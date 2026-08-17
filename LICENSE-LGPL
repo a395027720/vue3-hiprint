@@ -1,0 +1,54 @@
+GNU LESSER GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
+
+本文件适用于本仓库中的 `src/hiprint/hiprint.bundle.js` 文件，该文件基于
+hiprint 2.5.4 修改衍生。根据 LGPL 协议条款，本文件的修改和衍生部分必须以 LGPL
+协议重新发布。
+
+Copyright (c) 2016-2021 www.hinnn.com. All rights reserved.
+Copyright (c) 2026 jake-gao (modifications)
+
+This file is part of vue3-hiprint.
+
+vue3-hiprint is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+vue3-hiprint is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+----------------------------------------------------------------
+
+Additional notice for modifications by jake-gao (2026):
+
+This file has been modified to:
+  - Use ESM module syntax instead of UMD wrapper
+  - Replace webpack-specific `require.context('../i18n', ...)` with static imports
+    via Vite plugin `vite-plugins/require-context-shim.js` (no source changes)
+
+The complete corresponding source code of these modifications is available at:
+https://github.com/a395027720/vue3-hiprint
+
+----------------------------------------------------------------
+
+Full LGPL v2.1 text:
+
+                   GNU LESSER GENERAL PUBLIC LICENSE
+                       Version 2.1, February 1999
+
+ Copyright (C) 1991, 1999 Free Software Foundation, Inc.
+ 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+[This is the version of the LGPL that hiprint 2.5.4 was originally
+ distributed under. For brevity the full license text is omitted here
+ and should be obtained from <https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html>
+ or from the Free Software Foundation.]

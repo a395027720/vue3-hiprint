@@ -1,0 +1,124 @@
+{
+  "hash": "74d1aace",
+  "configHash": "154d50c3",
+  "lockfileHash": "3c26c129",
+  "browserHash": "2e813752",
+  "optimized": {
+    "@ant-design/icons-vue": {
+      "src": "../../node_modules/@ant-design/icons-vue/es/index.js",
+      "file": "@ant-design_icons-vue.js",
+      "fileHash": "4cfa3f77",
+      "needsInterop": false
+    },
+    "@claviska/jquery-minicolors/jquery.minicolors.min": {
+      "src": "../../node_modules/@claviska/jquery-minicolors/jquery.minicolors.min.js",
+      "file": "@claviska_jquery-minicolors_jquery__minicolors__min.js",
+      "fileHash": "7feaa292",
+      "needsInterop": true
+    },
+    "ant-design-vue": {
+      "src": "../../node_modules/ant-design-vue/es/index.js",
+      "file": "ant-design-vue.js",
+      "fileHash": "6f5bffb1",
+      "needsInterop": false
+    },
+    "bwip-js": {
+      "src": "../../node_modules/bwip-js/dist/bwip-js.mjs",
+      "file": "bwip-js.js",
+      "fileHash": "273f3a52",
+      "needsInterop": false
+    },
+    "canvg": {
+      "src": "../../node_modules/canvg/lib/index.es.js",
+      "file": "canvg.js",
+      "fileHash": "f5ff6215",
+      "needsInterop": false
+    },
+    "concurrent-tasks": {
+      "src": "../../node_modules/concurrent-tasks/lib/index.js",
+      "file": "concurrent-tasks.js",
+      "fileHash": "003c0edc",
+      "needsInterop": true
+    },
+    "dom-to-image-more": {
+      "src": "../../node_modules/dom-to-image-more/dist/dom-to-image-more.min.js",
+      "file": "dom-to-image-more.js",
+      "fileHash": "d0995e12",
+      "needsInterop": true
+    },
+    "jquery": {
+      "src": "../../node_modules/jquery/dist/jquery.js",
+      "file": "jquery.js",
+      "fileHash": "6c318ad0",
+      "needsInterop": true
+    },
+    "jsbarcode": {
+      "src": "../../node_modules/jsbarcode/bin/JsBarcode.js",
+      "file": "jsbarcode.js",
+      "fileHash": "56368d13",
+      "needsInterop": true
+    },
+    "jspdf": {
+      "src": "../../node_modules/jspdf/dist/jspdf.es.min.js",
+      "file": "jspdf.js",
+      "fileHash": "217ae78b",
+      "needsInterop": false
+    },
+    "lodash": {
+      "src": "../../node_modules/lodash/lodash.js",
+      "file": "lodash.js",
+      "fileHash": "8d02d8c5",
+      "needsInterop": true
+    },
+    "nzh/dist/nzh.min.js": {
+      "src": "../../node_modules/nzh/nzh.js",
+      "file": "nzh_dist_nzh__min__js.js",
+      "fileHash": "d04cfb75",
+      "needsInterop": true
+    },
+    "socket.io-client": {
+      "src": "../../node_modules/socket.io-client/build/esm/index.js",
+      "file": "socket__io-client.js",
+      "fileHash": "20ea9c63",
+      "needsInterop": false
+    },
+    "vue": {
+      "src": "../../node_modules/vue/dist/vue.runtime.esm-bundler.js",
+      "file": "vue.js",
+      "fileHash": "492beb00",
+      "needsInterop": false
+    },
+    "vue-ls": {
+      "src": "../../node_modules/vue-ls/src/index.js",
+      "file": "vue-ls.js",
+      "fileHash": "080f83a1",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "purify.es-JQSCVQHY": {
+      "file": "purify__es-JQSCVQHY.js"
+    },
+    "html2canvas.esm-5PG4DOMR": {
+      "file": "html2canvas__esm-5PG4DOMR.js"
+    },
+    "chunk-4UOYXR3S": {
+      "file": "chunk-4UOYXR3S.js"
+    },
+    "chunk-53K6KLGZ": {
+      "file": "chunk-53K6KLGZ.js"
+    },
+    "chunk-XUZSOFX5": {
+      "file": "chunk-XUZSOFX5.js"
+    },
+    "chunk-XG5IKD4O": {
+      "file": "chunk-XG5IKD4O.js"
+    },
+    "chunk-SITVF2AJ": {
+      "file": "chunk-SITVF2AJ.js"
+    },
+    "chunk-PR4QN5HX": {
+      "file": "chunk-PR4QN5HX.js"
+    }
+  }
+}
