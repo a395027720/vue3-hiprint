@@ -17,8 +17,5 @@ yarn-error.log
 package-lock.json
 yarn.lock
 
-# vite dev/build cache
+# vite dev cache
 .vite-cache/
-
-# demo build output（CI 会重新构建）
-demo/
