@@ -1,354 +1,202 @@
 <template>
   <a-card>
-    <a-row :gutter="[8,0]" style="margin-bottom: 10px">
+    <!-- 顶部 toolbar（tasks 不需要 mode 选择、不需要缩放） -->
+    <a-row :gutter="[8, 0]" style="margin-bottom: 10px">
       <a-col :span="24">
         <a-space>
-          <!-- 纸张设置 -->
-          <a-button-group>
-            <template v-for="(value,type) in paperTypes" :key="type">
-              <a-button :type="curPaperType === type ? 'primary' : 'default'" @click="setPaper(type,value)">
-                {{ type }}
-              </a-button>
-            </template>
-            <a-popover v-model:visible="paperPopVisible" title="设置纸张宽高(mm)" trigger="click">
-              <template #content><div>
-                <a-input-group compact style="margin: 10px 10px">
-                  <a-input-number v-model:value="paperWidth" style=" width: 100px; text-align: center"
-                           placeholder="宽(mm)"/>
-                  <a-input style=" width: 30px; border-left: 0; pointer-events: none; backgroundColor: #fff"
-                           placeholder="~" disabled
-                  />
-                  <a-input-number v-model:value="paperHeight" style="width: 100px; text-align: center; border-left: 0"
-                           placeholder="高(mm)"/>
-                </a-input-group>
-                <a-button type="primary" style="width: 100%" @click="otherPaper">确定</a-button>
-              </div></template>
-              <a-button :type="'other'==curPaperType?'primary':'default'">自定义纸张</a-button>
-            </a-popover>
-          </a-button-group>
+          <PaperToolbar
+            :template="hiprintTemplate"
+            :show-scale="false"
+            :show-paper-type="true"
+            :default-custom-paper="{ width: 80, height: 60 }"
+            @clear="clearPaper"
+          />
           <!-- 打印数量 -->
           打印数量：
-          <a-slider v-model:value="count" style="width: 200px" :min="1" :max="10000"/>
-          <a-input-number v-model:value="count" :min="1" :max="10000" style="margin-left: 16px"/>
-          <!-- 预览/打印 -->
+          <a-slider v-model:value="count" style="width: 200px" :min="1" :max="10000" />
+          <a-input-number v-model:value="count" :min="1" :max="10000" style="margin-left: 16px" />
           <a-button-group>
-            <a-button type="primary" icon="eye" @click="preView">
-              预览
-            </a-button>
-            <a-button type="primary" @click="print">
-              直接打印
-              <template #icon><printer-outlined /></template>
-            </a-button>
+            <a-button type="primary" icon="eye" @click="preView">预览</a-button>
+            <a-button type="primary" @click="print">直接打印<template #icon><printer-outlined /></template></a-button>
           </a-button-group>
-          <!-- 保存/清空 -->
           <a-button-group>
-            <a-button type="primary" icon="save" @click="save">
-              保存
-            </a-button>
-            <a-popconfirm
-              title="是否确认清空?"
-              okType="danger"
-              okText="确定清空"
-              @confirm="clearPaper"
-            >
-              <template #icon><question-circle-outlined style="color: red"/></template>
-              <a-button danger>
-                清空
-                <template #icon><close-outlined /></template>
-              </a-button>
-            </a-popconfirm>
+            <a-button type="primary" icon="save" @click="save">保存</a-button>
           </a-button-group>
-          <json-view :template="template"/>
+          <json-view :template="hiprintTemplate" />
         </a-space>
       </a-col>
     </a-row>
-    <a-row :gutter="[8,0]">
-      <a-col :span="4">
-        <a-card style="height: 100vh">
-          <a-row>
-            <a-col :span="24" class="rect-printElement-types hiprintEpContainer">
-            </a-col>
-          </a-row>
-        </a-card>
-      </a-col>
-      <a-col :span="14">
-        <a-card class="card-design">
-          <div id="hiprint-printTemplate" class="hiprint-printTemplate"></div>
-        </a-card>
-      </a-col>
-      <a-col :span="6" class="params_setting_container">
-        <a-card>
-          <a-row class="hinnn-layout-sider">
-            <div id="PrintElementOptionSetting"></div>
-          </a-row>
-        </a-card>
-      </a-col>
-    </a-row>
-    <!-- 预览 -->
-    <print-preview ref="preView"/>
+
+    <PrintLayout>
+      <template #right>
+        <div id="PrintElementOptionSetting"></div>
+      </template>
+    </PrintLayout>
+
+    <PreviewModal ref="previewRef" />
   </a-card>
 </template>
 
-<script>
-import { Modal } from "ant-design-vue";
+<script setup>
+import { ref, markRaw, onMounted, h } from 'vue'
+import { Modal, message, notification, Button } from 'ant-design-vue'
+import TaskRunner from 'concurrent-tasks'
 
-import printPreview from './preview'
+import PrintLayout from '../components/PrintLayout.vue'
+import PaperToolbar from '../components/PaperToolbar.vue'
+import PreviewModal from '../components/PreviewModal.vue'
+
 import jsonView from '../json-view.vue'
-
-import {hiprint} from '../../index'
-import TaskRunner from 'concurrent-tasks';
-import panel from './panel'
+import { hiprint } from '../../index'
 import provider from './providers'
+import panel from './panel'
 import printData from './print-data'
 
-let hiprintTemplate;
-export default {
-  name: "printCustom",
-  components: {printPreview, jsonView},
-  data() {
-    return {
-      template: null,
-      // 打印数量
-      count: 1,
-      // 当前纸张
-      curPaper: {
-        type: 'other',
-        width: 80,
-        height: 60
+// fix #1: 原 name="printCustom" 与 custom demo 撞名（影响 keep-alive 缓存 key）
+defineOptions({ name: 'printTasks' })
+
+const count = ref(1)
+const hiprintTemplate = ref(null)
+const previewRef = ref()
+
+function loadTemplate() {
+  const raw = localStorage.getItem('hiPrint-KEY_TEMPLATE_TASKS')
+  if (raw) {
+    try { return JSON.parse(raw) } catch (_) { /* 解析失败回退到默认 */ }
+  }
+  return panel
+}
+
+function buildTemplate() {
+  $('#hiprint-printTemplate').empty()
+  hiprintTemplate.value = markRaw(
+    new hiprint.PrintTemplate({
+      template: loadTemplate(),
+      settingContainer: '#PrintElementOptionSetting',
+      paginationContainer: '.hiprint-printPagination'
+    })
+  )
+  hiprintTemplate.value.design('#hiprint-printTemplate')
+}
+
+function preView() {
+  const tpl = hiprintTemplate.value
+  if (!tpl) return
+  const w = tpl.editingPanel?.width ?? 80
+  previewRef.value?.show(tpl, printData, w)
+}
+
+function print() {
+  if (!hiprintTemplate.value) return
+  if (window.hiwebSocket?.opened) {
+    console.log(hiprintTemplate.value.getPrinterList())
+    tasksPrint()
+    return
+  }
+  Modal.error({
+    title: '客户端未连接',
+    content: '请先下载并运行 electron-hiprint 打印服务（详见 README 中的 electron-hiprint 章节）。',
+    okText: '我知道了'
+  })
+}
+
+function tasksPrint() {
+  // 文档：https://concurrent-tasks.js.org/
+  const runner = new TaskRunner()
+  runner.setConcurrency(1)
+  const tasksKey = `open${Date.now()}`
+  const tasks = []
+  for (let i = 1; i <= count.value; i++) {
+    const key = `task${i}`
+    tasks.push((done) => {
+      realPrint(runner, done, key, i, { count: i.toString() }, tasksKey)
+    })
+  }
+  runner.addMultiple(tasks)
+  openNotification(runner, tasksKey)
+}
+
+function realPrint(runner, done, key, i, printDataArg, tasksKey) {
+  notification.info({
+    key,
+    placement: 'topRight',
+    duration: null,
+    message: `正在准备打印第 ${i} 张`,
+    description: '队列运行中...'
+  })
+  const tpl = new hiprint.PrintTemplate({ template: loadTemplate() })
+  tpl.print2(printDataArg, { printer: '', title: key })
+  tpl.on('printSuccess', () => {
+    const info = runner.tasks.list.length > 1 ? '准备打印下一张' : '已完成打印'
+    notification.success({
+      key,
+      placement: 'topRight',
+      message: key + ' 打印成功',
+      description: info
+    })
+    done()
+    if (!runner.isBusy()) {
+      notification.close(tasksKey)
+    }
+  })
+  tpl.on('printError', () => {
+    notification.close(key)
+    done()
+    message.error('打印失败，已加入重试队列中')
+    // 这里把 i + 1 是为了避免死循环——原代码有这个 bug
+    runner.add(realPrint.bind(null, runner, done, key, i + 1, printDataArg))
+  })
+}
+
+// fix #3: 原 openNotification 用 h('a-button', {props, on}, ...) 是 Vue 2 风格
+// 改用 Vue 3 兼容写法：h(Button, props, slot)
+// 因为 main.js 把 icon 全量注册，template 里 <a-button> 可用，但 h 函数需要组件引用
+function openNotification(runner, tasksKey) {
+  notification.open({
+    key: tasksKey,
+    message: '队列运行中...',
+    duration: 0,
+    placement: 'topLeft',
+    description: '点击关闭所有任务',
+    btn: () => h(
+      Button,
+      {
+        type: 'default',
+        size: 'small',
+        onClick: () => {
+          notification.close(tasksKey)
+          runner.removeAll()
+          message.info('已移除所有任务')
+        }
       },
-      // 纸张类型
-      paperTypes: {
-        'A3': {
-          width: 420,
-          height: 296.6
-        },
-        'A4': {
-          width: 210,
-          height: 296.6
-        },
-        'A5': {
-          width: 210,
-          height: 147.6
-        },
-        'B3': {
-          width: 500,
-          height: 352.6
-        },
-        'B4': {
-          width: 250,
-          height: 352.6
-        },
-        'B5': {
-          width: 250,
-          height: 175.6
-        }
-      },
-      // 自定义纸张
-      paperPopVisible: false,
-      paperWidth: 80,
-      paperHeight: 60,
-    }
-  },
-  computed: {
-    curPaperType() {
-      let type = 'other'
-      let types = this.paperTypes
-      for (const key in types) {
-        let item = types[key]
-        let {width, height} = this.curPaper
-        if (item.width === width && item.height === height) {
-          type = key
-        }
-      }
-      return type
-    }
-  },
-  mounted() {
-    this.init()
-    this.otherPaper()
-  },
-  methods: {
-    init() {
-      hiprint.init({
-        providers: [provider]
-      });
-      $('.hiprintEpContainer').empty()
-      hiprint.PrintElementTypeManager.build('.hiprintEpContainer', 'taskProviderModule');
-      $('#hiprint-printTemplate').empty()
-      let template = this.$ls.get('KEY_TEMPLATE_TASKS', panel)
-      this.template = hiprintTemplate = new hiprint.PrintTemplate({
-        template: template,
-        settingContainer: '#PrintElementOptionSetting',
-        paginationContainer: '.hiprint-printPagination'
-      });
-      hiprintTemplate.design('#hiprint-printTemplate');
-    },
-    /**
-     * 设置纸张大小
-     * @param type [A3, A4, A5, B3, B4, B5, other]
-     * @param value {width,height} mm
-     */
-    setPaper(type, value) {
-      try {
-        if (Object.keys(this.paperTypes).includes(type)) {
-          this.curPaper = {type: type, width: value.width, height: value.height}
-          hiprintTemplate.setPaper(value.width, value.height)
-        } else {
-          this.curPaper = {type: 'other', width: value.width, height: value.height}
-          hiprintTemplate.setPaper(value.width, value.height)
-        }
-      } catch (error) {
-        this.$message.error(`操作失败: ${error}`)
-      }
-    },
-    otherPaper() {
-      let value = {}
-      value.width = this.paperWidth
-      value.height = this.paperHeight
-      this.paperPopVisible = false
-      this.setPaper('other', value)
-    },
-    preView() {
-      let {width} = this.curPaper
-      this.$refs.preView.show(hiprintTemplate, printData, width)
-    },
-    print() {
-      if (window.hiwebSocket.opened) {
-        const printerList = hiprintTemplate.getPrinterList();
-        console.log(printerList)
-        this.tasksPrint()
-        return
-      }
-      Modal.error({
-        title: '客户端未连接',
-        content: '请先下载并运行 electron-hiprint 打印服务（详见 README 中的 electron-hiprint 章节）。',
-        okText: '我知道了',
-      });
-    },
-    // 队列打印
-    tasksPrint() {
-      // 官网/文档： https://concurrent-tasks.js.org/
-      const runner = new TaskRunner();
-      runner.setConcurrency(1); // 同时执行数量
-      const task = []
-      let that = this
-      const tasksKey = `open${Date.now()}`;
-      for (let i = 1; i <= this.count; i++) {
-        // done -> 任务完成回调
-        let key = `task${i}`;
-        task.push(done => {
-          let printData = {count: i.toString()}
-          that.realPrint(runner, done, key, i, printData, tasksKey)
-        })
-      }
-      runner.addMultiple(task)
-      this.openNotification(runner, tasksKey)
-    },
-    realPrint(runner, done, key, i, printData, tasksKey) {
-      let that = this
-      that.$notification.info({
-        key: key,
-        placement: 'topRight',
-        duration: null,
-        message: `正在准备打印第 ${i} 张`,
-        description: '队列运行中...',
-      });
-      let template = that.$ls.get('KEY_TEMPLATE_TASKS', panel)
-      let hiprintTemplate = new hiprint.PrintTemplate({
-        template: template,
-      });
-      hiprintTemplate.print2(printData, {printer: '', title: key});
-      hiprintTemplate.on('printSuccess', function () {
-        let info = runner.tasks.list.length > 1 ? '准备打印下一张' : '已完成打印'
-        that.$notification.success({
-          key: key,
-          placement: 'topRight',
-          message: key + ' 打印成功',
-          description: info,
-        });
-        done()
-        if (!runner.isBusy()) {
-          that.$notification.close(tasksKey)
-        }
-      })
-      hiprintTemplate.on('printError', function () {
-        that.$notification.close(key)
-        done()
-        that.$message.error('打印失败，已加入重试队列中')
-        runner.add(that.realPrint(runner, done, key, i, printData))
-      })
-    },
-    openNotification(runner, tasksKey) {
-      let that = this;
-      that.$notification.open({
-        key: tasksKey,
-        message: '队列运行中...',
-        duration: 0,
-        placement: 'topLeft',
-        description: '点击关闭所有任务',
-        btn: h => {
-          return h(
-            'a-button',
-            {
-              props: {
-                type: 'danger',
-                size: 'small',
-              },
-              on: {
-                click: () => {
-                  that.$notification.close(tasksKey);
-                  // 详情请查阅文档
-                  runner.removeAll();
-                  that.$message.info('已移除所有任务');
-                },
-              },
-            },
-            '关闭任务',
-          );
-        },
-      });
-    },
-    save() {
-      let json = hiprintTemplate.getJson()
-      let template = this.$ls.get('KEY_TEMPLATE_TASKS', panel)
-      console.log(json)
-      console.log(JSON.stringify(json))
-      this.$ls.set('KEY_TEMPLATE_TASKS', template)
-      this.$message.info('保存成功')
-    },
-    clearPaper() {
-      try {
-        hiprintTemplate.clear();
-      } catch (error) {
-        this.$message.error(`操作失败: ${error}`);
-      }
-    }
+      { default: () => '关闭任务' }
+    )
+  })
+}
+
+// fix #2: 原 save() 把读出来的旧 template 写回 localStorage，json 从未被保存
+function save() {
+  const tpl = hiprintTemplate.value
+  if (!tpl) return
+  const json = tpl.getJson()
+  console.log(json)
+  console.log(JSON.stringify(json))
+  localStorage.setItem('hiPrint-KEY_TEMPLATE_TASKS', JSON.stringify(json))
+  message.info('保存成功')
+}
+
+function clearPaper() {
+  try {
+    hiprintTemplate.value?.clear()
+  } catch (e) {
+    message.error(`操作失败: ${e}`)
   }
 }
+
+onMounted(() => {
+  hiprint.init({ providers: [provider] })
+  $('.hiprintEpContainer').empty()
+  hiprint.PrintElementTypeManager.build('.hiprintEpContainer', 'taskProviderModule')
+  buildTemplate()
+})
 </script>
-
-<style lang="scss" scoped>
-// build 拖拽
-:deep(.hiprint-printElement-type > li > ul > li > a) {
-  padding: 4px 4px;
-  color: #1296db;
-  line-height: 1;
-  height: auto;
-  text-overflow: ellipsis;
-}
-
-// 默认图片
-:deep(.hiprint-printElement-image-content) {
-  img {
-    content: url("@/assets/logo.png");
-  }
-}
-
-// 设计容器
-.card-design {
-  overflow: hidden;
-  overflow-x: auto;
-  overflow-y: auto;
-}
-
-</style>
