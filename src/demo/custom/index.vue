@@ -3,7 +3,7 @@
     <a-row :gutter="[8,0]" style="margin-bottom: 10px">
       <a-col :span="4">
         <!-- 模板选择 -->
-        <a-select v-model='mode' showSearch @change="changeMode" option-label-prop="label"
+        <a-select v-model:value='mode' showSearch @change="changeMode" option-label-prop="label"
                   style="width: 100%;">
           <a-select-option v-for='(opt,idx) in modeList' :key='idx' :label="opt.name" :value='idx'>
             {{ opt.name }}
@@ -19,20 +19,20 @@
                 {{ type }}
               </a-button>
             </template>
-            <a-popover v-model="paperPopVisible" title="设置纸张宽高(mm)" trigger="click">
+            <a-popover v-model:visible="paperPopVisible" title="设置纸张宽高(mm)" trigger="click">
               <template #content><div>
                 <a-input-group compact style="margin: 10px 10px">
-                  <a-input type="number" v-model="paperWidth" style=" width: 100px; text-align: center"
+                  <a-input-number v-model:value="paperWidth" style=" width: 100px; text-align: center"
                            placeholder="宽(mm)"/>
                   <a-input style=" width: 30px; border-left: 0; pointer-events: none; backgroundColor: #fff"
                            placeholder="~" disabled
                   />
-                  <a-input type="number" v-model="paperHeight" style="width: 100px; text-align: center; border-left: 0"
+                  <a-input-number v-model:value="paperHeight" style="width: 100px; text-align: center; border-left: 0"
                            placeholder="高(mm)"/>
                 </a-input-group>
                 <a-button type="primary" style="width: 100%" @click="otherPaper">确定</a-button>
               </div></template>
-              <a-button :type="'other'==curPaperType?'primary':''">自定义纸张</a-button>
+              <a-button :type="'other'==curPaperType?'primary':'default'">自定义纸张</a-button>
             </a-popover>
           </a-button-group>
           <a-button type="text" icon="zoom-out" @click="changeScale(false)"></a-button>
@@ -70,7 +70,7 @@
               @confirm="clearPaper"
             >
               <template #icon><question-circle-outlined style="color: red"/></template>
-              <a-button type="danger">
+              <a-button danger>
                 清空
                 <template #icon><close-outlined /></template>
               </a-button>
@@ -165,8 +165,8 @@ export default {
       scaleMin: 0.5,
       // 自定义纸张
       paperPopVisible: false,
-      paperWidth: '220',
-      paperHeight: '80',
+      paperWidth: 220,
+      paperHeight: 80,
       lastjson: '',
     }
   },
