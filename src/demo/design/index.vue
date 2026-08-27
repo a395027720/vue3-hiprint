@@ -2,74 +2,15 @@
   <a-card>
     <div style="display: flex; flex-direction: column">
       <a-space style="margin-bottom: 10px">
-        <a-button-group>
-          <template v-for="(value, type) in paperTypes" :key="type">
-            <a-button
-              :type="curPaperType === type ? 'primary' : 'default'"
-              @click="setPaper(type, value)"
-            >
-              {{ type }}
-            </a-button>
-          </template>
-          <a-popover
-            v-model:visible="paperPopVisible"
-            title="设置纸张宽高(mm)"
-            trigger="click"
-          >
-            <template #content>
-              <div>
-                <a-input-group compact style="margin: 10px 10px">
-                  <a-input-number
-                    v-model:value="paperWidth"
-                    style="width: 100px; text-align: center"
-                    placeholder="宽(mm)"
-                  />
-                  <a-input
-                    style="
-                      width: 30px;
-                      border-left: 0;
-                      pointer-events: none;
-                      backgroundcolor: #fff;
-                    "
-                    placeholder="~"
-                    disabled
-                  />
-                  <a-input-number
-                    v-model:value="paperHeight"
-                    style="width: 100px; text-align: center; border-left: 0"
-                    placeholder="高(mm)"
-                  />
-                </a-input-group>
-                <a-button type="primary" style="width: 100%" @click="otherPaper"
-                  >确定</a-button
-                >
-              </div>
-            </template>
-            <a-button :type="'other' == curPaperType ? 'primary' : 'default'"
-              >自定义纸张</a-button
-            >
-          </a-popover>
-        </a-button-group>
-        <a-button
-          type="text"
-          icon="zoom-out"
-          @click="changeScale(false)"
-        ></a-button>
-        <a-input-number
-          :value="scaleValue"
-          :min="scaleMin"
-          :max="scaleMax"
-          :step="0.1"
-          disabled
-          style="width: 70px"
-          :formatter="(value) => `${(value * 100).toFixed(0)}%`"
-          :parser="(value) => value.replace('%', '')"
+        <!-- 纸张设置 + 缩放控件（封装在 PaperToolbar 内）-->
+        <PaperToolbar
+          :template="hiprintTemplate"
+          :show-paper-type="false"
+          :show-scale="true"
+          :show-clear="false"
+          :default-custom-paper="{ width: 220, height: 80 }"
+          :scale-with-center="false"
         />
-        <a-button
-          type="text"
-          icon="zoom-in"
-          @click="changeScale(true)"
-        ></a-button>
         <a-button type="primary" icon="redo" @click="rotatePaper()"
           >旋转</a-button
         >
@@ -461,7 +402,7 @@
       </a-col>
     </a-row>
     <!-- 预览 -->
-    <print-preview ref="preView" />
+    <PrintPreviewModal ref="preView" />
   </a-card>
 </template>
 
@@ -471,7 +412,8 @@ import { Modal } from "ant-design-vue";
 import * as vuePluginHiprint from "../../index";
 // import panel from './panel'
 import printData from "./print-data";
-import printPreview from "./preview";
+import PrintPreviewModal from "../components/PreviewModal.vue";
+import PaperToolbar from "../components/PaperToolbar.vue";
 import jsonView from "../json-view.vue";
 import fontSize from "./font-size.js";
 import scale from "./scale.js";
@@ -484,7 +426,7 @@ export default {
   name: "printDesign",
   // 从 App.vue provide 注入（替代 Vue 2 的 this.hiprintVersion / $parent.lang）
   inject: ["hiprintVersion", "hiprintLang"],
-  components: { printPreview, jsonView },
+  components: { PrintPreviewModal, PaperToolbar, jsonView },
   data() {
     return {
       template: null,
