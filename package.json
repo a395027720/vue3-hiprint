@@ -1,11 +1,25 @@
 {
   "name": "@jake-gao/vue3-hiprint",
   "description": "基于 hiprint 的 Vue3 可视化打印设计器",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "jake-gao",
   "license": "MIT",
   "main": "dist/vue3-hiprint.js",
+  "module": "dist/vue3-hiprint.esm.js",
+  "exports": {
+    ".": {
+      "import": "./dist/vue3-hiprint.esm.js",
+      "require": "./dist/vue3-hiprint.js"
+    },
+    "./dist/print-lock.css": "./dist/print-lock.css",
+    "./dist/vue3-hiprint.js": "./dist/vue3-hiprint.js",
+    "./dist/vue3-hiprint.esm.js": "./dist/vue3-hiprint.esm.js"
+  },
   "private": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/a395027720/vue3-hiprint.git"
@@ -45,7 +59,7 @@
     "@ant-design/icons-vue": "^7.0.0",
     "@vitejs/plugin-vue": "^5.0.0",
     "rollup-plugin-copy": "^3.5.0",
-    "sass": "^1.69.0",
+    "sass": "^1.80.0",
     "vite": "^5.0.0"
   },
   "dependencies": {

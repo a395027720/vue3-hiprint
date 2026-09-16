@@ -31,8 +31,8 @@ export default defineConfig({
     lib: {
       entry: path.resolve(__dirname, 'src/index.js'),
       name: 'vue3-hiprint',
-      formats: ['umd'],
-      fileName: () => 'vue3-hiprint.js',
+      formats: ['umd', 'es'],
+      fileName: (format) => (format === 'es' ? 'vue3-hiprint.esm.js' : 'vue3-hiprint.js'),
     },
     rollupOptions: {
       external: [
