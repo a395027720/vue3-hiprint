@@ -897,6 +897,10 @@
               hidden: false
             },
             {
+              name: 'pageBreakBefore',
+              hidden: false
+            },
+            {
               name: 'autoCompletion',
               hidden: false
             },
@@ -1195,10 +1199,15 @@
         {
           name: 'gridColumnsFooterFormatter',
           hidden: false
+        },
+        {
+          name: 'pageBreakBefore',
+          hidden: false
         }
       ],
       default: {
-        width: 550
+        width: 550,
+        pageBreakBefore: false
       }
     },
     hline: {
