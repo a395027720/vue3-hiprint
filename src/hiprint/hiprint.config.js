@@ -901,6 +901,18 @@
               hidden: false
             },
             {
+              name: 'paginatorFormat',
+              hidden: false
+            },
+            {
+              name: 'paginatorPosition',
+              hidden: false
+            },
+            {
+              name: 'paginatorAlign',
+              hidden: false
+            },
+            {
               name: 'autoCompletion',
               hidden: false
             },
@@ -1042,14 +1054,6 @@
             },
             {
               name: 'gridColumnsFooterFormatter',
-              hidden: false
-            },
-            {
-              name: 'paginatorFormat',
-              hidden: false
-            },
-            {
-              name: 'paginatorPosition',
               hidden: false
             }
           ]
@@ -1217,6 +1221,10 @@
           hidden: false
         },
         {
+          name: 'paginatorAlign',
+          hidden: false
+        },
+        {
           name: 'pageBreakBefore',
           hidden: false
         }
@@ -1224,8 +1232,9 @@
       default: {
         width: 550,
         pageBreakBefore: false,
-        paginatorFormat: '第 ${startRow}-${endRow} 行 / 共 ${totalRows} 行',
-        paginatorPosition: 'none'
+        paginatorFormat: '第 ${pageNo} 页 / 共 ${totalPages} 页 / 第 ${startRow}-${endRow} 行 / 共 ${totalRows} 行',
+        paginatorPosition: 'none',
+        paginatorAlign: 'right'
       }
     },
     hline: {

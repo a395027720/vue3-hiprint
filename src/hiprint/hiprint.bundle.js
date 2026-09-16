@@ -4958,6 +4958,32 @@ var hiprint = function (t) {
         this.target.remove();
       }, t;
     }(),
+    paginatorAlign = function () {
+      function t() {
+        this.name = "paginatorAlign";
+      }
+
+      return t.prototype.createTarget = function () {
+        return this.target = $(`<div class="hiprint-option-item">
+        <div class="hiprint-option-item-label">
+        ${i18n.__('表格分页对齐')}
+        </div>
+        <div class="hiprint-option-item-field">
+        <select class="auto-submit">
+        <option value="left" >${i18n.__('左')}</option>
+        <option value="center" >${i18n.__('中')}</option>
+        <option value="right" >${i18n.__('右')}</option>
+        </select>
+        </div>
+    </div>`), this.target;
+      }, t.prototype.getValue = function () {
+        return this.target.find("select").val() || "right";
+      }, t.prototype.setValue = function (t) {
+        this.target.find("select").val((null == t ? "right" : t).toString());
+      }, t.prototype.destroy = function () {
+        this.target.remove();
+      }, t;
+    }(),
     lt = function () {
       function t() {
         this.name = "gridColumns";
@@ -5457,7 +5483,7 @@ var hiprint = function (t) {
       t.init(), t.printElementOptionItems[e.name] = e;
     }, t.getItem = function (e) {
       return t.init(), t.printElementOptionItems[e];
-    }, t._printElementOptionItems = [new fontFamily(), new r(), new a(), new p(), new i(), new s(), new l(), new pt(), new u(), new d(), new c(), new h(), new f(), new g(), new m(), new d2(), new c2(), new v(), new y(), new b(), new E(), new qrCodeLevel(), new T(), new P(), new _(), new w(), new x(), new coordinate(), new widthHeight(), new C(), new imageFit(), new O(), new H(), new D(), new paperNumberContinue(), new watermarkOptions(), new I(), new R(), new pageBreak(), new pageBreakBefore(), new paginatorFormat(), new paginatorPosition(), new M(), new M2(), new S(), new B(), new F(), new L(), new A(), new z(), new k(), new st(), new N(), new V(), new W(), new j(), new U(), new borderRadius(), new zIndex(), new K(), new G(), new q(), new X(), new Y(), new Q(), new J(), new Z(), new tt(), new et(), new nt(), new it(), new ot(),new textWrap(), new at(), new lt(), new panelLayoutOptions(), new ut(), new ith(), new dt(), new ct(), new ht(), new ft(), new gt(), new mt(), new rowcolumns(), new rowsColumnsMergeClean(), new groupSequenceContinue(), new groupFieldsFormatter(), new groupFormatter(), new groupFooterFormatter(), new vt(), new yt(), new bt(), new Tt(), new Et(), new Pt(), new stylerHeader(), new renderFormatter(), new _t(), new wt(), new maxRows(), new xt(), new tableColumnH(), new tableE(), new tableQRCodeLevel(), new tablept(), new tableSummaryTitle(), new tableSummaryText(), new tableSummaryColspan(), new tableSummary(), new tableSummaryAlign(), new tableSummaryNumFormat(), new tableSummaryFormatter(),new showCodeTitle(), new upperCase(), new barcodeType(), new qrcodeType(), new barColor(), new barTextMode(), new barWidth(), new barAutoWidth()], t;
+    }, t._printElementOptionItems = [new fontFamily(), new r(), new a(), new p(), new i(), new s(), new l(), new pt(), new u(), new d(), new c(), new h(), new f(), new g(), new m(), new d2(), new c2(), new v(), new y(), new b(), new E(), new qrCodeLevel(), new T(), new P(), new _(), new w(), new x(), new coordinate(), new widthHeight(), new C(), new imageFit(), new O(), new H(), new D(), new paperNumberContinue(), new watermarkOptions(), new I(), new R(), new pageBreak(), new pageBreakBefore(), new paginatorFormat(), new paginatorPosition(), new paginatorAlign(), new M(), new M2(), new S(), new B(), new F(), new L(), new A(), new z(), new k(), new st(), new N(), new V(), new W(), new j(), new U(), new borderRadius(), new zIndex(), new K(), new G(), new q(), new X(), new Y(), new Q(), new J(), new Z(), new tt(), new et(), new nt(), new it(), new ot(),new textWrap(), new at(), new lt(), new panelLayoutOptions(), new ut(), new ith(), new dt(), new ct(), new ht(), new ft(), new gt(), new mt(), new rowcolumns(), new rowsColumnsMergeClean(), new groupSequenceContinue(), new groupFieldsFormatter(), new groupFormatter(), new groupFooterFormatter(), new vt(), new yt(), new bt(), new Tt(), new Et(), new Pt(), new stylerHeader(), new renderFormatter(), new _t(), new wt(), new maxRows(), new xt(), new tableColumnH(), new tableE(), new tableQRCodeLevel(), new tablept(), new tableSummaryTitle(), new tableSummaryText(), new tableSummaryColspan(), new tableSummary(), new tableSummaryAlign(), new tableSummaryNumFormat(), new tableSummaryFormatter(),new showCodeTitle(), new upperCase(), new barcodeType(), new qrcodeType(), new barColor(), new barTextMode(), new barWidth(), new barAutoWidth()], t;
   }();
 }, function (t, e, n) {
   "use strict";
@@ -5847,8 +5873,9 @@ var hiprint = function (t) {
               pageCount++;
               var totalRows = i.length;
               var endRow = startRow + h.length - 1;
-              var paginatorText = (this.options.paginatorFormat || "").replace(/\$\{startRow\}/g, startRow).replace(/\$\{endRow\}/g, endRow).replace(/\$\{totalRows\}/g, totalRows).replace(/\$\{pageIndex\}/g, pageCount - 1).replace(/\$\{pageCount\}/g, pageCount);
-              var paginatorHtml = $(`<div class="hiprint-table-paginator" style="text-align: right; padding: 2pt 0; font-size: 9pt; color: #666;">${paginatorText}</div>`);
+              var paginatorText = (this.options.paginatorFormat || "").replace(/\$\{startRow\}/g, startRow).replace(/\$\{endRow\}/g, endRow).replace(/\$\{totalRows\}/g, totalRows).replace(/\$\{pageNo\}/g, pageCount).replace(/\$\{pageIndex\}/g, pageCount - 1).replace(/\$\{pageCount\}/g, "__TOTAL_PAGES__").replace(/\$\{totalPages\}/g, "__TOTAL_PAGES__");
+              var paginatorAlign = this.options.paginatorAlign || "right";
+              var paginatorHtml = $(`<div class="hiprint-table-paginator" style="text-align: ${paginatorAlign}; padding: 2pt 0; font-size: 9pt; color: #666;">${paginatorText}</div>`);
               if ("top" == paginatorPosition) {
                 h.target.prepend(paginatorHtml);
               } else {
@@ -5859,6 +5886,16 @@ var hiprint = function (t) {
           startRow += h.length;
           s++;
           e && this.updatePanelHeight(f + this.options.getHeight(), t);
+        }
+
+        if (pageCount > 0) {
+          n.forEach(function (paper) {
+            if (paper.target && paper.target.find) {
+              paper.target.find(".hiprint-table-paginator").each(function () {
+                $(this).html($(this).html().replace(/__TOTAL_PAGES__/g, pageCount));
+              });
+            }
+          });
         }
 
         return n;
