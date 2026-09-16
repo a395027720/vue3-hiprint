@@ -1043,6 +1043,14 @@
             {
               name: 'gridColumnsFooterFormatter',
               hidden: false
+            },
+            {
+              name: 'paginatorFormat',
+              hidden: false
+            },
+            {
+              name: 'paginatorPosition',
+              hidden: false
             }
           ]
         },
@@ -1201,13 +1209,23 @@
           hidden: false
         },
         {
+          name: 'paginatorFormat',
+          hidden: false
+        },
+        {
+          name: 'paginatorPosition',
+          hidden: false
+        },
+        {
           name: 'pageBreakBefore',
           hidden: false
         }
       ],
       default: {
         width: 550,
-        pageBreakBefore: false
+        pageBreakBefore: false,
+        paginatorFormat: '第 ${startRow}-${endRow} 行 / 共 ${totalRows} 行',
+        paginatorPosition: 'none'
       }
     },
     hline: {
