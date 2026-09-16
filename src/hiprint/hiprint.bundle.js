@@ -5748,7 +5748,7 @@ var hiprint = function (t) {
         for (var a, p = this.getBeginPrintTopInPaperByReferenceElement(t), s = 0, l = !1; !l;) {
           var u = 0,
             d = t.getPaperFooter(s);
-          0 == s && p > d && "none" != t.panelPageRule && (p = p - d + t.paperHeader, n.push(new _dto_PaperHtmlResult__WEBPACK_IMPORTED_MODULE_2__.a({
+          0 == s && (p > d && "none" != t.panelPageRule || this.options.pageBreakBefore && e != void 0) && (p = t.paperHeader, n.push(new _dto_PaperHtmlResult__WEBPACK_IMPORTED_MODULE_2__.a({
             target: void 0,
             printLine: void 0
           })), u = t.getContentHeight(s) - (p - t.paperHeader), s++ , d = t.getPaperFooter(s));
@@ -5795,12 +5795,6 @@ var hiprint = function (t) {
           e && this.updatePanelHeight(f + this.options.getHeight(), t);
         }
 
-        if (this.options.pageBreakBefore && e != void 0) {
-          n.unshift(new _dto_PaperHtmlResult__WEBPACK_IMPORTED_MODULE_2__.a({
-            target: void 0,
-            printLine: void 0
-          }));
-        }
         return n;
       }, TablePrintElement.prototype.getRowsInSpecificHeight = function (t, e, n, i, o, r, tfh) {
         var that = this;
