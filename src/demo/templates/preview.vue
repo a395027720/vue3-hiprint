@@ -19,9 +19,18 @@
     <template #title>
       <a-space>
         <div style="margin-right: 20px">模板预览</div>
-        <a-button :loading="waitShowPrinter" type="primary" icon="printer" @click.stop="print">打印</a-button>
-        <a-button type="primary" icon="printer" @click.stop="toPdf">pdf</a-button>
-        <a-button type="primary" icon="printer" @click.stop="print2">直接打印</a-button>
+        <a-button :loading="waitShowPrinter" type="primary" @click.stop="print">
+          <template #icon><printer-outlined /></template>
+          打印
+        </a-button>
+        <a-button type="primary" @click.stop="toPdf">
+          <template #icon><printer-outlined /></template>
+          pdf
+        </a-button>
+        <a-button type="primary" @click.stop="print2">
+          <template #icon><printer-outlined /></template>
+          直接打印
+        </a-button>
         <json-view :template="hiprintTemplate"/>
       </a-space>
     </template>
@@ -36,14 +45,13 @@
 <script>
 import {hiprint} from '../../index'
 import jsonView from '../json-view.vue'
-import printPreview from "../custom/preview.vue";
 import panel from "../design/panel";
 import printData from "../design/print-data";
 
 let hiprintTemplate;
 export default {
   name: "templatePreview",
-  components: {printPreview, jsonView},
+  components: {jsonView},
   data() {
     return {
       visible: false,

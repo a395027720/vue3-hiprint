@@ -20,31 +20,11 @@
       <a-button
         style="width: 200px; font-size: 16px"
         :type="'templates' === curDemo ? 'primary' : 'default'"
-        icon="file-search"
         @click="curDemo = 'templates'"
       >
+        <template #icon><file-search-outlined /></template>
         模 板 中 心
       </a-button>
-      <div style="margin-left: 20px"></div>
-      <a-select
-        v-if="curDemo == 'printDesign'"
-        ref="verSelect"
-        v-model="version"
-        :options="versions"
-        @change="handleVerChange"
-        style="width: 160px"
-      >
-      </a-select>
-      <div style="margin-left: 20px"></div>
-      <a-select
-        v-if="i18nSupport"
-        ref="i18nSelect"
-        v-model="lang"
-        :options="languages"
-        @change="handleLangChange"
-        style="width: 160px"
-      >
-      </a-select>
     </a-row>
     <!-- 动态渲染组件，懒得去弄路由了 -->
     <keep-alive>
@@ -59,19 +39,9 @@ import printCustom from "@/demo/custom/index";
 import printTasks from "@/demo/tasks/index";
 import printPanels from "@/demo/panels/index";
 import templates from "@/demo/templates/index";
-import { decodeVer } from "@/utils";
 
 export default {
   name: "App",
-  // 注入给 design/index.vue 替代 $parent.version / $parent.lang（Vue 3 中 $parent 不再暴露非直接父链）
-  provide() {
-    // 注意：provide 的值是非响应式的；切换 version/lang 后 handleVerChange 会 location.reload，
-    // 子组件会在 reload 后重新执行 inject 拿到最新值，所以无需响应式包裹
-    return {
-      hiprintVersion: this.version,
-      hiprintLang: this.lang,
-    };
-  },
   components: {
     printDesign,
     printCustom,
@@ -88,115 +58,7 @@ export default {
         { name: "printTasks", title: "队列/批量打印" },
         { name: "printPanels", title: "多面板设计" },
       ],
-      // npm 信息
-      npmInfo: {},
-      versions: [],
-      lang: "cn",
-      languages: [
-        {
-          label: "简体中文-cn",
-          value: "cn",
-        },
-        {
-          label: "英语-en",
-          value: "en",
-        },
-        {
-          label: "德语-de",
-          value: "de",
-        },
-        {
-          label: "西班牙语-es",
-          value: "es",
-        },
-        {
-          label: "法语-fr",
-          value: "fr",
-        },
-        {
-          label: "意大利语-it",
-          value: "it",
-        },
-        {
-          label: "日语-ja",
-          value: "ja",
-        },
-        {
-          label: "俄语-ru",
-          value: "ru",
-        },
-        {
-          label: "繁体中文-cn_tw",
-          value: "cn_tw",
-        },
-      ],
-      // 选择版本
-      version: undefined,
     };
-  },
-  computed: {
-    i18nSupport() {
-      return (
-        this.version == "development" ||
-        (this.version && decodeVer(this.version).verVal >= 55.8)
-      );
-    },
-  },
-  created() {
-    this.version = sessionStorage.getItem("version") || "development";
-    this.lang = sessionStorage.getItem("lang") || "cn";
-    this.getVersion();
-  },
-  methods: {
-    /**
-     * @description: 通过 jsdelivr 获取所有 npm 信息
-     * @return {*}
-     */
-    getVersion() {
-      const xhr = new XMLHttpRequest();
-      // jsdelivr 源
-      // xhr.open(
-      //   "GET",
-      //   "https://data.jsdelivr.com/v1/packages/npm/@jake-gao/vue3-hiprint"
-      // );
-      // cnpm 源
-      xhr.open("GET", "https://registry.npmmirror.com/@jake-gao/vue3-hiprint");
-      xhr.onload = () => {
-        if (xhr.status === 200) {
-          this.npmInfo = JSON.parse(xhr.responseText);
-          this.versions = Object.keys(this.npmInfo.versions)
-            .map((version) => ({
-              label: version,
-              value: version,
-            }))
-            .reverse();
-          if (import.meta.env.DEV) {
-            this.versions.unshift({
-              label: "development",
-              value: "development",
-            });
-          }
-          this.version ??= this.versions[0].value;
-        }
-      };
-      xhr.send();
-    },
-    /**
-     * @description: 版本切换事件
-     * @param {String} val
-     */
-    handleVerChange(val) {
-      sessionStorage.setItem("version", val);
-      location.reload();
-    },
-    /**
-     * @description: 语言切换事件
-     * @param {String} val
-     */
-    handleLangChange(val) {
-      sessionStorage.setItem("lang", val);
-      location.reload();
-    },
   },
 };
 </script>

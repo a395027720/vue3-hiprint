@@ -1,56 +1,74 @@
 <template>
   <a-card>
     <div style="display: flex; flex-direction: column">
-      <a-space style="margin-bottom: 10px">
-        <!-- 纸张设置 + 缩放控件（封装在 PaperToolbar 内）-->
-        <PaperToolbar
-          :template="hiprintTemplate"
-          :show-paper-type="false"
-          :show-scale="true"
-          :show-clear="false"
-          :default-custom-paper="{ width: 220, height: 80 }"
-          :scale-with-center="false"
-        />
-        <a-button type="primary" icon="redo" @click="rotatePaper()"
-          >旋转</a-button
-        >
-        <a-button type="primary" icon="eye" @click="preView"> 预览 </a-button>
-        <a-popconfirm
-          title="是否确认清空?"
-          okType="danger"
-          okText="确定清空"
-          @confirm="clearPaper"
-        >
-          <template #icon
-            ><question-circle-outlined style="color: red"
-          /></template>
-          <a-button danger>
-            清空
-            <template #icon><close-outlined /></template>
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+        "
+      >
+        <!-- 左侧：纸张设置 + 缩放 + 旋转 -->
+        <div style="display: flex; align-items: center; gap: 8px">
+          <!-- 纸张设置 + 缩放控件（封装在 PaperToolbar 内）-->
+          <PaperToolbar
+            :template="hiprintTemplate"
+            :show-paper-type="false"
+            :show-scale="true"
+            :show-clear="false"
+            :default-custom-paper="{ width: 220, height: 80 }"
+            :scale-with-center="false"
+          />
+          <a-button type="primary" @click="rotatePaper()"
+            ><template #icon><redo-outlined /></template>旋转</a-button
+          >
+        </div>
+        <!-- 右侧：预览 / 清空 / JSON / 更多 -->
+        <div style="display: flex; align-items: center; gap: 8px">
+          <a-button type="primary" @click="preView">
+            <template #icon><eye-outlined /></template>
+            预览
           </a-button>
-        </a-popconfirm>
-        <json-view :template="template" />
-        <a-dropdown>
-          <template #overlay>
-            <a-menu @click="handleMenuClick">
-              <a-menu-item key="0">都不看,我就不看</a-menu-item>
-              <a-menu-item v-for="item in keyList" :key="item.key">
-                {{ item.name }}</a-menu-item
-              >
-            </a-menu>
-          </template>
-          <a-button style="margin-left: 8px">
-            更多功能示例
-            <template #icon><down-outlined /></template>
-          </a-button>
-        </a-dropdown>
-      </a-space>
+          <a-popconfirm
+            title="是否确认清空?"
+            okType="danger"
+            okText="确定清空"
+            @confirm="clearPaper"
+          >
+            <template #icon
+              ><question-circle-outlined style="color: red"
+            /></template>
+            <a-button danger>
+              清空
+              <template #icon><close-outlined /></template>
+            </a-button>
+          </a-popconfirm>
+          <json-view :template="template" />
+          <a-dropdown>
+            <template #overlay>
+              <a-menu @click="handleMenuClick">
+                <a-menu-item key="0">都不看,我就不看</a-menu-item>
+                <a-menu-item v-for="item in keyList" :key="item.key">
+                  {{ item.name }}</a-menu-item
+                >
+              </a-menu>
+            </template>
+            <a-button>
+              更多功能示例
+              <template #icon><down-outlined /></template>
+            </a-button>
+          </a-dropdown>
+        </div>
+      </div>
       <a-space v-if="'1' == curKey" style="margin-bottom: 10px">
         <div class="btn-text-desc">直接打印/api打印:</div>
-        <a-button type="primary" icon="printer" @click="print">
+        <a-button type="primary" @click="print">
+          <template #icon><printer-outlined /></template>
           直接打印
         </a-button>
-        <a-button type="primary" icon="printer" @click="printByFragments">
+        <a-button type="primary" @click="printByFragments">
+          <template #icon><printer-outlined /></template>
           分批直接打印
         </a-button>
         <a-button type="primary" @click="onlyPrint"> Api单独打印 </a-button>
@@ -360,7 +378,7 @@
                   </div>
                 </a-col>
               </a-row>
-              <a-row v-if="currVerInfo.verVal >= 55.3" style="height: 100px">
+              <a-row v-if="true" style="height: 100px">
                 <a-col :span="12" class="drag_item_box">
                   <div>
                     <a class="ep-draggable-item" tid="defaultModule.barcode">
@@ -417,15 +435,12 @@ import PaperToolbar from "../components/PaperToolbar.vue";
 import jsonView from "../json-view.vue";
 import fontSize from "./font-size.js";
 import scale from "./scale.js";
-import { decodeVer } from "@/utils";
 // disAutoConnect();
 var hiprint, defaultElementTypeProvider, panel;
 let hiprintTemplate;
 
 export default {
   name: "printDesign",
-  // 从 App.vue provide 注入（替代 Vue 2 的 this.hiprintVersion / $parent.lang）
-  inject: ["hiprintVersion", "hiprintLang"],
   components: { PrintPreviewModal, PaperToolbar, jsonView },
   data() {
     return {
@@ -498,35 +513,12 @@ export default {
       }
       return type;
     },
-    /**
-     * @description: 当前版本信息，用于 demo 页面根据版本控制功能
-     * @return {Object}
-     */
-    currVerInfo() {
-      if (this.hiprintVersion && this.hiprintVersion != "development") {
-        return decodeVer(this.hiprintVersion);
-      } else if (hiprint?.version) {
-        return decodeVer(hiprint.version);
-      } else {
-        return {
-          verVal: 9999,
-        };
-      }
-    },
   },
   mounted() {
     this.getPanel();
-    // 存在一个固定版本号，并且不是开发版本
-    if (this.hiprintVersion && this.hiprintVersion != "development") {
-      // 加载对应版本的 hiprint
-      this.getVersion(this.hiprintVersion);
-    }
-    // 不存在固定版本，加载当前代码中的 hiprint
-    else {
-      hiprint = vuePluginHiprint.hiprint;
-      defaultElementTypeProvider = vuePluginHiprint.defaultElementTypeProvider;
-      this.init();
-    }
+    hiprint = vuePluginHiprint.hiprint;
+    defaultElementTypeProvider = vuePluginHiprint.defaultElementTypeProvider;
+    this.init();
   },
   methods: {
     /**
@@ -535,68 +527,11 @@ export default {
     getPanel() {
       // 加载所有 panel（Vite 用 import.meta.glob 替代 webpack 的 require.context）
       const panelModules = import.meta.glob("./*panel*.js", { eager: true });
-      // 对所有 panel 进行版本解析
-      const panelKeys = Object.keys(panelModules).filter((k) =>
-        /\/panel-?/.test(k),
-      );
-      var panelInfos = panelKeys.map((key) => ({
-        ...decodeVer(key.replace(/(\.\/panel-?)|(\.js)/g, "")),
-        key,
-      }));
-      // 存在一个固定版本号，并且不是开发版本
-      if (this.hiprintVersion && this.hiprintVersion != "development") {
-        // 解析对应版本信息
-        var currVerInfo = decodeVer(this.hiprintVersion);
-        // 查找小于等于当前版本的 panel
-        var newVers = panelInfos
-          .filter(({ verVal }) => verVal <= currVerInfo.verVal)
-          // 对版本号进行倒叙
-          .sort((acc, curr) => curr.verVal - acc.verVal);
-        // 获取最大版本号面板 json
-        panel = panelModules[newVers[0].key].default;
-      }
-      // 不存在固定版本，加载默认面板 json
-      else {
-        panel = panelModules["./panel.js"].default;
-      }
-    },
-    /**
-     * @description: 加载版本
-     * @param {string} version 版本号
-     */
-    getVersion(version) {
-      const script = document.createElement("script");
-      script.setAttribute("type", "text/javascript");
-      script.setAttribute(
-        "src",
-        // jsdelivr cdn
-        // `https://cdn.jsdelivr.net/npm/@jake-gao/vue3-hiprint@${version}/dist/vue-plugin-hiprint.js`
-        // cnpm cdn
-        // `https://registry.npmmirror.com/@jake-gao/vue3-hiprint/${version}/files/dist/vue-plugin-hiprint.js`
-        // unpkg cdn
-        `https://unpkg.com/@jake-gao/vue3-hiprint@${version}/dist/vue-plugin-hiprint.js`,
-      );
-      script.addEventListener("load", () => {
-        hiprint = window.vue3Hiprint || window["vue-plugin-hiprint"].hiprint;
-        defaultElementTypeProvider = window.vue3Hiprint
-          ? window["@jake-gao/vue3-hiprint"].defaultElementTypeProvider
-          : window["vue-plugin-hiprint"].defaultElementTypeProvider;
-        this.init();
-      });
-      const head = document.querySelector("head");
-      head.querySelector('link[media=print][href*="print-lock.css"]').remove();
-      head.append(
-        // $(`<link rel="stylesheet" type="text/css" media="print" href="https://registry.npmmirror.com/@jake-gao/vue3-hiprint/${version}/files/dist/print-lock.css">`)[0]
-        $(
-          `<link rel="stylesheet" type="text/css" media="print" href="https://unpkg.com/@jake-gao/vue3-hiprint@${version}/dist/print-lock.css">`,
-        )[0],
-      );
-      head.append(script);
+      panel = panelModules["./panel.js"].default;
     },
     init() {
       hiprint.init({
         providers: [new defaultElementTypeProvider()],
-        lang: this.hiprintLang,
       });
       // 还原配置
       hiprint.setConfig();
@@ -1269,6 +1204,12 @@ export default {
   width: 12vw;
   text-align: right;
   white-space: nowrap;
+  font-weight: 600;
+  padding: 0 10px;
+  border-left: 3px solid #1890ff;
+  background: #fafafa;
+  line-height: 32px;
+  border-radius: 2px;
 }
 
 // 拖拽

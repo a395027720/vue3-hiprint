@@ -55,9 +55,10 @@
   <template v-if="showScale">
     <a-button
       type="text"
-      icon="zoom-out"
       @click="changeScale(false)"
-    ></a-button>
+    >
+      <template #icon><zoom-out-outlined /></template>
+    </a-button>
     <a-input-number
       :value="scale"
       :min="minScale"
@@ -70,9 +71,10 @@
     />
     <a-button
       type="text"
-      icon="zoom-in"
       @click="changeScale(true)"
-    ></a-button>
+    >
+      <template #icon><zoom-in-outlined /></template>
+    </a-button>
   </template>
 
   <!-- 清空 popconfirm（4 demo 都有） -->

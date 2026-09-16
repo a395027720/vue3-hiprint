@@ -7,8 +7,14 @@
     <template #title>
       <a-space>
         <div style="margin-right: 20px">打印预览</div>
-        <a-button :loading="waitShowPrinter" type="primary" icon="printer" @click.stop="print">打印</a-button>
-        <a-button type="primary" icon="printer" @click.stop="toPdf">pdf</a-button>
+        <a-button :loading="waitShowPrinter" type="primary" @click.stop="print">
+          <template #icon><printer-outlined /></template>
+          打印
+        </a-button>
+        <a-button type="primary" @click.stop="toPdf">
+          <template #icon><printer-outlined /></template>
+          pdf
+        </a-button>
       </a-space>
     </template>
     <template #footer>

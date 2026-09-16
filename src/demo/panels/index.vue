@@ -33,11 +33,20 @@
               @clear="clearPaper"
             />
             <a-button-group>
-              <a-button type="primary" icon="eye" @click="preView">预览</a-button>
-              <a-button type="primary" @click="print">直接打印<template #icon><printer-outlined /></template></a-button>
+              <a-button type="primary" @click="preView">
+                <template #icon><eye-outlined /></template>
+                预览
+              </a-button>
+              <a-button type="primary" @click="print">
+                <template #icon><printer-outlined /></template>
+                直接打印
+              </a-button>
             </a-button-group>
             <a-button-group>
-              <a-button type="primary" icon="save" @click="save">保存</a-button>
+              <a-button type="primary" @click="save">
+                <template #icon><save-outlined /></template>
+                保存
+              </a-button>
             </a-button-group>
             <json-view :template="hiprintTemplate" />
           </a-space>
