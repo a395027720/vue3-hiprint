@@ -37,9 +37,10 @@ export default {
   computed: {
     templates() {
       const data = JSON.parse(JSON.stringify(templates));
+      const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       for (const key in data) {
         if (Object.hasOwnProperty.call(data, key)) {
-          data[key].preview = import.meta.env.DEV ? templates[key].preview : `/vue3-hiprint${templates[key].preview}`
+          data[key].preview = `${base}${templates[key].preview}`
         }
       }
       return data;
