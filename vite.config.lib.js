@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import copy from 'rollup-plugin-copy'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 import requireContextShim from './vite-plugins/require-context-shim.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -16,6 +17,9 @@ export default defineConfig({
   plugins: [
     vue(),
     requireContextShim(),
+    // 把 CSS 字符串内联到 JS bundle,运行时注入 <style>,消费方无需手动 import style.css
+    // 这样 print-lock.css 走 media="print" 的契约也不变(plugin 不影响 media 行为)
+    cssInjectedByJsPlugin(),
     copy({
       targets: [
         { src: 'src/hiprint/css/print-lock.css', dest: 'dist' },

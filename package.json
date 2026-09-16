@@ -1,7 +1,7 @@
 {
   "name": "@jake-gao/vue3-hiprint",
   "description": "基于 hiprint 的 Vue3 可视化打印设计器",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "author": "jake-gao",
   "license": "MIT",
   "main": "dist/vue3-hiprint.js",
@@ -60,7 +60,8 @@
     "@vitejs/plugin-vue": "^5.0.0",
     "rollup-plugin-copy": "^3.5.0",
     "sass": "^1.80.0",
-    "vite": "^5.0.0"
+    "vite": "^5.0.0",
+    "vite-plugin-css-injected-by-js": "~4.0.1"
   },
   "dependencies": {
     "@claviska/jquery-minicolors": "^2.3.6",
@@ -68,13 +69,13 @@
     "bwip-js": "^4.0.0",
     "canvg": "^3.0.10",
     "concurrent-tasks": "^1.0.7",
+    "dom-to-image-more": "3.7.2",
     "jquery": "^3.6.0",
     "jsbarcode": "^3.11.5",
     "jspdf": "^2.5.1",
     "lodash": "^4.17.21",
     "nzh": "^1.0.8",
     "socket.io-client": "^4.5.1",
-    "dom-to-image-more": "3.7.2",
     "vue": "^3.4.0",
     "vue-ls": "^4.0.0"
   }
