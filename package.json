@@ -1,7 +1,7 @@
 {
   "name": "@jake-gao/vue3-hiprint",
   "description": "基于 hiprint 的 Vue3 可视化打印设计器",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "author": "jake-gao",
   "license": "MIT",
   "main": "dist/vue3-hiprint.js",
