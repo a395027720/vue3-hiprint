@@ -13,7 +13,7 @@
         <div style="display: flex; align-items: center; gap: 8px">
           <!-- 纸张设置 + 缩放控件（封装在 PaperToolbar 内）-->
           <PaperToolbar
-            :template="hiprintTemplate"
+            :template="template"
             :show-paper-type="false"
             :show-scale="true"
             :show-clear="false"
@@ -230,11 +230,7 @@
                 </a-col>
                 <a-col :span="12" class="drag_item_box">
                   <div>
-                    <a
-                      class="ep-draggable-item"
-                      tid="defaultModule.image"
-                      style
-                    >
+                    <a class="ep-draggable-item" tid="defaultModule.image" style>
                       <span
                         class="glyphicon glyphicon-picture"
                         aria-hidden="true"
@@ -258,11 +254,7 @@
                 </a-col>
                 <a-col :span="12" class="drag_item_box">
                   <div>
-                    <a
-                      class="ep-draggable-item"
-                      tid="defaultModule.table"
-                      style
-                    >
+                    <a class="ep-draggable-item" tid="defaultModule.table" style>
                       <span
                         class="glyphicon glyphicon-th"
                         aria-hidden="true"
@@ -292,11 +284,7 @@
               <a-row style="height: 100px">
                 <a-col :span="12" class="drag_item_box">
                   <div>
-                    <a
-                      class="ep-draggable-item"
-                      tid="defaultModule.html"
-                      style=""
-                    >
+                    <a class="ep-draggable-item" tid="defaultModule.html" style="">
                       <span
                         class="glyphicon glyphicon-header"
                         aria-hidden="true"
@@ -420,783 +408,562 @@
       </a-col>
     </a-row>
     <!-- 预览 -->
-    <PrintPreviewModal ref="preView" />
+    <PrintPreviewModal ref="preViewRef" />
   </a-card>
 </template>
 
-<script defer>
-import { Modal } from "ant-design-vue";
-// import {defaultElementTypeProvider, hiprint} from '../../index'
-import * as vuePluginHiprint from "../../index";
-// import panel from './panel'
+<script setup>
+import { ref, computed, onMounted, getCurrentInstance } from "vue";
+import { Modal, message } from "ant-design-vue";
+import { useHiprint, hiprint, defaultElementTypeProvider } from "../../index";
 import printData from "./print-data";
 import PrintPreviewModal from "../components/PreviewModal.vue";
 import PaperToolbar from "../components/PaperToolbar.vue";
 import jsonView from "../json-view.vue";
 import fontSize from "./font-size.js";
 import scale from "./scale.js";
-// disAutoConnect();
-var hiprint, defaultElementTypeProvider, panel;
-let hiprintTemplate;
 
-export default {
-  name: "printDesign",
-  components: { PrintPreviewModal, PaperToolbar, jsonView },
-  data() {
-    return {
-      template: null,
-      curPaper: {
-        type: "A4",
-        width: 210,
-        height: 296.6,
-      },
-      paperTypes: {
-        A3: {
-          width: 420,
-          height: 296.6,
-        },
-        A4: {
-          width: 210,
-          height: 296.6,
-        },
-        A5: {
-          width: 210,
-          height: 147.6,
-        },
-        B3: {
-          width: 500,
-          height: 352.6,
-        },
-        B4: {
-          width: 250,
-          height: 352.6,
-        },
-        B5: {
-          width: 250,
-          height: 175.6,
-        },
-      },
-      // 自定义纸张
-      paperPopVisible: false,
-      paperWidth: 220,
-      paperHeight: 80,
-      // 缩放
-      scaleValue: 1,
-      scaleMax: 5,
-      scaleMin: 0.5,
-      // 导入导出json
-      jsonIn: "",
-      jsonOut: "",
-      // 功能
-      curKey: "",
-      keyList: [
-        { key: 1, name: "直接打印/api打印" },
-        { key: 2, name: "导出PDF文件/流" },
-        { key: 3, name: "ipp打印(需打印机支持)" },
-        { key: 4, name: "元素参数操作" },
-        { key: 5, name: "模板导入导出" },
-        { key: 6, name: "元素获取/更新参数" },
-        { key: 7, name: "元素对齐/间距(需先选中)" },
-      ],
-    };
-  },
-  computed: {
-    curPaperType() {
-      let type = "other";
-      let types = this.paperTypes;
-      for (const key in types) {
-        let item = types[key];
-        let { width, height } = this.curPaper;
-        if (item.width === width && item.height === height) {
-          type = key;
-        }
-      }
-      return type;
+defineOptions({ name: "printDesign" });
+
+// 数据（原 data()）
+const curPaper = ref({
+  type: "A4",
+  width: 210,
+  height: 296.6,
+});
+const paperTypes = ref({
+  A3: { width: 420, height: 296.6 },
+  A4: { width: 210, height: 296.6 },
+  A5: { width: 210, height: 147.6 },
+  B3: { width: 500, height: 352.6 },
+  B4: { width: 250, height: 352.6 },
+  B5: { width: 250, height: 175.6 },
+});
+const paperPopVisible = ref(false);
+const paperWidth = ref(220);
+const paperHeight = ref(80);
+const scaleValue = ref(1);
+const scaleMax = ref(5);
+const scaleMin = ref(0.5);
+const jsonIn = ref("");
+const jsonOut = ref("");
+const curKey = ref("");
+const keyList = ref([
+  { key: 1, name: "直接打印/api打印" },
+  { key: 2, name: "导出PDF文件/流" },
+  { key: 3, name: "ipp打印(需打印机支持)" },
+  { key: 4, name: "元素参数操作" },
+  { key: 5, name: "模板导入导出" },
+  { key: 6, name: "元素获取/更新参数" },
+  { key: 7, name: "元素对齐/间距(需先选中)" },
+]);
+
+// module-level: panel 由 getPanel 加载
+let panel;
+
+// useHiprint 一站式 hook（templateOptions 含 design 特有的 PrintTemplate 选项）
+const {
+  template,
+  build,
+  clear,
+  guard,
+} = useHiprint({
+  designOptions: { grid: true },
+  templateOptions: {
+    onImageChooseClick: (target) => {
+      setTimeout(() => {
+        target.refresh(
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAtAAAAIIAQMAAAB99EudAAAABlBMVEUmf8vG2O41LStnAAABD0lEQVR42u3XQQqCQBSAYcWFS4/QUTpaHa2jdISWLUJjjMpclJoPGvq+1WsYfiJCZ4oCAAAAAAAAAAAAAAAAAHin6pL9c6H/fOzHbRrP0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0u/SY9LS0tLS0tLS0tLS0n+edm+UlpaWlpaWlpaWlpaW/tl0Ndyzbno7/+tPTJdd1wal69dNa6abx+Lq6TSeYtK7BX/Diek0XULSZZrakPRtV0i6Hu/KIt30q4fM0pvBqvR9mvsQkZaW9gyJT+f5lsnzjR54xAk8mAUeJyMPwYFH98ALx5Jr0kRLLndT7b64UX9QR/0eAAAAAAAAAAAAAAAAAAD/4gpryzr/bja4QgAAAABJRU5ErkJggg==",
+          { real: true },
+        );
+      }, 3000);
+    },
+    fontList: [
+      { title: "微软雅黑", value: "Microsoft YaHei" },
+      { title: "黑体", value: "STHeitiSC-Light" },
+      { title: "思源黑体", value: "SourceHanSansCN-Normal" },
+      { title: "王羲之书法体", value: "王羲之书法体" },
+      { title: "宋体", value: "SimSun" },
+      { title: "华为楷体", value: "STKaiti" },
+      { title: "cursive", value: "cursive" },
+    ],
+    dataMode: 1,
+    history: true,
+    willOutOfBounds: true,
+    qtDesigner: true,
+    onDataChanged: (type, json) => {
+      console.log(type);
+      console.log(json);
+    },
+    onUpdateError: (e) => {
+      console.log(e);
     },
   },
-  mounted() {
-    this.getPanel();
-    hiprint = vuePluginHiprint.hiprint;
-    defaultElementTypeProvider = vuePluginHiprint.defaultElementTypeProvider;
-    this.init();
-  },
-  methods: {
-    /**
-     * @description: 加载 panel
-     */
-    getPanel() {
-      // 加载所有 panel（Vite 用 import.meta.glob 替代 webpack 的 require.context）
-      const panelModules = import.meta.glob("./*panel*.js", { eager: true });
-      panel = panelModules["./panel.js"].default;
-    },
-    init() {
-      hiprint.init({
-        providers: [new defaultElementTypeProvider()],
+  onGuardFail: () => Modal.error({
+    title: "客户端未连接",
+    content: "请先下载并运行 electron-hiprint 打印服务（详见 README 中的 electron-hiprint 章节）。",
+    okText: "我知道了",
+  }),
+});
+
+// 预览 modal ref
+const preViewRef = ref(null);
+
+// plugin 注入的 $print / $print2（main.js 装了 hiPrintPlugin），script setup 里通过 instance proxy 调
+const { proxy } = getCurrentInstance();
+
+// 计算属性
+const curPaperType = computed(() => {
+  let type = "other";
+  const types = paperTypes.value;
+  for (const key in types) {
+    let item = types[key];
+    let { width, height } = curPaper.value;
+    if (item.width === width && item.height === height) {
+      type = key;
+    }
+  }
+  return type;
+});
+
+// 加载 panel
+function getPanel() {
+  const panelModules = import.meta.glob("./*panel*.js", { eager: true });
+  panel = panelModules["./panel.js"].default;
+}
+
+// 初始化 hiprint 引擎
+function init() {
+  hiprint.init({ providers: [new defaultElementTypeProvider()] });
+  hiprint.setConfig();
+  hiprint.PrintElementTypeManager.buildByHtml($(".ep-draggable-item"));
+  build(panel);
+  console.log(template.value);
+  scaleValue.value = template.value?.editingPanel?.scale || 1;
+}
+
+onMounted(() => {
+  getPanel();
+  init();
+});
+
+function setOptionConfig(type) {
+  switch (type) {
+    case -1:
+      hiprint.setConfig({
+        movingDistance: 2.5,
+        text: {
+          tabs: [
+            {
+              options: [
+                {
+                  name: "fixed",
+                  hidden: true,
+                },
+              ],
+            },
+          ],
+          supportOptions: [
+            { name: "styler", hidden: true },
+            { name: "formatter", hidden: true },
+          ],
+        },
+        image: {
+          tabs: [
+            {
+              replace: true,
+              name: "基本",
+              options: [
+                { name: "field", hidden: false },
+                { name: "src", hidden: false },
+                { name: "fit", hidden: false },
+              ],
+            },
+          ],
+        },
       });
-      // 还原配置
+      hiprint.setConfig({
+        movingDistance: 2.5,
+        text: {
+          tabs: [
+            {
+              options: [{ name: "fixed", hidden: true }],
+            },
+          ],
+          supportOptions: [
+            { name: "styler", hidden: true },
+            { name: "formatter", hidden: true },
+          ],
+        },
+        image: {
+          tabs: [
+            {
+              replace: true,
+              name: "基本",
+              options: [
+                { name: "field", hidden: false },
+                { name: "src", hidden: false },
+                { name: "fit", hidden: false },
+              ],
+            },
+          ],
+        },
+      });
+      break;
+    case 0:
       hiprint.setConfig();
-      // eslint-disable-next-line no-undef
-      hiprint.PrintElementTypeManager.buildByHtml($(".ep-draggable-item"));
-      $("#hiprint-printTemplate").empty();
-      let that = this;
-      this.template = hiprintTemplate = new hiprint.PrintTemplate({
-        template: panel,
-        // 图片选择功能
-        onImageChooseClick: (target) => {
-          // 测试 3秒后修改图片地址值
-          setTimeout(() => {
-            // target.refresh(url,options,callback)
-            // callback(el, width, height) // 原元素,宽,高
-            // target.refresh(url,false,(el,width,height)=>{
-            //   el.options.width = width;
-            //   el.designTarget.css('width', width + "pt");
-            //   el.designTarget.children('.resize-panel').trigger($.Event('click'));
-            // })
-            target.refresh(
-              "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAtAAAAIIAQMAAAB99EudAAAABlBMVEUmf8vG2O41LStnAAABD0lEQVR42u3XQQqCQBSAYcWFS4/QUTpaHa2jdISWLUJjjMpclJoPGvq+1WsYfiJCZ4oCAAAAAAAAAAAAAAAAAHin6pL9c6H/fOzHbRrP0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0u/SY9LS0tLS0tLS0tLS0n+edm+UlpaWlpaWlpaWlpaW/tl0Ndyzbno7/+tPTJdd1wal69dNa6abx+Lq6TSeYtK7BX/Diek0XULSZZrakPRtV0i6Hu/KIt30q4fM0pvBqvR9mvsQkZaW9gyJT+f5lsnzjR54xAk8mAUeJyMPwYFH98ALx5Jr0kRLLndT7b64UX9QR/0eAAAAAAAAAAAAAAAAAAD/4gpryzr/bja4QgAAAABJRU5ErkJggg==",
-              {
-                // auto: true, // 根据图片宽高自动等比(宽>高?width:height)
-                // width: true, // 按宽调整高
-                // height: true, // 按高调整宽
-                real: true, // 根据图片实际尺寸调整(转pt)
-              },
-            );
-          }, 3000);
-          // target.getValue()
-          // target.refresh(url)
+      break;
+    case 1:
+      hiprint.setConfig({
+        text: {
+          tabs: [
+            {},
+            {},
+            { name: "边框", replace: true, options: [] },
+            { name: "高级", replace: true, options: [] },
+          ],
         },
-        // 自定义可选字体
-        // 或者使用 hiprintTemplate.setFontList([])
-        // 或元素中 options.fontList: []
-        fontList: [
-          { title: "微软雅黑", value: "Microsoft YaHei" },
-          { title: "黑体", value: "STHeitiSC-Light" },
-          { title: "思源黑体", value: "SourceHanSansCN-Normal" },
-          { title: "王羲之书法体", value: "王羲之书法体" },
-          { title: "宋体", value: "SimSun" },
-          { title: "华为楷体", value: "STKaiti" },
-          { title: "cursive", value: "cursive" },
+      });
+      break;
+    case 2:
+      hiprint.setConfig({
+        image: { tabs: [], supportOptions: [] },
+      });
+      break;
+    case 3:
+      hiprint.setConfig({
+        optionItems: [
+          fontSize,
+          (function () {
+            function t() {
+              this.name = "zIndex";
+            }
+            t.prototype.css = function (t, e) {
+              if (t && t.length) {
+                if (e) return t.css("z-index", e);
+              }
+              return null;
+            };
+            t.prototype.createTarget = function () {
+              this.target = $(
+                '<div class="hiprint-option-item">\n        <div class="hiprint-option-item-label">\n        元素层级2\n        </div>\n        <div class="hiprint-option-item-field">\n        <input type="number" class="auto-submit"/>\n        </div>\n    </div>',
+              );
+              return this.target;
+            };
+            t.prototype.getValue = function () {
+              var t = this.target.find("input").val();
+              if (t) return parseInt(t.toString());
+            };
+            t.prototype.setValue = function (t) {
+              this.target.find("input").val(t);
+            };
+            t.prototype.destroy = function () {
+              this.target.remove();
+            };
+            return t;
+          })(),
         ],
-        dataMode: 1, // 1:getJson 其他：getJsonTid 默认1
-        history: true, // 是否需要 撤销重做功能
-        willOutOfBounds: true, // 是否允许组件内的控件超出范围
-        qtDesigner: true, // 是否开启类似QT Designer的唯一field生成模式
-        onDataChanged: (type, json) => {
-          console.log(type); // 新增、移动、删除、修改(参数调整)、大小、旋转
-          console.log(json); // 返回 template
-        },
-        onUpdateError: (e) => {
-          console.log(e);
-        },
-        settingContainer: "#PrintElementOptionSetting",
-        paginationContainer: ".hiprint-printPagination",
       });
-      hiprintTemplate.design("#hiprint-printTemplate", { grid: true });
-      console.log(hiprintTemplate);
-      // 获取当前放大比例, 当zoom时传true 才会有
-      this.scaleValue = hiprintTemplate.editingPanel.scale || 1;
-    },
-    setOptionConfig(type) {
-      switch (type) {
-        case -1: // 测试
-          hiprint.setConfig({
-            movingDistance: 2.5,
-            text: {
-              tabs: [
-                // 隐藏部分
+      break;
+    case 4:
+      hiprint.setConfig({
+        optionItems: [scale],
+        movingDistance: 2.5,
+        text: {
+          tabs: [
+            {},
+            {
+              name: "样式",
+              options: [
                 {
-                  // name: '测试', // tab名称 可忽略
-                  options: [
-                    {
-                      name: "fixed",
-                      hidden: true,
-                    },
-                  ],
-                },
-                // 当修改第二个 tabs 时,必须把他之前的 tabs 都列举出来.
-              ],
-              supportOptions: [
-                {
-                  name: "styler",
-                  hidden: true,
-                },
-                {
-                  name: "formatter",
-                  hidden: true,
+                  name: "scale",
+                  after: "transform",
+                  hidden: false,
                 },
               ],
             },
-            image: {
-              tabs: [
-                {
-                  // 整体替换
-                  replace: true,
-                  name: "基本",
-                  options: [
-                    {
-                      name: "field",
-                      hidden: false,
-                    },
-                    {
-                      name: "src",
-                      hidden: false,
-                    },
-                    {
-                      name: "fit",
-                      hidden: false,
-                    },
-                  ],
-                },
-              ],
-            },
-          });
-          hiprint.setConfig({
-            movingDistance: 2.5,
-            text: {
-              tabs: [
-                // 隐藏部分
-                {
-                  // name: '测试', // tab名称 可忽略
-                  options: [
-                    {
-                      name: "fixed",
-                      hidden: true,
-                    },
-                  ],
-                },
-                // 当修改第二个 tabs 时,必须把他之前的 tabs 都列举出来.
-              ],
-              supportOptions: [
-                {
-                  name: "styler",
-                  hidden: true,
-                },
-                {
-                  name: "formatter",
-                  hidden: true,
-                },
-              ],
-            },
-            image: {
-              tabs: [
-                {
-                  // 整体替换
-                  replace: true,
-                  name: "基本",
-                  options: [
-                    {
-                      name: "field",
-                      hidden: false,
-                    },
-                    {
-                      name: "src",
-                      hidden: false,
-                    },
-                    {
-                      name: "fit",
-                      hidden: false,
-                    },
-                  ],
-                },
-              ],
-            },
-          });
-          break;
-        case 0: // 还原配置
-          hiprint.setConfig();
-          break;
-        case 1: // 隐藏文本 边框、高级
-          hiprint.setConfig({
-            text: {
-              tabs: [
-                {},
-                {},
-                // 隐藏边框
-                {
-                  name: "边框",
-                  replace: true, // 整体替换
-                  options: [],
-                },
-                // 隐藏高级
-                {
-                  name: "高级",
-                  replace: true, // 整体替换
-                  options: [],
-                },
-              ],
-            },
-          });
-          break;
-        case 2: // 图片元素 参数不分组
-          hiprint.setConfig({
-            image: {
-              tabs: [],
-              supportOptions: [],
-            },
-          });
-          break;
-        case 3: // 重写字体大小、元素层级参数
-          hiprint.setConfig({
-            optionItems: [
-              fontSize,
-              (function () {
-                function t() {
-                  this.name = "zIndex";
-                }
+          ],
+        },
+      });
+      break;
+  }
+  console.log(template.value);
+  template.value?.editingPanel?.printElements?.forEach((e) => {
+    if (e._printElementOptionTabs) delete e._printElementOptionTabs;
+    if (e._printElementOptionItems) delete e._printElementOptionItems;
+  });
+  const els = template.value?.getSelectEls();
+  els && els.length && els[0].designTarget.trigger($.Event("click"));
+}
 
-                return (
-                  (t.prototype.css = function (t, e) {
-                    if (t && t.length) {
-                      if (e) return t.css("z-index", e);
-                    }
-                    return null;
-                  }),
-                  (t.prototype.createTarget = function () {
-                    return (
-                      (this.target = $(
-                        '<div class="hiprint-option-item">\n        <div class="hiprint-option-item-label">\n        元素层级2\n        </div>\n        <div class="hiprint-option-item-field">\n        <input type="number" class="auto-submit"/>\n        </div>\n    </div>',
-                      )),
-                      this.target
-                    );
-                  }),
-                  (t.prototype.getValue = function () {
-                    var t = this.target.find("input").val();
-                    if (t) return parseInt(t.toString());
-                  }),
-                  (t.prototype.setValue = function (t) {
-                    this.target.find("input").val(t);
-                  }),
-                  (t.prototype.destroy = function () {
-                    this.target.remove();
-                  }),
-                  t
-                );
-              })(),
-            ],
-          });
-          break;
-        case 4: // 新增缩放参数
-          hiprint.setConfig({
-            optionItems: [scale],
-            movingDistance: 2.5,
-            text: {
-              tabs: [
-                {},
-                // 当修改第二个 tabs 时,必须把他之前的 tabs 都列举出来.
-                {
-                  name: "样式",
-                  options: [
-                    {
-                      name: "scale",
-                      after: "transform", // 自定义参数，插入在 transform 之后
-                      hidden: false,
-                    },
-                  ],
-                },
-              ],
-            },
-          });
-          break;
-      }
-      // 参数 tabs 会缓存. 这里演示: 手动清空一下, 再点击选中元素
-      console.log(hiprintTemplate);
-      hiprintTemplate.editingPanel.printElements.forEach((e) => {
-        if (e._printElementOptionTabs) {
-          delete e._printElementOptionTabs;
-        }
-        if (e._printElementOptionItems) {
-          delete e._printElementOptionItems;
-        }
+function setPaper(type, value) {
+  try {
+    if (Object.keys(paperTypes.value).includes(type)) {
+      curPaper.value = { type, width: value.width, height: value.height };
+    } else {
+      curPaper.value = { type: "other", width: value.width, height: value.height };
+    }
+    template.value?.setPaper(value.width, value.height);
+  } catch (error) {
+    message.error(`操作失败: ${error}`)
+  }
+}
+
+function otherPaper() {
+  const value = { width: paperWidth.value, height: paperHeight.value };
+  paperPopVisible.value = false;
+  setPaper("other", value);
+}
+
+function changeScale(big) {
+  let v = scaleValue.value;
+  if (big) {
+    v += 0.1;
+    if (v > scaleMax.value) v = 5;
+  } else {
+    v -= 0.1;
+    if (v < scaleMin.value) v = 0.5;
+  }
+  if (template.value) {
+    template.value.zoom(v);
+    scaleValue.value = v;
+  }
+}
+
+function rotatePaper() {
+  template.value?.rotatePaper();
+}
+
+function preView() {
+  hiprint.updateElementType("defaultModule.text", (type) => {
+    type.title = "这是更新后的元素";
+    return type;
+  });
+  hiprint.refreshPrinterList((list) => {
+    console.log("refreshPrinterList");
+    console.log(list);
+  });
+  hiprint.getAddress("ip", (data) => console.log("ip", data));
+  hiprint.getAddress("ipv6", (data) => console.log("ipv6", data));
+  hiprint.getAddress("mac", (data) => console.log("mac", data));
+  hiprint.getAddress("dns", (data) => console.log("dns", data));
+  hiprint.getAddress("all", (data) => console.log("all", data));
+  hiprint.getAddress(
+    "interface",
+    (data) => console.log("interface", data),
+    "IPv4",
+    "eth1",
+  );
+  preViewRef.value?.show(template.value, printData);
+}
+
+function onlyPrint() {
+  proxy.$print(undefined, panel, printData, {}, {
+    styleHandler: () => {
+      let css = '<link href="http://hiprint.io/Content/hiprint/css/print-lock.css" media="print" rel="stylesheet">';
+      return css;
+    },
+  });
+  console.log(template.value);
+}
+
+function onlyPrint2() {
+  guard.run(() => {
+    const localTpl = proxy.$print2(undefined, panel, printData, {
+      printer: "",
+      title: "Api单独打印",
+      styleHandler: () => {
+        let css = "<style>.hiprint-printElement-text{color:red !important;}</style>";
+        return css;
+      },
+    });
+    const key = "Api单独直接打印";
+    localTpl.on("printSuccess", () => {
+      Modal.success({
+        key,
+        placement: "topRight",
+        message: key + " 打印成功",
+        description: "Api单独直接打印回调",
       });
-      let els = hiprintTemplate.getSelectEls();
-      els && els.length && els[0].designTarget.trigger($.Event("click"));
+    });
+  });
+}
+
+function handleMenuClick(e) {
+  curKey.value = e.key;
+}
+
+function print() {
+  guard.run(() => {
+    const printerList = template.value?.getPrinterList();
+    console.log(printerList);
+    template.value?.print2(printData, { printer: "", title: "hiprint测试打印" });
+  });
+}
+
+function printByFragments() {
+  guard.run(() => {
+    const dataList = new Array(50).fill(printData);
+    template.value?.print2(dataList, {
+      printer: "",
+      title: "hiprint测试打印",
+      printByFragments: true,
+    });
+  });
+}
+
+function clearPaper() {
+  clear();
+}
+
+function exportPdf(type) {
+  template.value?.toPdf(printData, "测试导出pdf", { isDownload: false, type }).then((res) => {
+    console.log("type:", type);
+    console.log(res);
+  });
+}
+
+function ippPrintAttr() {
+  const printerList = template.value?.getPrinterList();
+  console.log(printerList);
+  if (!printerList?.length) return;
+  const p = printerList[0];
+  console.log(p);
+  const url = p.options["printer-uri-supported"];
+  hiprint.ippPrint(
+    {
+      url,
+      opt: {},
+      action: "Get-Printer-Attributes",
+      message: null,
     },
-    /**
-     * 设置纸张大小
-     * @param type [A3, A4, A5, B3, B4, B5, other]
-     * @param value {width,height} mm
-     */
-    setPaper(type, value) {
-      try {
-        if (Object.keys(this.paperTypes).includes(type)) {
-          this.curPaper = {
-            type: type,
-            width: value.width,
-            height: value.height,
-          };
-          hiprintTemplate.setPaper(value.width, value.height);
-        } else {
-          this.curPaper = {
-            type: "other",
-            width: value.width,
-            height: value.height,
-          };
-          hiprintTemplate.setPaper(value.width, value.height);
-        }
-      } catch (error) {
-        this.$message.error(`操作失败: ${error}`);
-      }
-    },
-    otherPaper() {
-      let value = {};
-      value.width = this.paperWidth;
-      value.height = this.paperHeight;
-      this.paperPopVisible = false;
-      this.setPaper("other", value);
-    },
-    changeScale(big) {
-      let scaleValue = this.scaleValue;
-      if (big) {
-        scaleValue += 0.1;
-        if (scaleValue > this.scaleMax) scaleValue = 5;
-      } else {
-        scaleValue -= 0.1;
-        if (scaleValue < this.scaleMin) scaleValue = 0.5;
-      }
-      if (hiprintTemplate) {
-        // scaleValue: 放大缩小值, false: 不保存(不传也一样), 如果传 true, 打印时也会放大
-        hiprintTemplate.zoom(scaleValue);
-        this.scaleValue = scaleValue;
-      }
-    },
-    rotatePaper() {
-      if (hiprintTemplate) {
-        hiprintTemplate.rotatePaper();
-      }
-    },
-    preView() {
-      // 测试, 点预览更新拖拽元素
-      hiprint.updateElementType("defaultModule.text", (type) => {
-        type.title = "这是更新后的元素";
-        return type;
-      });
-      // 测试, 通过socket刷新打印机列表； 默认只有连接的时候才会获取到最新的打印机列表
-      hiprint.refreshPrinterList((list) => {
-        console.log("refreshPrinterList");
-        console.log(list);
-      });
-      // 测试, 获取IP、IPV6、MAC地址、DNS
-      // 参数格式：
-      // 1. 类型（ip、ipv6、mac、dns、all、interface、vboxnet）
-      // 2. 回调 data => {addr, e}  addr: 返回的数据 e:错误信息
-      // 3. 其他参数 ...args
-      hiprint.getAddress("ip", (data) => {
-        console.log("ip");
-        console.log(data);
-      });
-      hiprint.getAddress("ipv6", (data) => {
-        console.log("ipv6");
-        console.log(data);
-      });
-      hiprint.getAddress("mac", (data) => {
-        console.log("mac");
-        console.log(data);
-      });
-      hiprint.getAddress("dns", (data) => {
-        console.log("dns");
-        console.log(data);
-      });
-      hiprint.getAddress("all", (data) => {
-        console.log("all");
-        console.log(data);
-      });
-      // 各个平台不一样, 用法见: https://www.npmjs.com/package/address
-      hiprint.getAddress(
-        "interface",
-        (data) => {
-          console.log("interface");
-          console.log(data);
+    (res) => console.log(res),
+    (printer) => console.log(printer),
+  );
+}
+
+function ippPrintTest() {
+  const printerList = template.value?.getPrinterList();
+  console.log(printerList);
+  if (!printerList?.length) return;
+  const p = printerList[0];
+  console.log(p);
+  const url = p.options["printer-uri-supported"];
+  hiprint.ippPrint(
+    {
+      url,
+      opt: {},
+      action: "Print-Job",
+      message: {
+        "operation-attributes-tag": {
+          "requesting-user-name": "hiPrint",
+          "job-name": "ipp Test Job",
+          "document-format": "text/plain",
         },
-        "IPv4",
-        "eth1",
-      );
-      this.$refs.preView.show(hiprintTemplate, printData);
+        data: "test test test test test test test",
+        encoding: "utf-8",
+      },
     },
-    onlyPrint() {
-      let hiprintTemplate = this.$print(
-        undefined,
-        panel,
-        printData,
-        {},
-        {
-          styleHandler: () => {
-            let css =
-              '<link href="http://hiprint.io/Content/hiprint/css/print-lock.css" media="print" rel="stylesheet">';
-            return css;
-          },
+    (res) => console.log(res),
+    (printer) => console.log(printer),
+  );
+}
+
+function ippRequestTest() {
+  const printerList = template.value?.getPrinterList();
+  console.log(printerList);
+  if (!printerList?.length) return;
+  const p = printerList[0];
+  console.log(p);
+  const url = p.options["printer-uri-supported"];
+  hiprint.ippRequest(
+    {
+      url,
+      data: {
+        operation: "Get-Printer-Attributes",
+        "operation-attributes-tag": {
+          "attributes-charset": "utf-8",
+          "attributes-natural-language": "zh-cn",
+          "printer-uri": url,
         },
-      );
-      console.log(hiprintTemplate);
+      },
     },
-    onlyPrint2() {
-      let that = this;
-      if (window.hiwebSocket.opened) {
-        let hiprintTemplate = this.$print2(undefined, panel, printData, {
-          printer: "",
-          title: "Api单独打印",
-          styleHandler: () => {
-            // let css = '<link href="http://hiprint.io/Content/hiprint/css/print-lock.css" media="print" rel="stylesheet">';
-            let css =
-              "<style>.hiprint-printElement-text{color:red !important;}</style>";
-            return css;
-          },
-        });
-        let key = "Api单独直接打印";
-        hiprintTemplate.on("printSuccess", function () {
-          that.$notification.success({
-            key: key,
-            placement: "topRight",
-            message: key + " 打印成功",
-            description: "Api单独直接打印回调",
-          });
-        });
-        return;
-      }
-      Modal.error({
-        title: "客户端未连接",
-        content:
-          "请先下载并运行 electron-hiprint 打印服务（详见 README 中的 electron-hiprint 章节）。",
-        okText: "我知道了",
-      });
-    },
-    handleMenuClick(e) {
-      const { key } = e;
-      this.curKey = key;
-    },
-    print() {
-      this.doOperationWhenClientConnected(() => {
-        const printerList = hiprintTemplate.getPrinterList();
-        console.log(printerList);
-        hiprintTemplate.print2(printData, {
-          printer: "",
-          title: "hiprint测试打印",
-        });
-      });
-    },
-    printByFragments() {
-      this.doOperationWhenClientConnected(() => {
-        const dataList = new Array(50).fill(printData);
-        // 原有方法打印不成功，原因是获取HTML的方法处理时间过长，导致超过socket心跳间隔
-        // hiprintTemplate.print2(dataList, {printer: '', title: 'hiprint测试打印'});
-        hiprintTemplate.print2(dataList, {
-          printer: "",
-          title: "hiprint测试打印",
-          printByFragments: true, // 是否需要分批打印，分批打印能够支持连续打印大量数据，但会增加打印所需时间
-          // generateHTMLInterval: 30, // 多条数据生成HTML的间隔，单位ms，默认是10
-          // fragmentSize: 10000,  // 分片字符长度，默认50000
-          // sendInterval: 20, // 分片传输间隔，单位ms，默认10
-          // type: 'pdf',
-        });
-      });
-    },
-    doOperationWhenClientConnected(operation) {
-      if (window.hiwebSocket.opened) {
-        operation?.();
-        return;
-      }
-      Modal.error({
-        title: "客户端未连接",
-        content:
-          "请先下载并运行 electron-hiprint 打印服务（详见 README 中的 electron-hiprint 章节）。",
-        okText: "我知道了",
-      });
-    },
-    clearPaper() {
-      try {
-        hiprintTemplate.clear();
-      } catch (error) {
-        this.$message.error(`操作失败: ${error}`);
-      }
-    },
-    exportPdf(type) {
-      hiprintTemplate
-        .toPdf(printData, "测试导出pdf", { isDownload: false, type: type })
-        .then((res) => {
-          console.log("type:", type);
-          console.log(res);
-        });
-    },
-    ippPrintAttr() {
-      // 不知道打印机 ipp 情况， 可通过 '客户端' 获取一下
-      const printerList = hiprintTemplate.getPrinterList();
-      console.log(printerList);
-      if (!printerList.length) return;
-      let p = printerList[0];
-      console.log(p);
-      // 系统不同， 参数可能不同
-      let url = p.options["printer-uri-supported"];
-      // 测试 获取 ipp打印 支持参数
-      hiprint.ippPrint(
-        {
-          url: url,
-          // 打印机参数： {version,uri,charset,language}
-          opt: {},
-          action: "Get-Printer-Attributes", // 获取打印机支持参数
-          // ipp参数
-          message: null,
+    (res) => console.log(res),
+  );
+}
+
+function ippRequestPrint() {
+  const printerList = template.value?.getPrinterList();
+  console.log(printerList);
+  if (!printerList?.length) return;
+  const p = printerList[0];
+  console.log(p);
+  const url = p.options["printer-uri-supported"];
+  const str = "ippRequestPrint ippRequestPrint ippRequestPrint";
+  const array = new Uint8Array(str.length);
+  for (var i = 0; i < str.length; i++) {
+    array[i] = str.charCodeAt(i);
+  }
+  const testData = array.buffer;
+  hiprint.ippRequest(
+    {
+      url,
+      data: {
+        operation: "Print-Job",
+        "operation-attributes-tag": {
+          "attributes-charset": "utf-8",
+          "attributes-natural-language": "zh-cn",
+          "printer-uri": url,
+          "requesting-user-name": "hiPrint",
+          "job-name": "ipp Request Job",
+          "document-format": "text/plain",
         },
-        (res) => {
-          // 执行的ipp 任务回调 / 错误回调
-          console.log(res);
-        },
-        (printer) => {
-          // ipp连接成功 回调 打印机信息
-          console.log(printer);
-        },
-      );
+        data: testData,
+      },
     },
-    ippPrintTest() {
-      // 不知道打印机 ipp 情况， 可通过 '客户端' 获取一下
-      const printerList = hiprintTemplate.getPrinterList();
-      console.log(printerList);
-      if (!printerList.length) return;
-      let p = printerList[0];
-      console.log(p);
-      // 系统不同， 参数可能不同
-      let url = p.options["printer-uri-supported"];
-      // 测试 打印文本
-      hiprint.ippPrint(
-        {
-          url: url,
-          // 打印机参数： {version,uri,charset,language}
-          opt: {},
-          action: "Print-Job",
-          // ipp参数
-          message: {
-            "operation-attributes-tag": {
-              "requesting-user-name": "hiPrint", // 用户名
-              "job-name": "ipp Test Job", // 任务名
-              "document-format": "text/plain", // 文档类型
-            },
-            // data 需为 Buffer (客户端简单处理了string 转 Buffer), 支持设置 encoding
-            // data 需为 Buffer (客户端简单处理了string 转 Buffer), 支持设置 encoding
-            // data 需为 Buffer (客户端简单处理了string 转 Buffer), 支持设置 encoding
-            // 其他 Uint8Array/ArrayBuffer   默认仅 使用 Buffer.from(data)
-            // 其他 Uint8Array/ArrayBuffer   默认仅 使用 Buffer.from(data)
-            // 其他 Uint8Array/ArrayBuffer   默认仅 使用 Buffer.from(data)
-            // 其他 Uint8Array/ArrayBuffer   默认仅 使用 Buffer.from(data)
-            data: "test test test test test test test",
-            encoding: "utf-8", // 默认可不传
-          },
-        },
-        (res) => {
-          // 执行的ipp 任务回调 / 错误回调
-          console.log(res);
-        },
-        (printer) => {
-          // ipp连接成功 回调 打印机信息
-          console.log(printer);
-        },
-      );
-    },
-    // 自定义 ipp 请求
-    ippRequestTest() {
-      const printerList = hiprintTemplate.getPrinterList();
-      console.log(printerList);
-      if (!printerList.length) return;
-      let p = printerList[0];
-      console.log(p);
-      // 系统不同， 参数可能不同
-      let url = p.options["printer-uri-supported"];
-      // 详见： https://www.npmjs.com/package/ipp
-      hiprint.ippRequest(
-        {
-          url: url,
-          // 传入的数据 ipp.serialize 后 未做任何处理  打印内容 需要 Buffer
-          // 传入的数据 ipp.serialize 后 未做任何处理  打印内容 需要 Buffer
-          // 传入的数据 ipp.serialize 后 未做任何处理  打印内容 需要 Buffer
-          data: {
-            operation: "Get-Printer-Attributes",
-            "operation-attributes-tag": {
-              // 测试发现 Request下列3个必须要有
-              "attributes-charset": "utf-8",
-              "attributes-natural-language": "zh-cn",
-              "printer-uri": url,
-            },
-          },
-        },
-        (res) => {
-          // 执行的ipp 任务回调 / 错误回调
-          console.log(res);
-        },
-      );
-    },
-    ippRequestPrint() {
-      const printerList = hiprintTemplate.getPrinterList();
-      console.log(printerList);
-      if (!printerList.length) return;
-      let p = printerList[0];
-      console.log(p);
-      // 系统不同， 参数可能不同
-      let url = p.options["printer-uri-supported"];
-      let str = "ippRequestPrint ippRequestPrint ippRequestPrint";
-      let array = new Uint8Array(str.length);
-      for (var i = 0; i < str.length; i++) {
-        array[i] = str.charCodeAt(i);
-      }
-      let testData = array.buffer;
-      // 详见： https://www.npmjs.com/package/ipp
-      hiprint.ippRequest(
-        {
-          url: url,
-          // 传入的数据 ipp.serialize 后 未做任何处理  打印内容 需要 Buffer
-          // 传入的数据 ipp.serialize 后 未做任何处理  打印内容 需要 Buffer
-          // 传入的数据 ipp.serialize 后 未做任何处理  打印内容 需要 Buffer
-          data: {
-            operation: "Print-Job",
-            "operation-attributes-tag": {
-              // 测试发现 Request下列3个必须要有
-              "attributes-charset": "utf-8",
-              "attributes-natural-language": "zh-cn",
-              "printer-uri": url,
-              "requesting-user-name": "hiPrint", // 用户名
-              "job-name": "ipp Request Job", // 任务名
-              "document-format": "text/plain", // 文档类型
-            },
-            data: testData,
-          },
-        },
-        (res) => {
-          // 执行的ipp 任务回调 / 错误回调
-          console.log(res);
-        },
-      );
-    },
-    updateJson() {
-      if (hiprintTemplate) {
-        try {
-          hiprintTemplate.update(JSON.parse(this.jsonIn));
-        } catch (e) {
-          this.$message.error(`更新失败: ${e}`);
-        }
-      }
-    },
-    exportJson() {
-      if (hiprintTemplate) {
-        this.jsonOut = JSON.stringify(hiprintTemplate.getJson() || {});
-      }
-    },
-    setElsAlign(e) {
-      hiprintTemplate.setElsAlign(e);
-    },
-    setElsSpace(h) {
-      hiprintTemplate.setElsSpace(10, h);
-    },
-    setEleSelectByField() {
-      hiprintTemplate.selectElementsByField(["name"]);
-    },
-    getSelectEls() {
-      let els = hiprintTemplate.getSelectEls();
-      console.log(els);
-    },
-    updateFontSize() {
-      hiprintTemplate.updateOption("fontSize", 12);
-    },
-    updateFontWeight() {
-      hiprintTemplate.updateOption("fontWeight", "bolder");
-    },
-  },
-};
+    (res) => console.log(res),
+  );
+}
+
+function updateJson() {
+  if (!template.value) return;
+  try {
+    template.value.update(JSON.parse(jsonIn.value));
+  } catch (e) {
+    message.error(`更新失败: ${e}`);
+  }
+}
+
+function exportJson() {
+  if (template.value) {
+    jsonOut.value = JSON.stringify(template.value.getJson() || {});
+  }
+}
+
+function setElsAlign(e) {
+  template.value?.setElsAlign(e);
+}
+
+function setElsSpace(h) {
+  template.value?.setElsSpace(10, h);
+}
+
+function setEleSelectByField() {
+  template.value?.selectElementsByField(["name"]);
+}
+
+function getSelectEls() {
+  const els = template.value?.getSelectEls();
+  console.log(els);
+}
+
+function updateFontSize() {
+  template.value?.updateOption("fontSize", 12);
+}
+
+function updateFontWeight() {
+  template.value?.updateOption("fontWeight", "bolder");
+}
 </script>
 
 <style lang="scss" scoped>

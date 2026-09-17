@@ -64,15 +64,15 @@
 </template>
 
 <script setup>
-import { ref, markRaw, onMounted } from 'vue'
-import { Modal, message } from 'ant-design-vue'
+import { ref, onMounted } from 'vue'
+import { message, Modal } from 'ant-design-vue'
 
 import PrintLayout from '../components/PrintLayout.vue'
 import PaperToolbar from '../components/PaperToolbar.vue'
 import PreviewModal from '../components/PreviewModal.vue'
 
 import jsonView from '../json-view.vue'
-import { hiprint } from '../../index'
+import { useHiprint } from '../../index'
 import providers from './providers'
 import printData from './print-data'
 
@@ -80,8 +80,29 @@ defineOptions({ name: 'printCustom' })
 
 const mode = ref(0)
 const modeList = ref([])
-const hiprintTemplate = ref(null)
 const previewRef = ref()
+
+const {
+  template: hiprintTemplate,
+  build: buildTpl,
+  print2,
+  clear,
+  initProviders,
+} = useHiprint({
+  templateOptions: {
+    dataMode: 1,
+    history: false,
+    onDataChanged: (type, json) => {
+      console.log(type)
+      console.log(json)
+    },
+  },
+  onGuardFail: () => Modal.error({
+    title: '客户端未连接',
+    content: '请先下载并运行 electron-hiprint 打印服务（详见 README 中的 electron-hiprint 章节）。',
+    okText: '我知道了'
+  }),
+})
 
 function loadTemplates() {
   const raw = localStorage.getItem('hiPrint-KEY_TEMPLATES')
@@ -94,32 +115,19 @@ function persistTemplates(templates) {
 }
 
 function buildTemplate() {
-  $('#hiprint-printTemplate').empty()
   const provider = providers[mode.value]
   const allTemplates = loadTemplates()
-  const template = allTemplates[provider.value] || {}
-  hiprintTemplate.value = markRaw(
-    new hiprint.PrintTemplate({
-      template,
-      dataMode: 1,
-      history: false,
-      onDataChanged: (type, json) => {
-        console.log(type)
-        console.log(json)
-      },
-      settingContainer: '#PrintElementOptionSetting',
-      paginationContainer: '.hiprint-printPagination'
-    })
-  )
-  hiprintTemplate.value.design('#hiprint-printTemplate')
+  const tpl = allTemplates[provider.value] || {}
+  buildTpl(tpl)
 }
 
 function onModeChange() {
   const provider = providers[mode.value]
   if (!provider) return
-  hiprint.init({ providers: [provider.f] })
-  $('.hiprintEpContainer').empty()
-  hiprint.PrintElementTypeManager.build('.hiprintEpContainer', provider.value)
+  initProviders({
+    providers: [provider.f],
+    moduleName: provider.value,
+  })
   buildTemplate()
 }
 
@@ -135,18 +143,8 @@ function preView() {
 }
 
 function print() {
-  const tpl = hiprintTemplate.value
-  if (!tpl) return
-  if (window.hiwebSocket?.opened) {
-    console.log(tpl.getPrinterList())
-    tpl.print2(printData, { printer: '', title: 'hiprint测试打印' })
-    return
-  }
-  Modal.error({
-    title: '客户端未连接',
-    content: '请先下载并运行 electron-hiprint 打印服务（详见 README 中的 electron-hiprint 章节）。',
-    okText: '我知道了'
-  })
+  console.log(hiprintTemplate.value?.getPrinterList())
+  print2(printData, { title: 'hiprint测试打印' })
 }
 
 function save() {
@@ -162,11 +160,7 @@ function save() {
 }
 
 function clearPaper() {
-  try {
-    hiprintTemplate.value?.clear()
-  } catch (e) {
-    message.error(`操作失败: ${e}`)
-  }
+  clear()
 }
 
 onMounted(() => {

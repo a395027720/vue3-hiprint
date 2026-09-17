@@ -43,7 +43,8 @@
 </template>
 
 <script>
-import {hiprint} from '../../index'
+import { message } from "ant-design-vue";
+import {hiprint, useHiprint} from '../../index'
 import jsonView from '../json-view.vue'
 import panel from "../design/panel";
 import printData from "../design/print-data";
@@ -52,6 +53,12 @@ let hiprintTemplate;
 export default {
   name: "templatePreview",
   components: {jsonView},
+  setup() {
+    const { guard } = useHiprint({
+      onGuardFail: () => message.error('请先连接直接打印客户端'),
+    });
+    return { guard };
+  },
   data() {
     return {
       visible: false,
@@ -124,7 +131,7 @@ export default {
       });
     },
     print2() {
-      if (hiprint.hiwebSocket.opened) {
+      this.guard.run(() => {
         let that = this;
         this.hiprintTemplate.print2(this.printData, {
           printer: '', title: this.name,
@@ -132,8 +139,7 @@ export default {
             return that.extendCss
           }
         })
-      } else
-        this.$message.error('请先连接直接打印客户端')
+      })
     },
   }
 }

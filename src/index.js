@@ -79,10 +79,17 @@ hiprint.version = version
 
 window.hiprint = hiprint;
 window.vue3Hiprint = hiprint;
+// Vue 3 友好 wrapper 层(详见 src/hiprint/api/)
+import { useHiprint } from './hiprint/api/useHiprint'
+import { createPrintTemplate } from './hiprint/api/createPrintTemplate'
+
 export {
   autoConnect,
   disAutoConnect,
   hiprint,
   hiPrintPlugin,
   defaultElementTypeProvider,
+  // wrapper 层(单一 composable + Options API 友好顶层函数)
+  useHiprint,
+  createPrintTemplate,
 }

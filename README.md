@@ -43,6 +43,73 @@ tpl.print({ /* data */ });
 
 ---
 
+## Vue 3 Wrapper API（推荐）
+
+`useHiprint` 一站式 composable，收敛 init / providers / 模板 / 打印 / clear / guard。
+
+```vue
+<script setup>
+import { Modal } from "ant-design-vue";
+import { useHiprint, defaultElementTypeProvider } from "@jake-gao/vue3-hiprint";
+
+const {
+  template, build, rebuild,
+  print, print2, toPdf,
+  clear, guard, printing,
+  initProviders,
+} = useHiprint({
+  template: {},
+  providers: [new defaultElementTypeProvider()],
+  moduleName: "defaultModule",
+  onGuardFail: () => Modal.error({
+    title: "客户端未连接",
+    content: "请先下载并运行 electron-hiprint 打印服务。",
+    okText: "我知道了",
+  }),
+});
+
+onMounted(() => build());
+
+function handlePrint2() {
+  print2(printData, { title: "订单打印" });  // title 是 print2 调用时参数,非实例配置
+}
+function handleClear() { clear(); }
+</script>
+
+<template>
+  <div id="hiprint-printTemplate" />
+</template>
+```
+
+返回的 API 一览：
+
+| API | 用途 |
+|---|---|
+| `template` | 模板实例 ref（`markRaw` 后,直接传给 `PaperToolbar` 等组件） |
+| `build(tpl?)` / `rebuild(tpl?)` | 建模板 + design |
+| `print(data, opts?)` | 浏览器打印（弹系统打印预览），自动管 loading |
+| `print2(data, opts?)` | 客户端直接打印（socket.io），内置 guard |
+| `toPdf(data, name?, opts?)` | 导出 PDF |
+| `clear()` | 清空画布（try/catch + `message.error`） |
+| `guard.run(op, opts?)` | 客户端连接守卫，失败时调 `onGuardFail` |
+| `printing` | 打印 loading 态 ref |
+| `initProviders({providers?, moduleName?})` | 重新注册 providers（模式切换场景） |
+
+**`onGuardFail` 是唯一需要 demo 注入的 UI 回调**——`useHiprint` 不绑任何 UI 库，你想用 Element Plus / Naive UI / 自己写 toast 都行。
+
+Options API demo 用 `setup()` 暴露需要的部分：
+
+```js
+setup() {
+  const { guard, clear } = useHiprint({ onGuardFail: () => Modal.error({...}) });
+  return { guard, clear };
+}
+```
+
+Options API 还提供 `createPrintTemplate(opts)` 顶层函数,不走 ref（详见 bundle.js）。
+
+---
+
 ## Vue 3 全局插件
 
 ```js

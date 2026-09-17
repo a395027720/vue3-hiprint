@@ -68,15 +68,15 @@
 </template>
 
 <script setup>
-import { ref, markRaw, onMounted } from 'vue'
-import { Modal, message, notification } from 'ant-design-vue'
+import { ref, onMounted } from 'vue'
+import { message, Modal, notification } from 'ant-design-vue'
 
 import PrintLayout from '../components/PrintLayout.vue'
 import PaperToolbar from '../components/PaperToolbar.vue'
 import PreviewModal from '../components/PreviewModal.vue'
 
 import jsonView from '../json-view.vue'
-import { hiprint } from '../../index'
+import { useHiprint } from '../../index'
 import { providers, providerList } from './providers'
 import printData from './print-data'
 
@@ -84,43 +84,52 @@ defineOptions({ name: 'printPanels' })
 
 const mode = ref(0)
 const modeList = ref([])
-const hiprintTemplate = ref(null)
 const previewRef = ref()
+
+const {
+  template: hiprintTemplate,
+  build: buildTpl,
+  print2,
+  clear,
+  initProviders,
+} = useHiprint({
+  designOptions: { grid: true },
+  templateOptions: {
+    defaultPanelName: '默认面板名称',
+    onPanelAddClick: (panel, createPanel) => {
+      panel.name = '新面板' + (panel.index + 1)
+      message.success('弹出个东西,让你们知道,在这里可以自定义面板名称')
+      notification.success({
+        placement: 'topRight',
+        message: '弹出个东西,让你们知道,在这里可以自定义面板名称',
+        description: '自定义面板名称'
+      })
+      createPanel(panel)
+    },
+  },
+  onGuardFail: () => Modal.error({
+    title: '客户端未连接',
+    content: '请先下载并运行 electron-hiprint 打印服务（详见 README 中的 electron-hiprint 章节）。',
+    okText: '我知道了'
+  }),
+})
 
 function onModeChange(idx) {
   const p = providerList[idx]
   if (!p) return
-  hiprint.init({ providers: [...providers] })
-  $('.hiprintEpContainer').empty()
-  hiprint.PrintElementTypeManager.build('.hiprintEpContainer', p.value)
+  initProviders({
+    providers: [...providers],
+    moduleName: p.value,
+  })
 }
 
 function buildTemplate() {
-  $('#hiprint-printTemplate').empty()
   const raw = localStorage.getItem('hiPrint-KEY_TEMPLATES_PANELS')
   let templates = {}
   if (raw) {
     try { templates = JSON.parse(raw) } catch (_) { /* 解析失败保持默认空模板 */ }
   }
-  hiprintTemplate.value = markRaw(
-    new hiprint.PrintTemplate({
-      template: templates,
-      settingContainer: '#PrintElementOptionSetting',
-      paginationContainer: '.hiprint-printPagination',
-      defaultPanelName: '默认面板名称',
-      onPanelAddClick: (panel, createPanel) => {
-        panel.name = '新面板' + (panel.index + 1)
-        message.success('弹出个东西,让你们知道,在这里可以自定义面板名称')
-        notification.success({
-          placement: 'topRight',
-          message: '弹出个东西,让你们知道,在这里可以自定义面板名称',
-          description: '自定义面板名称'
-        })
-        createPanel(panel)
-      }
-    })
-  )
-  hiprintTemplate.value.design('#hiprint-printTemplate', { grid: true })
+  buildTpl(templates)
 }
 
 function preView() {
@@ -131,18 +140,8 @@ function preView() {
 }
 
 function print() {
-  const tpl = hiprintTemplate.value
-  if (!tpl) return
-  if (window.hiwebSocket?.opened) {
-    console.log(tpl.getPrinterList())
-    tpl.print2(printData, { printer: '', title: 'hiprint测试打印' })
-    return
-  }
-  Modal.error({
-    title: '客户端未连接',
-    content: '请先下载并运行 electron-hiprint 打印服务（详见 README 中的 electron-hiprint 章节）。',
-    okText: '我知道了'
-  })
+  console.log(hiprintTemplate.value?.getPrinterList())
+  print2(printData, { title: 'hiprint测试打印' })
 }
 
 function save() {
@@ -155,11 +154,7 @@ function save() {
 }
 
 function clearPaper() {
-  try {
-    hiprintTemplate.value?.clear()
-  } catch (e) {
-    message.error(`操作失败: ${e}`)
-  }
+  clear()
 }
 
 onMounted(() => {

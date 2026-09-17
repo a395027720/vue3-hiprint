@@ -47,8 +47,8 @@
 </template>
 
 <script setup>
-import { ref, markRaw, onMounted, h } from 'vue'
-import { Modal, message, notification, Button } from 'ant-design-vue'
+import { ref, onMounted, h } from 'vue'
+import { message, Modal, notification, Button } from 'ant-design-vue'
 import TaskRunner from 'concurrent-tasks'
 
 import PrintLayout from '../components/PrintLayout.vue'
@@ -56,7 +56,7 @@ import PaperToolbar from '../components/PaperToolbar.vue'
 import PreviewModal from '../components/PreviewModal.vue'
 
 import jsonView from '../json-view.vue'
-import { hiprint } from '../../index'
+import { useHiprint } from '../../index'
 import provider from './providers'
 import panel from './panel'
 import printData from './print-data'
@@ -65,8 +65,22 @@ import printData from './print-data'
 defineOptions({ name: 'printTasks' })
 
 const count = ref(1)
-const hiprintTemplate = ref(null)
 const previewRef = ref()
+
+const {
+  template: hiprintTemplate,
+  build: buildTpl,
+  clear,
+  guard,
+  initProviders,
+} = useHiprint({
+  moduleName: 'taskProviderModule',
+  onGuardFail: () => Modal.error({
+    title: '客户端未连接',
+    content: '请先下载并运行 electron-hiprint 打印服务（详见 README 中的 electron-hiprint 章节）。',
+    okText: '我知道了'
+  }),
+})
 
 function loadTemplate() {
   const raw = localStorage.getItem('hiPrint-KEY_TEMPLATE_TASKS')
@@ -77,15 +91,7 @@ function loadTemplate() {
 }
 
 function buildTemplate() {
-  $('#hiprint-printTemplate').empty()
-  hiprintTemplate.value = markRaw(
-    new hiprint.PrintTemplate({
-      template: loadTemplate(),
-      settingContainer: '#PrintElementOptionSetting',
-      paginationContainer: '.hiprint-printPagination'
-    })
-  )
-  hiprintTemplate.value.design('#hiprint-printTemplate')
+  buildTpl(loadTemplate())
 }
 
 function preView() {
@@ -97,16 +103,8 @@ function preView() {
 
 function print() {
   if (!hiprintTemplate.value) return
-  if (window.hiwebSocket?.opened) {
-    console.log(hiprintTemplate.value.getPrinterList())
-    tasksPrint()
-    return
-  }
-  Modal.error({
-    title: '客户端未连接',
-    content: '请先下载并运行 electron-hiprint 打印服务（详见 README 中的 electron-hiprint 章节）。',
-    okText: '我知道了'
-  })
+  console.log(hiprintTemplate.value.getPrinterList())
+  guard.run(() => tasksPrint())
 }
 
 function tasksPrint() {
@@ -195,17 +193,11 @@ function save() {
 }
 
 function clearPaper() {
-  try {
-    hiprintTemplate.value?.clear()
-  } catch (e) {
-    message.error(`操作失败: ${e}`)
-  }
+  clear()
 }
 
 onMounted(() => {
-  hiprint.init({ providers: [provider] })
-  $('.hiprintEpContainer').empty()
-  hiprint.PrintElementTypeManager.build('.hiprintEpContainer', 'taskProviderModule')
+  initProviders({ providers: [provider] })
   buildTemplate()
 })
 </script>
