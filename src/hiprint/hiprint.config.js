@@ -630,6 +630,10 @@
               name: 'fixed',
               hidden: false
             },
+            {
+              name: 'propagateTextOverflow',
+              hidden: false
+            },
           ]
         },
         {
@@ -796,6 +800,10 @@
         },
         {
           name: 'lHeight',
+          hidden: false
+        },
+        {
+          name: 'propagateTextOverflow',
           hidden: false
         },
         {

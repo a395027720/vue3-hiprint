@@ -991,7 +991,7 @@ var hiprint = function (t) {
             height: this.options.getHeight(),
             width: this.options.getWidth(),
             beginPrintPaperIndex: t.index,
-            bottomInLastPaper: r + this.options.getHeight() + (this.options.propagateTextOverflow ? Math.max(0, (t.referenceElement.bottomInLastPaper - t.referenceElement.printTopInPaper) - t.referenceElement.height) : 0),
+            bottomInLastPaper: r + this.options.getHeight() + (t.referenceElement.propagateTextOverflow ? Math.max(0, (t.referenceElement.bottomInLastPaper - t.referenceElement.printTopInPaper) - t.referenceElement.height) : 0),
             printTopInPaper: r
           })
         }))
@@ -1043,7 +1043,7 @@ var hiprint = function (t) {
             height: this.options.getHeight(),
             width: this.options.getWidth(),
             beginPrintPaperIndex: t.index,
-            bottomInLastPaper: r + this.options.getHeight() + (this.options.propagateTextOverflow ? Math.max(0, (t.referenceElement.bottomInLastPaper - t.referenceElement.printTopInPaper) - t.referenceElement.height) : 0),
+            bottomInLastPaper: r + this.options.getHeight() + (t.referenceElement.propagateTextOverflow ? Math.max(0, (t.referenceElement.bottomInLastPaper - t.referenceElement.printTopInPaper) - t.referenceElement.height) : 0),
             printTopInPaper: r
           })
         }));
@@ -2268,7 +2268,7 @@ var hiprint = function (t) {
 
   var i = function () {
     function t(t) {
-      this.top = t.top, this.left = t.left, this.height = t.height, this.width = t.width, this.bottomInLastPaper = t.bottomInLastPaper, this.beginPrintPaperIndex = t.beginPrintPaperIndex, this.printTopInPaper = t.printTopInPaper, this.endPrintPaperIndex = t.endPrintPaperIndex;
+      this.top = t.top, this.left = t.left, this.height = t.height, this.width = t.width, this.bottomInLastPaper = t.bottomInLastPaper, this.beginPrintPaperIndex = t.beginPrintPaperIndex, this.printTopInPaper = t.printTopInPaper, this.endPrintPaperIndex = t.endPrintPaperIndex, this.propagateTextOverflow = t.propagateTextOverflow;
     }
 
     return t.prototype.isPositionLeftOrRight = function (t) {
@@ -3894,6 +3894,31 @@ var hiprint = function (t) {
         this.target.remove();
       }, t;
     }(),
+    propagateTextOverflow = function () {
+      function t() {
+        this.name = "propagateTextOverflow";
+      }
+
+      return t.prototype.createTarget = function () {
+        return this.target = $(`<div class="hiprint-option-item">
+        <div class="hiprint-option-item-label">
+        ${i18n.__('下方跟随溢出')}
+        </div>
+        <div class="hiprint-option-item-field">
+        <select class="auto-submit">
+        <option value="" >${i18n.__('默认')}</option>
+            <option value="true" >${i18n.__('是')}</option>
+        </select>
+        </div>
+    </div>`), this.target;
+      }, t.prototype.getValue = function () {
+        if ("true" == this.target.find("select").val()) return !0;
+      }, t.prototype.setValue = function (t) {
+        this.target.find("select").val((null == t ? "" : t).toString());
+      }, t.prototype.destroy = function () {
+        this.target.remove();
+      }, t;
+    }(),
     M = function () {
       function t() {
         this.name = "panelPaperRule";
@@ -5483,7 +5508,7 @@ var hiprint = function (t) {
       t.init(), t.printElementOptionItems[e.name] = e;
     }, t.getItem = function (e) {
       return t.init(), t.printElementOptionItems[e];
-    }, t._printElementOptionItems = [new fontFamily(), new r(), new a(), new p(), new i(), new s(), new l(), new pt(), new u(), new d(), new c(), new h(), new f(), new g(), new m(), new d2(), new c2(), new v(), new y(), new b(), new E(), new qrCodeLevel(), new T(), new P(), new _(), new w(), new x(), new coordinate(), new widthHeight(), new C(), new imageFit(), new O(), new H(), new D(), new paperNumberContinue(), new watermarkOptions(), new I(), new R(), new pageBreak(), new pageBreakBefore(), new paginatorFormat(), new paginatorPosition(), new paginatorAlign(), new M(), new M2(), new S(), new B(), new F(), new L(), new A(), new z(), new k(), new st(), new N(), new V(), new W(), new j(), new U(), new borderRadius(), new zIndex(), new K(), new G(), new q(), new X(), new Y(), new Q(), new J(), new Z(), new tt(), new et(), new nt(), new it(), new ot(),new textWrap(), new at(), new lt(), new panelLayoutOptions(), new ut(), new ith(), new dt(), new ct(), new ht(), new ft(), new gt(), new mt(), new rowcolumns(), new rowsColumnsMergeClean(), new groupSequenceContinue(), new groupFieldsFormatter(), new groupFormatter(), new groupFooterFormatter(), new vt(), new yt(), new bt(), new Tt(), new Et(), new Pt(), new stylerHeader(), new renderFormatter(), new _t(), new wt(), new maxRows(), new xt(), new tableColumnH(), new tableE(), new tableQRCodeLevel(), new tablept(), new tableSummaryTitle(), new tableSummaryText(), new tableSummaryColspan(), new tableSummary(), new tableSummaryAlign(), new tableSummaryNumFormat(), new tableSummaryFormatter(),new showCodeTitle(), new upperCase(), new barcodeType(), new qrcodeType(), new barColor(), new barTextMode(), new barWidth(), new barAutoWidth()], t;
+    }, t._printElementOptionItems = [new fontFamily(), new r(), new a(), new p(), new i(), new s(), new l(), new pt(), new u(), new d(), new c(), new h(), new f(), new g(), new m(), new d2(), new c2(), new v(), new y(), new b(), new E(), new qrCodeLevel(), new T(), new P(), new _(), new w(), new x(), new coordinate(), new widthHeight(), new C(), new imageFit(), new O(), new H(), new D(), new paperNumberContinue(), new watermarkOptions(), new I(), new R(), new pageBreak(), new pageBreakBefore(), new propagateTextOverflow(), new paginatorFormat(), new paginatorPosition(), new paginatorAlign(), new M(), new M2(), new S(), new B(), new F(), new L(), new A(), new z(), new k(), new st(), new N(), new V(), new W(), new j(), new U(), new borderRadius(), new zIndex(), new K(), new G(), new q(), new X(), new Y(), new Q(), new J(), new Z(), new tt(), new et(), new nt(), new it(), new ot(),new textWrap(), new at(), new lt(), new panelLayoutOptions(), new ut(), new ith(), new dt(), new ct(), new ht(), new ft(), new gt(), new mt(), new rowcolumns(), new rowsColumnsMergeClean(), new groupSequenceContinue(), new groupFieldsFormatter(), new groupFormatter(), new groupFooterFormatter(), new vt(), new yt(), new bt(), new Tt(), new Et(), new Pt(), new stylerHeader(), new renderFormatter(), new _t(), new wt(), new maxRows(), new xt(), new tableColumnH(), new tableE(), new tableQRCodeLevel(), new tablept(), new tableSummaryTitle(), new tableSummaryText(), new tableSummaryColspan(), new tableSummary(), new tableSummaryAlign(), new tableSummaryNumFormat(), new tableSummaryFormatter(),new showCodeTitle(), new upperCase(), new barcodeType(), new qrcodeType(), new barColor(), new barTextMode(), new barWidth(), new barAutoWidth()], t;
   }();
 }, function (t, e, n) {
   "use strict";
@@ -8895,7 +8920,8 @@ var hiprint = function (t) {
             width: this.options.getWidth(),
             beginPrintPaperIndex: t.index,
             bottomInLastPaper: Math.max(this.options.getTop() + f.height, this.options.getTop() + this.options.getHeight()),
-            printTopInPaper: this.options.getTop()
+            printTopInPaper: this.options.getTop(),
+            propagateTextOverflow: this.options.propagateTextOverflow
           })
         })), o;
 
@@ -8920,7 +8946,8 @@ var hiprint = function (t) {
               width: this.options.getWidth(),
               beginPrintPaperIndex: t.index,
               bottomInLastPaper: Math.max(g, m + this.options.getHeight()),
-              printTopInPaper: m
+              printTopInPaper: m,
+              propagateTextOverflow: this.options.propagateTextOverflow
             })
           })), r++;
           e && this.updatePanelHeight(g + this.options.getHeight(), t);
