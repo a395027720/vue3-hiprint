@@ -991,7 +991,7 @@ var hiprint = function (t) {
             height: this.options.getHeight(),
             width: this.options.getWidth(),
             beginPrintPaperIndex: t.index,
-            bottomInLastPaper: r + this.options.getHeight() + Math.max(0, (t.referenceElement.bottomInLastPaper - t.referenceElement.printTopInPaper) - t.referenceElement.height),
+            bottomInLastPaper: r + this.options.getHeight() + (this.options.propagateTextOverflow ? Math.max(0, (t.referenceElement.bottomInLastPaper - t.referenceElement.printTopInPaper) - t.referenceElement.height) : 0),
             printTopInPaper: r
           })
         }))
@@ -1043,7 +1043,7 @@ var hiprint = function (t) {
             height: this.options.getHeight(),
             width: this.options.getWidth(),
             beginPrintPaperIndex: t.index,
-            bottomInLastPaper: r + this.options.getHeight() + Math.max(0, (t.referenceElement.bottomInLastPaper - t.referenceElement.printTopInPaper) - t.referenceElement.height),
+            bottomInLastPaper: r + this.options.getHeight() + (this.options.propagateTextOverflow ? Math.max(0, (t.referenceElement.bottomInLastPaper - t.referenceElement.printTopInPaper) - t.referenceElement.height) : 0),
             printTopInPaper: r
           })
         }));
