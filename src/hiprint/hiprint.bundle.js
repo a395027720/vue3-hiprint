@@ -991,7 +991,7 @@ var hiprint = function (t) {
             height: this.options.getHeight(),
             width: this.options.getWidth(),
             beginPrintPaperIndex: t.index,
-            bottomInLastPaper: r + this.options.getHeight(),
+            bottomInLastPaper: r + this.options.getHeight() + Math.max(0, (t.referenceElement.bottomInLastPaper - t.referenceElement.printTopInPaper) - t.referenceElement.height),
             printTopInPaper: r
           })
         }))
@@ -1043,7 +1043,7 @@ var hiprint = function (t) {
             height: this.options.getHeight(),
             width: this.options.getWidth(),
             beginPrintPaperIndex: t.index,
-            bottomInLastPaper: r + this.options.getHeight(),
+            bottomInLastPaper: r + this.options.getHeight() + Math.max(0, (t.referenceElement.bottomInLastPaper - t.referenceElement.printTopInPaper) - t.referenceElement.height),
             printTopInPaper: r
           })
         }));
@@ -3408,9 +3408,9 @@ var hiprint = function (t) {
         return this.target = $(`<div class="hiprint-option-item hiprint-option-item-row">\n        <div class="hiprint-option-item-label">\n        ${i18n.__('标题')}\n        </div>\n        <div class="hiprint-option-item-field">\n        <textarea style="height:50px;" placeholder="${i18n.__('请输入标题')}" class="auto-submit"></textarea>\n        </div>\n    </div>`), this.target;
       }, t.prototype.getValue = function () {
         var t = this.target.find("textarea").val();
-        if (t) return t;
+        return t != null ? t : "";
       }, t.prototype.setValue = function (t) {
-        this.target.find("textarea").val(t);
+        this.target.find("textarea").val(t != null ? t : "");
       }, t.prototype.destroy = function () {
         this.target.remove();
       }, t;
@@ -8846,7 +8846,7 @@ var hiprint = function (t) {
       }, e.prototype.getConfigOptions = function () {
         return p.a.instance.longText;
       }, e.prototype.getTitle = function () {
-        return this.options.title || this.printElementType.title;
+        return null != this.options.title ? this.options.title : this.printElementType.title;
       }, e.prototype.getData = function (t) {
         var f = this.getField();
         var e = f ? f.split('.').reduce((a, c) => a ? a[c] : t ? t[c] : "", !1) || "" : "";
@@ -8894,7 +8894,7 @@ var hiprint = function (t) {
             height: this.options.getHeight(),
             width: this.options.getWidth(),
             beginPrintPaperIndex: t.index,
-            bottomInLastPaper: this.options.getTop() + f.height,
+            bottomInLastPaper: Math.max(this.options.getTop() + f.height, this.options.getTop() + this.options.getHeight()),
             printTopInPaper: this.options.getTop()
           })
         })), o;
@@ -8919,7 +8919,7 @@ var hiprint = function (t) {
               height: this.options.getHeight(),
               width: this.options.getWidth(),
               beginPrintPaperIndex: t.index,
-              bottomInLastPaper: g,
+              bottomInLastPaper: Math.max(g, this.options.getTop() + this.options.getHeight()),
               printTopInPaper: m
             })
           })), r++;
@@ -9094,7 +9094,7 @@ var hiprint = function (t) {
       }, e.prototype.getConfigOptions = function () {
         return p.a.instance.text;
       }, e.prototype.getTitle = function () {
-        var t = this.options.title || this.printElementType.title || "";
+        var t = (null != this.options.title ? this.options.title : this.printElementType.title) || "";
         return t && (t = x.replaceEnterAndNewlineAndTab(t, "")), t;
       }, e.prototype.getData = function (t) {
         var e = void 0;
@@ -9453,7 +9453,7 @@ var hiprint = function (t) {
         t.prototype.onResize.call(this, e, n, i, o, r);
         this.initBarcode(this.designTarget, this.getTitle(), this.getData())
       }, e.prototype.getTitle = function () {
-        return this.options.title || this.printElementType.title;
+        return null != this.options.title ? this.options.title : this.printElementType.title;
       }, e.prototype.getData = function (t) {
         var e = void 0;
         var f = this.getField();
@@ -9525,7 +9525,7 @@ var hiprint = function (t) {
         t.prototype.onResize.call(this, e, n, i, o, r);
         this.initQrcode(this.designTarget, this.getTitle(), this.getData())
       }, e.prototype.getTitle = function () {
-        return this.options.title || this.printElementType.title;
+        return null != this.options.title ? this.options.title : this.printElementType.title;
       }, e.prototype.getData = function (t) {
         var e = void 0;
         var f = this.getField();
