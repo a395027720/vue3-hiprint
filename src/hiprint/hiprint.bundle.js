@@ -8919,7 +8919,7 @@ var hiprint = function (t) {
               height: this.options.getHeight(),
               width: this.options.getWidth(),
               beginPrintPaperIndex: t.index,
-              bottomInLastPaper: Math.max(g, this.options.getTop() + this.options.getHeight()),
+              bottomInLastPaper: Math.max(g, m + this.options.getHeight()),
               printTopInPaper: m
             })
           })), r++;
