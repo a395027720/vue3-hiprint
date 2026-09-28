@@ -5888,10 +5888,13 @@ var hiprint = function (t) {
               var paginatorText = (this.options.paginatorFormat || "").replace(/\$\{startRow\}/g, startRow).replace(/\$\{endRow\}/g, endRow).replace(/\$\{totalRows\}/g, totalRows).replace(/\$\{pageNo\}/g, pageCount).replace(/\$\{pageIndex\}/g, pageCount - 1).replace(/\$\{pageCount\}/g, "__TOTAL_PAGES__").replace(/\$\{totalPages\}/g, "__TOTAL_PAGES__");
               var paginatorAlign = this.options.paginatorAlign || "right";
               var paginatorHtml = $(`<div class="hiprint-table-paginator" style="text-align: ${paginatorAlign}; padding: 0; font-size: 9pt; color: #666;">${paginatorText}</div>`);
+              var $table = h.target.find(".hiprint-printElement-tableTarget");
               if ("top" == paginatorPosition) {
-                h.target.prepend(paginatorHtml);
+                paginatorHtml.append('<div style="height:4pt;"></div>');
+                $table.before(paginatorHtml);
               } else {
-                h.target.append(paginatorHtml);
+                paginatorHtml.prepend('<div style="height:4pt;"></div>');
+                $table.after(paginatorHtml);
               }
               var paginatorHeight = paginatorHtml.outerHeight() || 0;
               f += _assets_plugins_hinnn__WEBPACK_IMPORTED_MODULE_3__.a.px.toPt(paginatorHeight);
