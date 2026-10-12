@@ -1,6 +1,11 @@
 <template>
-  <a-modal :visible="visible" :maskClosable="false"
-           @cancel="hideModal" :width="width+'mm'">
+  <a-modal
+    :visible="visible"
+    :maskClosable="false"
+    @cancel="hideModal"
+    :width="width + 'mm'"
+    :bodyStyle="{ padding: '0px' }"
+  >
     <a-spin :spinning="spinning" style="min-height: 100px">
       <div :id="containerId"></div>
     </a-spin>
@@ -18,9 +23,7 @@
       </a-space>
     </template>
     <template #footer>
-      <a-button key="close" type="default" @click="hideModal">
-        关闭
-      </a-button>
+      <a-button key="close" type="default" @click="hideModal"> 关闭 </a-button>
     </template>
   </a-modal>
 </template>
@@ -34,9 +37,9 @@ export default {
   name: "printPreview",
   props: {
     /** PDF 文件名 */
-    pdfFileName: { type: String, default: '打印预览pdf' },
+    pdfFileName: { type: String, default: "打印预览pdf" },
     /** 是否用 printData 作为 toPdf 数据（design demo 传 false：用 {}） */
-    useTemplateData: { type: Boolean, default: true }
+    useTemplateData: { type: Boolean, default: true },
   },
   data() {
     return {
@@ -50,46 +53,48 @@ export default {
       // 数据
       printData: {},
       // 实例唯一 DOM id，避免 4 demo 同页时 id 冲突
-      containerId: `printPreview_${Math.random().toString(36).slice(2, 10)}`
-    }
+      containerId: `printPreview_${Math.random().toString(36).slice(2, 10)}`,
+    };
   },
   methods: {
     hideModal() {
-      this.visible = false
+      this.visible = false;
     },
-    show(hiprintTemplate, printData, width = '210') {
-      this.visible = true
-      this.spinning = true
-      this.width = hiprintTemplate.editingPanel ? hiprintTemplate.editingPanel.width : width
-      this.hiprintTemplate = hiprintTemplate
-      this.printData = printData
+    show(hiprintTemplate, printData, width = "210") {
+      this.visible = true;
+      this.spinning = true;
+      this.width = hiprintTemplate.editingPanel
+        ? hiprintTemplate.editingPanel.width
+        : width;
+      this.hiprintTemplate = hiprintTemplate;
+      this.printData = printData;
       setTimeout(() => {
         // eslint-disable-next-line no-undef
-        $('#' + this.containerId).html(hiprintTemplate.getHtml(printData))
-        this.spinning = false
-      }, 500)
+        $("#" + this.containerId).html(hiprintTemplate.getHtml(printData));
+        this.spinning = false;
+      }, 500);
     },
     print() {
-      this.waitShowPrinter = true
-      this.hiprintTemplate.print(this.printData, {}, {
-        callback: () => {
-          this.waitShowPrinter = false
-        }
-      })
+      this.waitShowPrinter = true;
+      this.hiprintTemplate.print(
+        this.printData,
+        {},
+        {
+          callback: () => {
+            this.waitShowPrinter = false;
+          },
+        },
+      );
     },
     toPdf() {
-      const data = this.useTemplateData ? this.printData : {}
-      this.hiprintTemplate.toPdf(data, this.pdfFileName)
-    }
-  }
-}
+      const data = this.useTemplateData ? this.printData : {};
+      this.hiprintTemplate.toPdf(data, this.pdfFileName);
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>
-:deep(.ant-modal-body) {
-  padding: 0px;
-}
-
 :deep(.ant-modal-content) {
   margin-bottom: 24px;
 }
