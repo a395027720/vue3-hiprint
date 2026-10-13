@@ -6,6 +6,7 @@
       @save="onSave"
       @view-json="onViewJson"
       @export-json="onExportJson"
+      @import-json="onImportJson"
       @print="onPrint"
       @print-preview="onPreview"
       @export-pdf="onExportPdf"
@@ -91,6 +92,15 @@
         </div>
       </div>
     </div>
+
+    <!-- 隐藏的 JSON 文件选择 input -->
+    <input
+      ref="importInputRef"
+      type="file"
+      accept="application/json,.json"
+      style="display: none"
+      @change="onImportFileChange"
+    />
   </div>
 </template>
 
@@ -391,6 +401,30 @@ function onCopyJson() {
   } else {
     emit('notice', '当前浏览器不支持剪贴板 API', 'warning')
   }
+}
+
+// 隐藏的 file input,触发后调 loadJson
+const importInputRef = ref<HTMLInputElement | null>(null)
+
+function onImportJson() {
+  importInputRef.value?.click()
+}
+
+function onImportFileChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  // 立刻清空 value,让下次选同一文件也能触发 change
+  input.value = ''
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (ev) => {
+    const raw = (ev.target?.result as string) ?? ''
+    const ok = designer.loadJson(raw)
+    if (ok) emit('notice', 'JSON 导入成功', 'success')
+    else emit('jsonImportError', raw)
+  }
+  reader.onerror = () => emit('notice', '文件读取失败', 'error')
+  reader.readAsText(file)
 }
 
 const theme = computed<'light' | 'dark'>(() => 'light')

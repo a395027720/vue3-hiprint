@@ -65,6 +65,9 @@
           <button class="save-menu-item" @click="onPick('exportJson')">
             <download-outlined /> 导出 JSON
           </button>
+          <button class="save-menu-item" @click="onPick('importJson')">
+            <upload-outlined /> 导入 JSON
+          </button>
           <div class="save-menu-sep" />
           <button class="save-menu-item" @click="onPick('print')">
             <printer-outlined /> 打印
@@ -96,6 +99,7 @@ const emit = defineEmits<{
   save: []
   viewJson: []
   exportJson: []
+  importJson: []
   print: []
   printPreview: []
   exportPdf: []
@@ -104,10 +108,11 @@ const emit = defineEmits<{
 const saveMenuOpen = ref(false)
 const saveMenuRef = ref<HTMLElement | null>(null)
 
-function onPick(action: 'viewJson' | 'exportJson' | 'print' | 'printPreview' | 'exportPdf') {
+function onPick(action: 'viewJson' | 'exportJson' | 'importJson' | 'print' | 'printPreview' | 'exportPdf') {
   saveMenuOpen.value = false
   if (action === 'viewJson') emit('viewJson')
   else if (action === 'exportJson') emit('exportJson')
+  else if (action === 'importJson') emit('importJson')
   else if (action === 'print') emit('print')
   else if (action === 'printPreview') emit('printPreview')
   else emit('exportPdf')
