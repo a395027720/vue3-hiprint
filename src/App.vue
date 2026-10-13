@@ -9,9 +9,18 @@
       <a-button-group>
         <template v-for="demo in demoList" :key="demo.name">
           <a-button
+            v-if="demo.name !== 'printNewDesigner'"
             :type="demo.name === curDemo ? 'primary' : 'default'"
             @click="curDemo = demo.name"
           >
+            {{ demo.title }}
+          </a-button>
+          <a-button
+            v-else
+            type="primary"
+            @click="openStandaloneDesigner"
+          >
+            <template #icon><fullscreen-outlined /></template>
             {{ demo.title }}
           </a-button>
         </template>
@@ -38,7 +47,6 @@ import printDesign from "@/demo/design/index";
 import printCustom from "@/demo/custom/index";
 import printTasks from "@/demo/tasks/index";
 import printPanels from "@/demo/panels/index";
-import printNewDesigner from "@/demo/new-designer/index";
 import templates from "@/demo/templates/index";
 
 export default {
@@ -48,7 +56,6 @@ export default {
     printCustom,
     printTasks,
     printPanels,
-    printNewDesigner,
     templates,
   },
   data() {
@@ -62,6 +69,12 @@ export default {
         { name: "printNewDesigner", title: "新设计器(实验)" },
       ],
     };
+  },
+  methods: {
+    openStandaloneDesigner() {
+      // hash 改变 → main.js 用 location.hash === '#/designer' 切到 Standalone
+      window.location.hash = "#/designer";
+    },
   },
 };
 </script>
