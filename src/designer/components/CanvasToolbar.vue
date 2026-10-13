@@ -71,19 +71,19 @@
         :disabled="!hasSelection"
         :title="hasSelection ? '垂直顶对齐' : '垂直顶对齐(未选中)'"
         @click="$emit('alignV', 'top')"
-      ><span v-html="alignTopIcon" /></button>
+      ><vertical-align-top-outlined /></button>
       <button
         class="ctb-btn"
         :disabled="!hasSelection"
         :title="hasSelection ? '垂直居中' : '垂直居中(未选中)'"
         @click="$emit('alignV', 'middle')"
-      ><span v-html="alignCenterVIcon" /></button>
+      ><vertical-align-middle-outlined /></button>
       <button
         class="ctb-btn"
         :disabled="!hasSelection"
         :title="hasSelection ? '垂直底对齐' : '垂直底对齐(未选中)'"
         @click="$emit('alignV', 'bottom')"
-      ><span v-html="alignBottomIcon" /></button>
+      ><vertical-align-bottom-outlined /></button>
     </div>
 
     <span class="ctb-sep" />
@@ -160,9 +160,6 @@ const gridIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" st
 const alignLeftIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>`
 const alignCenterHIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>`
 const alignRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>`
-const alignTopIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="21"/><line x1="12" y1="3" x2="12" y2="15"/><line x1="18" y1="3" x2="18" y2="18"/></svg>`
-const alignCenterVIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="21"/><line x1="12" y1="9" x2="12" y2="15"/><line x1="18" y1="6" x2="18" y2="21"/></svg>`
-const alignBottomIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="21"/><line x1="12" y1="9" x2="12" y2="21"/><line x1="18" y1="6" x2="18" y2="21"/></svg>`
 const trashIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>`
 </script>
 
@@ -262,5 +259,11 @@ const trashIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
 .ctb-select:focus {
   border-color: #1677ff;
   box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+/* antd icon 在 28x28 按钮里保持 16px 视觉大小 */
+.ctb-btn :deep(.anticon) {
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
 }
 </style>
