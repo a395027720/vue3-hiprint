@@ -92,6 +92,7 @@
             v-for="h in resizeHandles"
             :key="h.dir"
             class="resize-handle"
+            :class="`rh-${h.kind} rh-${h.dir}`"
             :style="handleStyle(selectedEl, h.dir)"
             @mousedown.stop="onResizeStart($event, selectedEl.id, h.dir)"
           />
@@ -363,14 +364,26 @@ function onElementMouseDown(e: MouseEvent, id: string) {
 type ResizeDir = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
 const MIN_SIZE_MM = 4
 
-const resizeHandles: Array<{ dir: ResizeDir }> = [
-  { dir: 'nw' }, { dir: 'n' }, { dir: 'ne' },
-  { dir: 'e' }, { dir: 'se' }, { dir: 's' },
-  { dir: 'sw' }, { dir: 'w' },
+const resizeHandles: Array<{ dir: ResizeDir; kind: 'corner' | 'edge' }> = [
+  { dir: 'nw', kind: 'corner' },
+  { dir: 'n', kind: 'edge' },
+  { dir: 'ne', kind: 'corner' },
+  { dir: 'e', kind: 'edge' },
+  { dir: 'se', kind: 'corner' },
+  { dir: 's', kind: 'edge' },
+  { dir: 'sw', kind: 'corner' },
+  { dir: 'w', kind: 'edge' },
 ]
 
-/** 计算单个 handle 的位置/光标(绝对像素,handle 在 canvas 坐标系下作为兄弟节点)。 */
+/** 计算单个 handle 的位置/光标(绝对像素,handle 在 canvas 坐标系下作为兄弟节点)。
+ *  角 handle 用 10x10 框(L 在框内),边 handle 用 14x3 / 3x14 短条,
+ *  所以 offset 不同(corner = 5,edge-横 = 7x1.5,edge-竖 = 1.5x7)。
+ */
 function handleStyle(el: Element, dir: ResizeDir) {
+  const isCorner = dir === 'nw' || dir === 'ne' || dir === 'sw' || dir === 'se'
+  const isHorizontal = dir === 'n' || dir === 's'
+  const offX = isCorner ? 5 : isHorizontal ? 7 : 1.5
+  const offY = isCorner ? 5 : isHorizontal ? 1.5 : 7
   const posMap: Record<ResizeDir, { fx: number; fy: number; cursor: string }> = {
     nw: { fx: 0, fy: 0, cursor: 'nwse-resize' },
     n: { fx: 0.5, fy: 0, cursor: 'ns-resize' },
@@ -383,8 +396,8 @@ function handleStyle(el: Element, dir: ResizeDir) {
   }
   const p = posMap[dir]
   return {
-    left: (mmToPxScaled(el.x) + p.fx * mmToPxScaled(el.w) - 5) + 'px',
-    top: (mmToPxScaled(el.y) + p.fy * mmToPxScaled(el.h) - 5) + 'px',
+    left: (mmToPxScaled(el.x) + p.fx * mmToPxScaled(el.w) - offX) + 'px',
+    top: (mmToPxScaled(el.y) + p.fy * mmToPxScaled(el.h) - offY) + 'px',
     cursor: p.cursor,
   }
 }
@@ -642,44 +655,78 @@ function onRotateStart(e: MouseEvent, id: string) {
 }
 
 /* ========== Resize / Rotate handles ==========
-   角 handle:18x18 框 + 内部 L 形(5x18 + 18x5)圆角条(参考 Vue-Print-Designer)
-   边 handle:6x6 圆点(简洁,不易和角 handle 混淆)
+   角 handle(corner):18x18 框 + 内部 L 形(10x3 横 + 3x10 竖)圆角条,参考 Vue-Print-Designer
+   边 handle(edge):12x3 短条,方向决定横/竖
    旋转 handle:圆点 + 连线
 */
 .resize-handle {
   position: absolute;
-  width: 10px;
-  height: 10px;
-  background: transparent;
   pointer-events: auto;
   z-index: 100;
+  background: transparent;
 }
-.resize-handle::before,
-.resize-handle::after {
+/* ---------- 角 handle:L 形(横 + 竖) ---------- */
+.rh-corner {
+  width: 10px;
+  height: 10px;
+}
+.rh-corner::before,
+.rh-corner::after {
   content: '';
   position: absolute;
   background: #1890ff;
-  border-radius: 2.5px;
+  border-radius: 1.5px;
   opacity: 0.9;
   transition: opacity 120ms;
 }
-.resize-handle:hover::before,
-.resize-handle:hover::after {
+.rh-corner:hover::before,
+.rh-corner:hover::after {
   opacity: 1;
 }
-/* 水平条 */
-.resize-handle::before {
+/* 横条(顶部或底部) */
+.rh-corner::before {
   left: 0;
-  top: 0;
   width: 10px;
   height: 3px;
 }
-/* 垂直条 */
-.resize-handle::after {
-  left: 0;
+/* 竖条(左侧或右侧) */
+.rh-corner::after {
   top: 0;
   width: 3px;
   height: 10px;
+}
+/* 角 handle 的 L 角点位置 */
+.rh-nw::before { top: 0; }
+.rh-nw::after { left: 0; }
+.rh-ne::before { top: 0; right: 0; left: auto; }
+.rh-ne::after { right: 0; top: 0; }
+.rh-se::before { bottom: 0; top: auto; }
+.rh-se::after { right: 0; bottom: 0; top: auto; }
+.rh-sw::before { bottom: 0; top: auto; }
+.rh-sw::after { left: 0; bottom: 0; top: auto; }
+
+/* ---------- 边 handle:单方向短条 ---------- */
+.rh-edge {
+  background: #1890ff;
+  border-radius: 1.5px;
+  opacity: 0.85;
+  transition: opacity 120ms, transform 120ms;
+}
+.rh-edge:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
+/* 上下边:横条 */
+.rh-n,
+.rh-s {
+  width: 14px;
+  height: 3px;
+}
+/* 左右边:竖条 */
+.rh-e,
+.rh-w {
+  width: 3px;
+  height: 14px;
 }
 .rotate-line {
   position: absolute;

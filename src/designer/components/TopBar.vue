@@ -59,6 +59,13 @@
           @click="saveMenuOpen = !saveMenuOpen"
         ><down-outlined /></button>
         <div v-if="saveMenuOpen" class="save-menu">
+          <button class="save-menu-item" @click="onPick('viewJson')">
+            <code-outlined /> 查看 JSON
+          </button>
+          <button class="save-menu-item" @click="onPick('exportJson')">
+            <download-outlined /> 导出 JSON
+          </button>
+          <div class="save-menu-sep" />
           <button class="save-menu-item" @click="onPick('print')">
             <printer-outlined /> 打印
           </button>
@@ -87,6 +94,8 @@ const emit = defineEmits<{
   add: [type: ElementType]
   custom: []
   save: []
+  viewJson: []
+  exportJson: []
   print: []
   printPreview: []
   exportPdf: []
@@ -95,9 +104,11 @@ const emit = defineEmits<{
 const saveMenuOpen = ref(false)
 const saveMenuRef = ref<HTMLElement | null>(null)
 
-function onPick(action: 'print' | 'printPreview' | 'exportPdf') {
+function onPick(action: 'viewJson' | 'exportJson' | 'print' | 'printPreview' | 'exportPdf') {
   saveMenuOpen.value = false
-  if (action === 'print') emit('print')
+  if (action === 'viewJson') emit('viewJson')
+  else if (action === 'exportJson') emit('exportJson')
+  else if (action === 'print') emit('print')
   else if (action === 'printPreview') emit('printPreview')
   else emit('exportPdf')
 }
@@ -397,5 +408,10 @@ function onCustom() {
 .save-menu-item:hover {
   background: #f5f5f5;
   color: #1677ff;
+}
+.save-menu-sep {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 4px 0;
 }
 </style>

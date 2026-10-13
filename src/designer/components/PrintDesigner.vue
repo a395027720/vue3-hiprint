@@ -4,6 +4,8 @@
       :dirty="designer.dirty.value"
       @add="onAdd"
       @save="onSave"
+      @view-json="onViewJson"
+      @export-json="onExportJson"
       @print="onPrint"
       @print-preview="onPreview"
       @export-pdf="onExportPdf"
@@ -74,6 +76,20 @@
         @move-up="onMoveUp"
         @move-down="onMoveDown"
       />
+    </div>
+
+    <!-- 查看 JSON 弹窗 -->
+    <div v-if="jsonModalOpen" class="json-modal-mask" @click.self="jsonModalOpen = false">
+      <div class="json-modal">
+        <div class="json-modal-header">
+          <span>当前模板 JSON</span>
+          <button class="json-modal-close" @click="jsonModalOpen = false">×</button>
+        </div>
+        <pre class="json-modal-body">{{ jsonText }}</pre>
+        <div class="json-modal-footer">
+          <button class="json-copy-btn" @click="onCopyJson">复制</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -343,6 +359,40 @@ async function onExportPdf() {
   else emit('notice', 'PDF 生成失败', 'error')
 }
 
+// ========== JSON 查看 / 导出 ==========
+
+const jsonModalOpen = ref(false)
+/** 实时计算(toJson 每次返回新字符串,computed 会因 template 变化重算) */
+const jsonText = computed(() => designer.toJson())
+
+function onViewJson() {
+  jsonModalOpen.value = true
+}
+
+function onExportJson() {
+  const json = designer.toJson()
+  if (!json) return
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'template.json'
+  a.click()
+  URL.revokeObjectURL(url)
+  emit('notice', 'JSON 已下载', 'success')
+}
+
+function onCopyJson() {
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(jsonText.value).then(
+      () => emit('notice', '已复制到剪贴板', 'success'),
+      () => emit('notice', '复制失败', 'error'),
+    )
+  } else {
+    emit('notice', '当前浏览器不支持剪贴板 API', 'warning')
+  }
+}
+
 const theme = computed<'light' | 'dark'>(() => 'light')
 function onToggleTheme() {
   emit('notice', '主题切换(预留,本设计器暂未实现深色配色)', 'info')
@@ -386,5 +436,81 @@ defineExpose({
   display: flex;
   min-height: 0;
   overflow: hidden;
+}
+
+/* JSON 弹窗 */
+.json-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+.json-modal {
+  width: 720px;
+  max-width: 90vw;
+  max-height: 80vh;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.json-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+.json-modal-close {
+  background: transparent;
+  border: 0;
+  font-size: 20px;
+  line-height: 1;
+  color: #999;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.json-modal-close:hover {
+  color: #333;
+}
+.json-modal-body {
+  flex: 1;
+  margin: 0;
+  padding: 12px 16px;
+  overflow: auto;
+  background: #f6f8fa;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #24292e;
+  white-space: pre;
+}
+.json-modal-footer {
+  padding: 8px 16px;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: flex-end;
+  background: #fafafa;
+}
+.json-copy-btn {
+  padding: 4px 14px;
+  font-size: 13px;
+  color: #fff;
+  background: #1677ff;
+  border: 1px solid #1677ff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.json-copy-btn:hover {
+  background: #4096ff;
+  border-color: #4096ff;
 }
 </style>
