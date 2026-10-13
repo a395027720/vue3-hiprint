@@ -154,12 +154,13 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
   }
 
   function selectMany(ids: string[]): void {
-    // 保持 elements 数组的顺序,这样 handles / 主选更稳定
-    const order = props.template?.elements?.map((e) => e.id) ?? []
-    // 没有 template 引用,直接用 ids 顺序
-    void order
-    multiSelectedIds.value = ids
-    selectedId.value = ids.length === 1 ? ids[0]! : null
+    // 按 elements 数组顺序排 ids,这样 handles / 主选更稳定
+    const order = new Set(template.value.elements.map((e) => e.id))
+    const sorted = ids.filter((id) => order.has(id))
+    // 把 ids 里不在 template 里的也保留(防御性)
+    for (const id of ids) if (!sorted.includes(id)) sorted.push(id)
+    multiSelectedIds.value = sorted
+    selectedId.value = sorted.length === 1 ? sorted[0]! : null
   }
 
   function toggleInMulti(id: string): void {
