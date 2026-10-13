@@ -13,25 +13,51 @@
         height="24"
         :viewBox="`0 0 ${frameStyle.widthPx} 24`"
       >
+        <!-- 画布内填底(浅,让画布对应区域标尺更"实") -->
+        <rect
+          x="24" y="0"
+          :width="frameStyle.widthPx - 24"
+          height="24"
+          fill="#fcfcfd"
+        />
+        <!-- 刻度线 -->
         <line
           v-for="t in hTicks"
           :key="`h-${t.mm}`"
-          :x1="t.x"
-          :x2="t.x"
-          y1="16"
-          :y2="t.major ? 6 : 12"
-          stroke="#bbb"
-          stroke-width="1"
+          :x1="t.x" :x2="t.x"
+          :y1="t.zero ? 0 : t.major ? 6 : 12"
+          y2="24"
+          :class="['ruler-tick', { 'ruler-tick-major': t.major, 'ruler-tick-zero': t.zero }]"
         />
+        <!-- 文字(画布内 0~width 才显示) -->
         <text
           v-for="t in hTicks"
           :key="`ht-${t.mm}`"
-          v-show="t.major"
-          :x="t.x + 2"
+          v-show="t.major && t.inCanvas"
+          :x="t.x + (t.mm === 0 ? 3 : t.mm > 0 ? 3 : -3)"
           y="11"
-          font-size="9"
-          fill="#888"
+          :class="['ruler-text', { 'ruler-text-zero': t.zero }]"
+          text-anchor="start"
         >{{ t.mm }}</text>
+        <!-- 选中元素位置三角(向下指,在画布内) -->
+        <polygon
+          v-for="m in selectedEdgeMarks.h"
+          :key="`ms-h-${m.id}-${m.edge}`"
+          :points="`${m.x - 3},0 ${m.x + 3},0 ${m.x},6`"
+          class="ruler-mark"
+        />
+        <!-- 鼠标游标线 + 坐标 chip -->
+        <g v-if="mousePos && mousePos.inCanvas" class="ruler-cursor">
+          <line :x1="mousePos.xPx" :x2="mousePos.xPx" y1="0" y2="24" />
+          <rect
+            :x="cursorChipX('h')"
+            y="3"
+            width="40" height="14" rx="2"
+          />
+          <text :x="cursorChipX('h') + 20" y="13" text-anchor="middle">
+            {{ formatMm(mousePos.xMm) }}
+          </text>
+        </g>
       </svg>
 
       <!-- 垂直标尺 -->
@@ -41,25 +67,57 @@
         :height="frameStyle.height"
         :viewBox="`0 0 24 ${frameStyle.heightPx}`"
       >
+        <rect
+          x="0" y="24"
+          width="24"
+          :height="frameStyle.heightPx - 24"
+          fill="#fcfcfd"
+        />
         <line
           v-for="t in vTicks"
           :key="`v-${t.mm}`"
-          x1="16"
-          :y1="t.x"
-          x2="6"
-          :y2="t.x"
-          stroke="#bbb"
-          stroke-width="1"
+          :x1="t.zero ? 0 : t.major ? 6 : 12"
+          :x2="24"
+          :y1="t.x" :y2="t.x"
+          :class="['ruler-tick', { 'ruler-tick-major': t.major, 'ruler-tick-zero': t.zero }]"
         />
         <text
           v-for="t in vTicks"
           :key="`vt-${t.mm}`"
-          v-show="t.major"
+          v-show="t.major && t.inCanvas"
           x="2"
-          :y="t.x + 8"
-          font-size="9"
-          fill="#888"
+          :y="t.x + (t.mm === 0 ? 12 : t.mm > 0 ? 11 : 6)"
+          :class="['ruler-text', { 'ruler-text-zero': t.zero }]"
+          text-anchor="start"
         >{{ t.mm }}</text>
+        <!-- 选中元素位置三角(向左指) -->
+        <polygon
+          v-for="m in selectedEdgeMarks.v"
+          :key="`ms-v-${m.id}-${m.edge}`"
+          :points="`0,${m.x - 3} 0,${m.x + 3} 6,${m.x}`"
+          class="ruler-mark"
+        />
+        <!-- 鼠标游标线 + 坐标 chip -->
+        <g v-if="mousePos && mousePos.inCanvas" class="ruler-cursor">
+          <line x1="0" :y1="mousePos.yPx" x2="24" :y2="mousePos.yPx" />
+          <rect
+            x="3"
+            :y="cursorChipY('v')"
+            width="40" height="14" rx="2"
+          />
+          <text x="23" :y="cursorChipY('v') + 10" text-anchor="middle">
+            {{ formatMm(mousePos.yMm) }}
+          </text>
+        </g>
+      </svg>
+
+      <!-- 左上角(0,0 标尺交点) -->
+      <svg class="ruler ruler-corner" width="24" height="24" viewBox="0 0 24 24">
+        <rect x="0" y="0" width="24" height="24" fill="#f5f5f7" />
+        <line x1="0" y1="24" x2="24" y2="24" stroke="#d0d0d4" stroke-width="1" />
+        <line x1="24" y1="0" x2="24" y2="24" stroke="#d0d0d4" stroke-width="1" />
+        <!-- 选中时,原点高亮 -->
+        <circle v-if="hasSelection" cx="12" cy="12" r="2.5" class="ruler-corner-dot" />
       </svg>
 
       <div
@@ -67,6 +125,8 @@
         :style="canvasStyle"
         @dragover.prevent
         @drop="onDrop"
+        @mousemove="onCanvasMouseMove"
+        @mouseleave="onCanvasMouseLeave"
       >
         <div
           v-for="el in template.elements"
@@ -470,29 +530,43 @@ function onWrapMouseDown(e: MouseEvent) {
 }
 
 /**
- * 刻度数组:每 5mm 一个 minor,每 10mm 一个 major(带数字)。
- * 数字从 -10mm 开始延伸到 paper.width + 10,模拟"画布外的世界"。
+ * 刻度数组:根据 zoom 自适应密度(越大越密)。
+ *  mm === 0 是 zero tick(加粗深色),mm % major === 0 是 major(长 + 数字),
+ *  其余是 minor(短)。
+ *  inCanvas 标记是否落在画布内 0~axisLen,只对画布内的 tick 显示文字。
  */
-const RULER_MAJOR = 10
-const RULER_MINOR = 5
-const RULER_PAD = 10 // mm
+const RULER_PAD = 12 // mm(画布外的延伸刻度,用于"画布外也有刻度感")
 
-function buildTicks(axisLen: number): Array<{ mm: number; x: number; major: boolean }> {
-  const ticks: Array<{ mm: number; x: number; major: boolean }> = []
+/** 根据 zoom 选 major / minor 间距,保证标尺不会太挤也不会太空 */
+function chooseStep(zoom: number): { major: number; minor: number } {
+  if (zoom >= 2) return { major: 5, minor: 1 }
+  if (zoom >= 1.25) return { major: 10, minor: 5 }
+  if (zoom >= 0.6) return { major: 20, minor: 5 }
+  return { major: 50, minor: 10 }
+}
+
+function buildTicks(axisLen: number, axis: 'x' | 'y'): Array<{ mm: number; x: number; major: boolean; zero: boolean; inCanvas: boolean }> {
+  const { major: majorStep, minor: minorStep } = chooseStep(zoomValue.value)
+  const ticks: Array<{ mm: number; x: number; major: boolean; zero: boolean; inCanvas: boolean }> = []
   const start = -RULER_PAD
   const end = axisLen + RULER_PAD
-  for (let mm = start; mm <= end; mm += RULER_MINOR) {
+  // 从 -RULER_PAD 起步到 +axisLen+RULER_PAD,每 minorStep 一个
+  const firstTick = Math.ceil(start / minorStep) * minorStep
+  for (let mm = firstTick; mm <= end; mm += minorStep) {
     const x = mmToPxScaled(mm)
-    const major = mm % RULER_MAJOR === 0
-    if (major || Math.abs(mm) % RULER_MINOR === 0) {
-      ticks.push({ mm, x, major })
+    const zero = mm === 0
+    const major = mm % majorStep === 0
+    const inCanvas = mm >= 0 && mm <= axisLen
+    // zero 永远画;major 永远画(但只画一次,避免 0 = major 被 zero 替代)
+    if (zero || major || mm % minorStep === 0) {
+      ticks.push({ mm, x, major, zero, inCanvas })
     }
   }
   return ticks
 }
 
-const hTicks = computed(() => buildTicks(props.template.paper.width))
-const vTicks = computed(() => buildTicks(props.template.paper.height))
+const hTicks = computed(() => buildTicks(props.template.paper.width, 'x'))
+const vTicks = computed(() => buildTicks(props.template.paper.height, 'y'))
 
 const snapLines = reactive<{ vertical: number[]; horizontal: number[] }>({
   vertical: [],
@@ -508,6 +582,73 @@ const selectedEl = computed<Element | null>(() =>
  *  null = 不在拖动。跟 snapLines(吸附命中红线)叠加:吸附时红线盖在虚线上表示"已对齐"。 */
 const selfLines = ref<{ v: number[]; h: number[] } | null>(null)
 
+// ========== 标尺:鼠标游标 + 选中元素位置标记 ==========
+
+/** 鼠标在画布内的位置(同时给水平/垂直标尺用) */
+const mousePos = ref<{
+  /** 鼠标在 canvas 内的 px(从 canvas 左上角算) */
+  xPx: number; yPx: number
+  /** 鼠标在 canvas 内的 mm */
+  xMm: number; yMm: number
+  /** 是否在画布内(0 ≤ mm ≤ paper) */
+  inCanvas: boolean
+} | null>(null)
+
+/** 当前是否有任何选中(主选 / 多选) */
+const hasSelection = computed(() =>
+  !!props.selectedId || (props.multiSelectedIds && props.multiSelectedIds.length > 0),
+)
+
+/** 选中元素 / 组的 4 边在水平/垂直标尺上的位置(去重后,用于画小三角) */
+type EdgeMark = { id: string; edge: 'l' | 'r' | 't' | 'b'; x: number }
+const selectedEdgeMarks = computed<{ h: EdgeMark[]; v: EdgeMark[] }>(() => {
+  const ids = props.multiSelectedIds && props.multiSelectedIds.length > 0
+    ? props.multiSelectedIds
+    : props.selectedId ? [props.selectedId] : []
+  if (ids.length === 0) return { h: [], v: [] }
+  const idSet = new Set(ids)
+  const h: EdgeMark[] = []
+  const v: EdgeMark[] = []
+  const seenH = new Set<number>()
+  const seenV = new Set<number>()
+  for (const e of props.template.elements) {
+    if (!idSet.has(e.id)) continue
+    // left / right (画在水平标尺上)
+    for (const m of [e.x, e.x + e.w]) {
+      if (m < 0 || m > props.template.paper.width) continue
+      const k = Math.round(m * 100) // 去重 mm
+      if (seenH.has(k)) continue
+      seenH.add(k)
+      h.push({ id: e.id, edge: m === e.x ? 'l' : 'r', x: mmToPxScaled(m) + 24 })
+    }
+    for (const m of [e.y, e.y + e.h]) {
+      if (m < 0 || m > props.template.paper.height) continue
+      const k = Math.round(m * 100)
+      if (seenV.has(k)) continue
+      seenV.add(k)
+      v.push({ id: e.id, edge: m === e.y ? 't' : 'b', x: mmToPxScaled(m) + 24 })
+    }
+  }
+  return { h, v }
+})
+
+/** 鼠标游标 chip 位置(水平:在鼠标 x 处居中,但贴右边缘时不溢出) */
+function cursorChipX(axis: 'h' | 'v'): number {
+  if (!mousePos.value) return 0
+  const x = mousePos.value.xPx + 24 + 4 // +24 跳过 ruler 偏移
+  // 距右边界 < 40 时,改为显示在鼠标左侧
+  const totalW = frameStyle.value.widthPx
+  if (x + 40 > totalW) return Math.max(0, mousePos.value.xPx + 24 - 40)
+  return x
+}
+function cursorChipY(axis: 'h' | 'v'): number {
+  if (!mousePos.value) return 0
+  const y = mousePos.value.yPx + 24 + 4
+  const totalH = frameStyle.value.heightPx
+  if (y + 18 > totalH) return Math.max(0, mousePos.value.yPx + 24 - 18)
+  return y
+}
+
 function elBox(el: Element) {
   return {
     left: mmToPxScaled(el.x) + 'px',
@@ -522,6 +663,22 @@ function elBox(el: Element) {
 function onDrop(e: DragEvent) {
   const type = e.dataTransfer?.getData('text/plain') as ElementType
   if (type) emit('add', type)
+}
+
+/** 鼠标在画布上:更新标尺游标位置(同时给水平/垂直标尺) */
+function onCanvasMouseMove(e: MouseEvent) {
+  const canvas = e.currentTarget as HTMLElement
+  const rect = canvas.getBoundingClientRect()
+  const xPx = e.clientX - rect.left
+  const yPx = e.clientY - rect.top
+  const z = zoomValue.value
+  const xMm = xPx / (mmToPx(1) * z)
+  const yMm = yPx / (mmToPx(1) * z)
+  const inCanvas = xMm >= 0 && xMm <= props.template.paper.width && yMm >= 0 && yMm <= props.template.paper.height
+  mousePos.value = { xPx, yPx, xMm, yMm, inCanvas }
+}
+function onCanvasMouseLeave() {
+  mousePos.value = null
 }
 
 /**
@@ -1061,24 +1218,94 @@ watch(() => props.template.elements, () => {
 }
 .ruler {
   position: absolute;
-  background: #fafafa;
+  background: linear-gradient(to bottom, #fbfbfd, #f3f3f6);
   display: block;
   pointer-events: none;
   z-index: 5; /* 在 snap-line 之上,让辅助线延伸到 ruler 位置时 ruler 仍然可见 */
+  user-select: none;
 }
 .ruler-h {
   top: 0;
   left: 24px;
   height: 24px;
-  border-bottom: 1px solid #e0e0e0;
-  border-left: 1px solid #e0e0e0;
+  border-bottom: 1px solid #d8d8de;
+  border-left: 1px solid #d8d8de;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.04);
 }
 .ruler-v {
   top: 24px;
   left: 0;
   width: 24px;
-  border-right: 1px solid #e0e0e0;
-  border-top: 1px solid #e0e0e0;
+  border-right: 1px solid #d8d8de;
+  border-top: 1px solid #d8d8de;
+  box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.04);
+}
+.ruler-corner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: #ececef;
+  border-right: 1px solid #d8d8de;
+  border-bottom: 1px solid #d8d8de;
+}
+.ruler-corner-dot {
+  fill: #1890ff;
+  filter: drop-shadow(0 0 2px rgba(24, 144, 255, 0.6));
+}
+
+/* 刻度线:默认 minor 灰色短, major 更长更深, zero 贯穿整高(加粗) */
+.ruler-tick {
+  stroke: #b8b8c0;
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.ruler-tick-major {
+  stroke: #6a6a72;
+  stroke-width: 1;
+}
+.ruler-tick-zero {
+  stroke: #1890ff;
+  stroke-width: 1.5;
+}
+
+/* 文字 */
+.ruler-text {
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  fill: #6a6a72;
+  letter-spacing: 0.2px;
+  paint-order: stroke;
+  stroke: rgba(252, 252, 253, 0.85);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+.ruler-text-zero {
+  fill: #1890ff;
+  font-weight: 600;
+  stroke: rgba(252, 252, 253, 0.9);
+}
+
+/* 选中元素在标尺上的位置三角(向下/向左) */
+.ruler-mark {
+  fill: #1890ff;
+  filter: drop-shadow(0 1px 1px rgba(24, 144, 255, 0.4));
+}
+
+/* 鼠标游标 */
+.ruler-cursor line {
+  stroke: #ff4d4f;
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.ruler-cursor rect {
+  fill: #ff4d4f;
+  filter: drop-shadow(0 1px 2px rgba(255, 77, 79, 0.4));
+}
+.ruler-cursor text {
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 600;
+  fill: #fff;
 }
 .canvas {
   position: absolute;
