@@ -29,13 +29,13 @@
         v-for="x in snapLines.vertical"
         :key="`v-${x}`"
         class="snap-line snap-v"
-        :style="{ left: mmToPx(x) + 'px' }"
+        :style="{ left: mmToPxScaled(x) + 'px' }"
       />
       <div
         v-for="y in snapLines.horizontal"
         :key="`h-${y}`"
         class="snap-line snap-h"
-        :style="{ top: mmToPx(y) + 'px' }"
+        :style="{ top: mmToPxScaled(y) + 'px' }"
       />
     </div>
   </div>
@@ -51,6 +51,10 @@ import ElementRenderer from './ElementRenderer.vue'
 const props = defineProps<{
   template: Template
   selectedId: string | null
+  /** 画布缩放(1 = 100%,0.5 = 50%) */
+  zoom?: number
+  /** 是否显示 5mm 网格 */
+  showGrid?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -67,9 +71,31 @@ const emit = defineEmits<{
 // 吸附阈值(单位:mm,4px / 3.78 ≈ 1mm,这里取 1mm 适中)
 const SNAP_THRESHOLD_MM = 1
 
+const zoomValue = computed(() => props.zoom ?? 1)
+
+/** mm → 画布 px(已应用 zoom) */
+function mmToPxScaled(mm: number): number {
+  return mmToPx(mm) * zoomValue.value
+}
+
+/** 5mm 网格背景:横竖各画一道浅灰 1px 线,间距 5mm。showGrid=false 时透明 */
+const gridStyle = computed(() => {
+  if (!props.showGrid) return { image: 'none', size: '' }
+  const step = mmToPxScaled(5)
+  return {
+    image: [
+      `linear-gradient(to right, #e0e0e0 1px, transparent 1px)`,
+      `linear-gradient(to bottom, #e0e0e0 1px, transparent 1px)`,
+    ].join(','),
+    size: `${step}px ${step}px`,
+  }
+})
+
 const canvasStyle = computed(() => ({
-  width: mmToPx(props.template.paper.width) + 'px',
-  height: mmToPx(props.template.paper.height) + 'px',
+  width: mmToPxScaled(props.template.paper.width) + 'px',
+  height: mmToPxScaled(props.template.paper.height) + 'px',
+  backgroundImage: gridStyle.value.image,
+  backgroundSize: gridStyle.value.size || undefined,
 }))
 
 const snapLines = reactive<{ vertical: number[]; horizontal: number[] }>({
@@ -79,10 +105,10 @@ const snapLines = reactive<{ vertical: number[]; horizontal: number[] }>({
 
 function elBox(el: Element) {
   return {
-    left: mmToPx(el.x) + 'px',
-    top: mmToPx(el.y) + 'px',
-    width: mmToPx(el.w) + 'px',
-    height: mmToPx(el.h) + 'px',
+    left: mmToPxScaled(el.x) + 'px',
+    top: mmToPxScaled(el.y) + 'px',
+    width: mmToPxScaled(el.w) + 'px',
+    height: mmToPxScaled(el.h) + 'px',
   }
 }
 
@@ -121,7 +147,8 @@ function onElementMouseDown(e: MouseEvent, id: string) {
   const startY = e.clientY
   const origX = el.x
   const origY = el.y
-  const pxPerMmLocal = mmToPx(1)
+  // mousemove 像素 → mm,需除以 zoom 让缩放下视觉拖动距离一致
+  const pxPerMmLocal = mmToPx(1) * zoomValue.value
   const vCandidates = collectCandidates('x', id)
   const hCandidates = collectCandidates('y', id)
 

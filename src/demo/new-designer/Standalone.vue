@@ -11,51 +11,12 @@
     <header class="toolbar">
       <div class="brand">vue3-hiprint · 新设计器(实验)</div>
       <a-space :size="4" wrap>
-        <a-button type="primary" size="small" @click="onPrint">
-          <template #icon><PrinterOutlined /></template>
-          打印预览
-        </a-button>
         <a-button size="small" @click="showJson = true">查看 JSON</a-button>
         <a-button size="small" @click="onExport">导出 JSON</a-button>
         <a-upload :before-upload="onImport" :show-upload-list="false" accept="application/json">
           <a-button size="small">导入 JSON</a-button>
         </a-upload>
         <a-divider type="vertical" />
-        <a-tooltip title="水平左对齐">
-          <a-button size="small" :disabled="!hasSelection" @click="onAlignH('left')">
-            <template #icon><AlignLeftOutlined /></template>
-          </a-button>
-        </a-tooltip>
-        <a-tooltip title="水平居中">
-          <a-button size="small" :disabled="!hasSelection" @click="onAlignH('center')">
-            <template #icon><AlignCenterOutlined /></template>
-          </a-button>
-        </a-tooltip>
-        <a-tooltip title="水平右对齐">
-          <a-button size="small" :disabled="!hasSelection" @click="onAlignH('right')">
-            <template #icon><AlignRightOutlined /></template>
-          </a-button>
-        </a-tooltip>
-        <a-divider type="vertical" />
-        <a-tooltip title="垂直顶对齐">
-          <a-button size="small" :disabled="!hasSelection" @click="onAlignV('top')">
-            <template #icon><VerticalAlignTopOutlined /></template>
-          </a-button>
-        </a-tooltip>
-        <a-tooltip title="垂直居中">
-          <a-button size="small" :disabled="!hasSelection" @click="onAlignV('middle')">
-            <template #icon><VerticalAlignMiddleOutlined /></template>
-          </a-button>
-        </a-tooltip>
-        <a-tooltip title="垂直底对齐">
-          <a-button size="small" :disabled="!hasSelection" @click="onAlignV('bottom')">
-            <template #icon><VerticalAlignBottomOutlined /></template>
-          </a-button>
-        </a-tooltip>
-        <a-divider type="vertical" />
-        <a-popconfirm title="重置当前模板?" ok-text="重置" cancel-text="取消" @confirm="onReset">
-          <a-button size="small" danger>重置</a-button>
-        </a-popconfirm>
         <a-tag color="blue">A4 · 210×297mm</a-tag>
         <a-button size="small" @click="backToDemo">返回 demo 列表</a-button>
       </a-space>
@@ -65,7 +26,10 @@
       <PrintDesigner
         ref="designerRef"
         :initial-template="initialTemplate"
+        :print-data="printData"
         @json-import-error="onJsonError"
+        @print-error="message.error('打印失败')"
+        @print-ok="message.success('已发送打印任务')"
       />
     </div>
 
@@ -85,21 +49,14 @@ import { ref, computed } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   PrintDesigner,
-  printTemplate,
-  alignHorizontal,
-  alignVertical,
   createTemplate,
   createText,
   createTable,
   type Template,
-  type HorizontalAlign,
-  type VerticalAlign,
 } from '../../designer'
 
 const designerRef = ref<InstanceType<typeof PrintDesigner> | null>(null)
 const showJson = ref(false)
-
-const hasSelection = computed(() => !!designerRef.value?.designer.selectedId.value)
 
 const initialTemplate: Template = createTemplate({
   elements: [
@@ -128,13 +85,6 @@ const printData = {
 
 const jsonText = computed(() => designerRef.value?.toJson() ?? '')
 
-async function onPrint() {
-  const tpl = designerRef.value?.designer.template.value
-  if (!tpl) return
-  const ok = await printTemplate(tpl, printData)
-  if (!ok) message.error('打印失败')
-}
-
 function onExport() {
   const json = designerRef.value?.toJson() ?? ''
   if (!json) return
@@ -161,26 +111,6 @@ function onImport(file: File): boolean {
 
 function onJsonError() {
   message.error('JSON 格式不合法(需要 version=1.0 + paper + elements)')
-}
-
-function onAlignH(mode: HorizontalAlign) {
-  const d = designerRef.value?.designer
-  const id = d?.selectedId.value
-  if (!d || !id) return
-  d.template.value = alignHorizontal(d.template.value, id, mode)
-}
-
-function onAlignV(mode: VerticalAlign) {
-  const d = designerRef.value?.designer
-  const id = d?.selectedId.value
-  if (!d || !id) return
-  d.template.value = alignVertical(d.template.value, id, mode)
-}
-
-function onReset() {
-  if (!designerRef.value) return
-  designerRef.value.designer.load(createTemplate())
-  message.info('已重置')
 }
 
 function backToDemo() {

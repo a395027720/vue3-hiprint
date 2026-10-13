@@ -1,15 +1,20 @@
 /**
  * useDesigner — 单一 Composition API 入口。
  *
- * 收敛:模板状态、选中元素、增删改、JSON 导入导出、打印触发。
- * 不做:UI 渲染(交给 <PrintDesigner> 组件)、history(后续 PR)。
+ * 收敛:模板状态、选中元素、增删改、JSON 导入导出、history、缩放、网格。
+ * 不做:UI 渲染(交给 <PrintDesigner> 组件)、拖动事务(MVP:update 不入 history)。
  *
  * 模板用 shallowRef 包,内部用 schema.ts 的 immutable helper 更新。
  * 这样 Vue 不会深度代理整个 element 树(尤其 table 很大时性能更好),
  * 组件侧用 template.value = nextTemplate 整体替换触发响应。
+ *
+ * ## History 策略
+ * add / remove / clearElements / setPaper / load 各自入 history。
+ * update **不**自动入 history,因为拖动会产生上百次 mousemove,会让 history
+ * 粒度太细。后续 PR 引入"事务"概念,让拖动 mouseup 时一次性 commit。
  */
 
-import { ref, shallowRef, computed } from 'vue'
+import { ref, shallowRef, computed, triggerRef } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 
 import type { Element, ElementType, Template } from '../core/types'
@@ -22,6 +27,7 @@ import {
   setPaper as setPaperHelper,
   updateElement as updateEl,
 } from '../core/schema'
+import { History } from '../core/history'
 
 export interface UseDesignerOptions {
   /** 初始模板(可选,默认空白 A4) */
@@ -41,13 +47,15 @@ export interface UseDesignerReturn {
   select: (id: string | null) => void
   /** 添加新元素(在画布中央) */
   add: (type: ElementType) => Element
-  /** 不可变更新元素 patch */
+  /** 不可变更新元素 patch(update 不入 history,后续 PR 用事务) */
   update: (id: string, patch: Partial<Element>) => void
-  /** 删除元素 */
+  /** 删除元素(入 history) */
   remove: (id: string) => void
-  /** 替换 paper */
+  /** 清空全部元素(入 history) */
+  clearElements: () => void
+  /** 替换 paper(入 history) */
   setPaper: (paper: Template['paper']) => void
-  /** 整体替换模板(用于 JSON 导入) */
+  /** 整体替换模板(用于 JSON 导入,入 history) */
   load: (tpl: Template) => void
   /** 导出 JSON 字符串 */
   toJson: () => string
@@ -57,6 +65,22 @@ export interface UseDesignerReturn {
   dirty: ComputedRef<boolean>
   /** 标记已保存(清空 dirty) */
   markClean: () => void
+  /** 撤销(若 canUndo) */
+  undo: () => void
+  /** 重做(若 canRedo) */
+  redo: () => void
+  /** 是否可撤销 */
+  canUndo: ComputedRef<boolean>
+  /** 是否可重做 */
+  canRedo: ComputedRef<boolean>
+  /** 画布缩放比例(1 = 100%,0.5 = 50%) */
+  zoom: Ref<number>
+  /** 设置缩放 */
+  setZoom: (z: number) => void
+  /** 是否显示网格 */
+  showGrid: Ref<boolean>
+  /** 切换网格显示 */
+  toggleGrid: () => void
 }
 
 export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn {
@@ -66,40 +90,77 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
   const selectedId = ref<string | null>(null)
   const lastSaved = shallowRef<Template>(initial)
   const dirty = computed(() => template.value !== lastSaved.value)
-  // 暂不实现 onDirtyChange,留给后续 PR(via watch)
+
+  // history counter(用 ref 让 canUndo/canRedo 响应式)
+  const histCount = ref({ past: 0, future: 0 })
+  const canUndo = computed(() => histCount.value.past > 0)
+  const canRedo = computed(() => histCount.value.future > 0)
+  const history = new History<Template>({
+    getCurrent: () => template.value,
+    setCurrent: (v) => {
+      template.value = v
+      // shallowRef 内部值引用变了需要 trigger 让 computed 重新计算
+      triggerRef(template)
+    },
+  })
+
+  const zoom = ref(1)
+  const showGrid = ref(false)
 
   const selected = computed<Element | null>(() =>
     selectedId.value ? findElement(template.value, selectedId.value) ?? null : null,
   )
 
+  /** 把 newTpl 提交为"下一个状态",History 自动把 current 入 past + setCurrent(new)。 */
+  function commit(newTpl: Template): void {
+    history.commit(newTpl)
+    histCount.value = { past: history.pastSize, future: history.futureSize }
+  }
+
   function add(type: ElementType): Element {
     const tpl = template.value
     const el = createElement(type, {
-      // 默认放在画布中央,基于 paper 中心
       x: Math.max(0, (tpl.paper.width - 60) / 2),
       y: Math.max(0, (tpl.paper.height - 20) / 2),
     })
-    template.value = addEl(tpl, el)
+    commit(addEl(tpl, el))
     selectedId.value = el.id
     return el
   }
 
   function update(id: string, patch: Partial<Element>): void {
+    // update 不入 history(拖动事务,后续 PR)
     template.value = updateEl(template.value, id, patch as never)
   }
 
   function remove(id: string): void {
-    template.value = removeEl(template.value, id)
+    commit(removeEl(template.value, id))
     if (selectedId.value === id) selectedId.value = null
   }
 
+  function clearElements(): void {
+    if (template.value.elements.length === 0) return
+    commit({ ...template.value, elements: [] })
+    selectedId.value = null
+  }
+
   function setPaper(paper: Template['paper']): void {
-    template.value = setPaperHelper(template.value, paper)
+    commit(setPaperHelper(template.value, paper))
   }
 
   function load(tpl: Template): void {
-    template.value = tpl
+    commit(tpl)
     selectedId.value = null
+  }
+
+  function undo(): void {
+    history.undo()
+    histCount.value = { past: history.pastSize, future: history.futureSize }
+  }
+
+  function redo(): void {
+    history.redo()
+    histCount.value = { past: history.pastSize, future: history.futureSize }
   }
 
   function toJson(): string {
@@ -123,6 +184,14 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     lastSaved.value = template.value
   }
 
+  function setZoom(z: number): void {
+    zoom.value = Math.max(0.25, Math.min(4, z))
+  }
+
+  function toggleGrid(): void {
+    showGrid.value = !showGrid.value
+  }
+
   return {
     template,
     selectedId,
@@ -131,11 +200,21 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     add,
     update,
     remove,
+    clearElements,
     setPaper,
     load,
     toJson,
     loadJson,
     dirty,
     markClean,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    zoom,
+    setZoom,
+    showGrid,
+    toggleGrid,
   }
 }
+

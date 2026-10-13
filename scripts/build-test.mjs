@@ -41,4 +41,14 @@ await build({
   logLevel: 'error',
 })
 
-console.log('[test] built dist-test/{schema,render,align}.mjs')
+await build({
+  entryPoints: [path.resolve(root, 'src/designer/core/history.ts')],
+  bundle: true,
+  format: 'esm',
+  platform: 'neutral',
+  outfile: path.resolve(root, 'dist-test/history.mjs'),
+  target: 'node18',
+  logLevel: 'error',
+})
+
+console.log('[test] built dist-test/{schema,render,align,history}.mjs')
