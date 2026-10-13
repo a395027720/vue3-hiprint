@@ -11,7 +11,7 @@
         class="ruler ruler-h"
         :width="frameStyle.width"
         height="24"
-        :viewBox="`0 0 ${frameStyle.widthPx} 24`"
+        :viewBox="`0 0 ${frameStyle.widthPx + 24} 24`"
       >
         <!-- 画布内填底(浅,让画布对应区域标尺更"实") -->
         <rect
@@ -65,7 +65,7 @@
         class="ruler ruler-v"
         width="24"
         :height="frameStyle.height"
-        :viewBox="`0 0 24 ${frameStyle.heightPx}`"
+        :viewBox="`0 0 24 ${frameStyle.heightPx + 24}`"
       >
         <rect
           x="0" y="24"
