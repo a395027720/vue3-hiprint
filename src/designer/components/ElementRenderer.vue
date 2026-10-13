@@ -51,11 +51,86 @@
     class="el-line"
     :style="lineStyle"
   ></div>
+
+  <!-- pagenum -->
+  <div
+    v-else-if="element.type === 'pagenum'"
+    class="el-pagenum"
+    :style="pageNumStyle"
+  >{{ pageNumText }}</div>
+
+  <!-- barcode(MVP:横线示意) -->
+  <div
+    v-else-if="element.type === 'barcode'"
+    class="el-barcode"
+    :style="barcodeBoxStyle"
+  >
+    <svg :viewBox="`0 0 ${element.w} ${element.h}`" :width="mmToPx(element.w)" :height="mmToPx(element.h * 0.75)">
+      <rect
+        v-for="(bar, i) in barcodeBars"
+        :key="i"
+        :x="bar.x"
+        y="0"
+        :width="bar.w"
+        :height="mmToPx(element.h * 0.75)"
+        fill="#000"
+      />
+    </svg>
+    <div style="font-size: 10px; color: #333; margin-top: 2px">{{ element.value }}</div>
+  </div>
+
+  <!-- qrcode(MVP:伪棋盘) -->
+  <div
+    v-else-if="element.type === 'qrcode'"
+    class="el-qrcode"
+    :style="qrcodeBoxStyle"
+  >
+    <svg :viewBox="`0 0 ${qrSize} ${qrSize}`" :width="qrSize" :height="qrSize">
+      <rect
+        v-for="(cell, i) in qrCells"
+        :key="i"
+        :x="cell.x"
+        :y="cell.y"
+        :width="cell.size"
+        :height="cell.size"
+        fill="#000"
+      />
+    </svg>
+  </div>
+
+  <!-- multilabel -->
+  <div
+    v-else-if="element.type === 'multilabel'"
+    class="el-multilabel"
+    :style="multiLabelBoxStyle"
+  >
+    <div
+      v-for="(l, i) in element.labels.slice(0, element.cols * 2)"
+      :key="i"
+      class="label-chip"
+      :style="labelChipStyle(i, l)"
+    >{{ l.text }}</div>
+  </div>
+
+  <!-- rect -->
+  <div
+    v-else-if="element.type === 'rect'"
+    class="el-rect"
+    :style="rectStyle"
+  ></div>
+
+  <!-- circle -->
+  <div
+    v-else-if="element.type === 'circle'"
+    class="el-circle"
+    :style="circleStyle"
+  ></div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Element, TableElement } from '../core/types'
+import { mmToPx } from '../core/render'
 
 const props = defineProps<{
   element: Element
@@ -175,6 +250,130 @@ const previewRows = computed<Record<string, unknown>[]>(() => {
 const textLines = computed<string[]>(() => {
   if (props.element.type !== 'text') return []
   return props.element.text.split('\n')
+})
+
+const pageNumText = computed<string>(() => {
+  if (props.element.type !== 'pagenum') return ''
+  return props.element.format.replace('{page}', '1').replace('{total}', '1')
+})
+
+const pageNumStyle = computed(() => {
+  if (props.element.type !== 'pagenum') return {}
+  const e = props.element
+  const justify = e.align === 'center' ? 'center' : e.align === 'right' ? 'flex-end' : 'flex-start'
+  return {
+    fontSize: e.fontSize + 'pt',
+    fontWeight: e.fontWeight,
+    color: e.color ?? '#000',
+    fontFamily: e.fontFamily,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: justify,
+  }
+})
+
+const barcodeBoxStyle = computed(() => {
+  if (props.element.type !== 'barcode') return {}
+  return {
+    background: '#fff',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }
+})
+
+const barcodeBars = computed<Array<{ x: number; w: number }>>(() => {
+  if (props.element.type !== 'barcode') return []
+  const w = mmToPx(props.element.w)
+  const count = Math.max(20, Math.floor(w / 3))
+  const bars: Array<{ x: number; w: number }> = []
+  for (let i = 0; i < count; i++) {
+    if (i % 3 === 0) continue
+    bars.push({ x: (i / count) * w, w: ((i * 7) % 4) + 1 })
+  }
+  return bars
+})
+
+const qrSize = computed(() => {
+  if (props.element.type !== 'qrcode') return 0
+  return mmToPx(Math.min(props.element.w, props.element.h))
+})
+
+const qrcodeBoxStyle = computed(() => ({
+  background: '#fff',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}))
+
+const qrCells = computed<Array<{ x: number; y: number; size: number }>>(() => {
+  if (props.element.type !== 'qrcode' || qrSize.value === 0) return []
+  const n = 21
+  const cell = qrSize.value / n
+  const out: Array<{ x: number; y: number; size: number }> = []
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      if ((x * 7 + y * 13 + x * y) % 3 === 0) {
+        out.push({ x: x * cell, y: y * cell, size: cell })
+      }
+    }
+  }
+  return out
+})
+
+const multiLabelBoxStyle = computed(() => {
+  if (props.element.type !== 'multilabel') return {}
+  const gap = 2
+  const cellW = (mmToPx(props.element.w) - gap * (props.element.cols - 1)) / props.element.cols
+  return {
+    display: 'grid',
+    gridTemplateColumns: `repeat(${props.element.cols}, ${cellW}px)`,
+    gap: `${gap}px`,
+  }
+})
+
+function labelChipStyle(i: number, l: { color?: string }) {
+  if (props.element.type !== 'multilabel') return {}
+  return {
+    background: l.color ?? '#f0f7ff',
+    border: '1px solid #91caff',
+    borderRadius: '3px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: (props.element.fontSize ?? 12) + 'pt',
+    color: props.element.color ?? '#333',
+    height: '18px',
+  }
+}
+
+const rectStyle = computed(() => {
+  if (props.element.type !== 'rect') return {}
+  const e = props.element
+  return {
+    background: e.fill ?? 'transparent',
+    boxSizing: 'border-box',
+    borderTop: sideCss(e, 'top'),
+    borderRight: sideCss(e, 'right'),
+    borderBottom: sideCss(e, 'bottom'),
+    borderLeft: sideCss(e, 'left'),
+    borderRadius: e.borderRadius ? e.borderRadius + 'mm' : undefined,
+  }
+})
+
+const circleStyle = computed(() => {
+  if (props.element.type !== 'circle') return {}
+  const e = props.element
+  return {
+    background: e.fill ?? 'transparent',
+    borderRadius: '50%',
+    boxSizing: 'border-box',
+    borderTop: sideCss(e, 'top'),
+    borderRight: sideCss(e, 'right'),
+    borderBottom: sideCss(e, 'bottom'),
+    borderLeft: sideCss(e, 'left'),
+  }
 })
 </script>
 

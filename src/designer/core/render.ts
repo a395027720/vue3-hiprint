@@ -209,12 +209,129 @@ function renderLine(el: Extract<Element, { type: 'line' }>): string {
   ""></div>`
 }
 
+function renderPageNum(el: Extract<Element, { type: 'pagenum' }>): string {
+  // MVP:打印时浏览器会算 @page,这里静态显示 "第 1 页 / 共 1 页"
+  // 完整支持需要 CSS counter + @page { counter-increment: page },留待后续 PR
+  const text = el.format.replace('{page}', '1').replace('{total}', '1')
+  return `<div class="el-pagenum" style="
+    position:absolute;
+    left:${mmToPx(el.x)}px;top:${mmToPx(el.y)}px;
+    width:${mmToPx(el.w)}px;height:${mmToPx(el.h)}px;
+    box-sizing:border-box;
+    display:flex;align-items:center;justify-content:${el.align === 'center' ? 'center' : el.align === 'right' ? 'flex-end' : 'flex-start'};
+    font-size:${el.fontSize}pt;
+    ${el.fontWeight ? `font-weight:${el.fontWeight};` : ''}
+    ${el.color ? `color:${el.color};` : ''}
+    ${el.fontFamily ? `font-family:${escapeHtml(el.fontFamily)};` : ''}
+  ">${escapeHtml(text)}</div>`
+}
+
+function renderBarcode(el: Extract<Element, { type: 'barcode' }>): string {
+  // MVP:用 SVG 画一组横线模拟条形码 + value 文本。
+  // 完整支持需要 bwip-js / JsBarcode,留待后续 PR。
+  const w = mmToPx(el.w)
+  const h = mmToPx(el.h)
+  const lines: string[] = []
+  const count = Math.max(20, Math.floor(w / 3))
+  for (let i = 0; i < count; i++) {
+    if (i % 3 === 0) continue
+    const x = (i / count) * w
+    const lw = ((i * 7) % 4) + 1
+    lines.push(`<rect x="${x.toFixed(1)}" y="0" width="${lw}" height="${(h * 0.75).toFixed(1)}" fill="#000"/>`)
+  }
+  return `<div class="el-barcode" style="
+    position:absolute;
+    left:${mmToPx(el.x)}px;top:${mmToPx(el.y)}px;
+    width:${w}px;height:${h}px;box-sizing:border-box;
+    background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  "><svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h * 0.75}">${lines.join('')}</svg><div style="font-size:10px;color:#333;margin-top:2px;">${escapeHtml(el.value)}</div></div>`
+}
+
+function renderQrcode(el: Extract<Element, { type: 'qrcode' }>): string {
+  // MVP:用 SVG 画 21x21 棋盘格模拟二维码 + value 文本。
+  // 完整支持需要 qrcode.js,留待后续 PR。
+  const w = mmToPx(el.w)
+  const h = mmToPx(el.h)
+  const size = Math.min(w, h)
+  const n = 21
+  const cell = size / n
+  const cells: string[] = []
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      // 伪随机填充(基于坐标)
+      if ((x * 7 + y * 13 + x * y) % 3 === 0) {
+        cells.push(`<rect x="${(x * cell).toFixed(1)}" y="${(y * cell).toFixed(1)}" width="${cell.toFixed(1)}" height="${cell.toFixed(1)}" fill="#000"/>`)
+      }
+    }
+  }
+  return `<div class="el-qrcode" style="
+    position:absolute;
+    left:${mmToPx(el.x)}px;top:${mmToPx(el.y)}px;
+    width:${w}px;height:${h}px;box-sizing:border-box;
+    background:#fff;display:flex;align-items:center;justify-content:center;
+  "><svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">${cells.join('')}</svg></div>`
+}
+
+function renderMultiLabel(el: Extract<Element, { type: 'multilabel' }>): string {
+  const w = mmToPx(el.w)
+  const h = mmToPx(el.h)
+  const gap = 2
+  const cellW = (w - gap * (el.cols - 1)) / el.cols
+  const cellH = 18
+  const items = el.labels.slice(0, el.cols * 2).map((l, i) => {
+    const c = i % el.cols
+    const r = Math.floor(i / el.cols)
+    return `<div style="
+      position:absolute;
+      left:${(c * (cellW + gap)).toFixed(1)}px;top:${(r * (cellH + gap)).toFixed(1)}px;
+      width:${cellW.toFixed(1)}px;height:${cellH}px;
+      background:${l.color ?? '#f0f7ff'};border:1px solid #91caff;border-radius:3px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:${el.fontSize}pt;color:${el.color ?? '#333'};
+    ">${escapeHtml(l.text)}</div>`
+  }).join('')
+  return `<div class="el-multilabel" style="
+    position:absolute;
+    left:${mmToPx(el.x)}px;top:${mmToPx(el.y)}px;
+    width:${w}px;height:${h}px;box-sizing:border-box;position:absolute;
+  ">${items}</div>`
+}
+
+function renderRect(el: Extract<Element, { type: 'rect' }>): string {
+  return `<div class="el-rect" style="
+    position:absolute;
+    left:${mmToPx(el.x)}px;top:${mmToPx(el.y)}px;
+    width:${mmToPx(el.w)}px;height:${mmToPx(el.h)}px;
+    background:${el.fill ?? 'transparent'};
+    box-sizing:border-box;
+    ${borderCss4Sides(el)}
+  "></div>`
+}
+
+function renderCircle(el: Extract<Element, { type: 'circle' }>): string {
+  return `<div class="el-circle" style="
+    position:absolute;
+    left:${mmToPx(el.x)}px;top:${mmToPx(el.y)}px;
+    width:${mmToPx(el.w)}px;height:${mmToPx(el.h)}px;
+    background:${el.fill ?? 'transparent'};
+    border-radius:50%;
+    box-sizing:border-box;
+    ${borderCss4Sides(el)}
+  "></div>`
+}
+
 export function renderElement(el: Element, data: unknown): string {
   switch (el.type) {
     case 'text': return renderText(el)
     case 'image': return renderImage(el)
     case 'table': return renderTable(el, resolveDataPath(data, el.dataPath))
     case 'line': return renderLine(el)
+    case 'pagenum': return renderPageNum(el)
+    case 'barcode': return renderBarcode(el)
+    case 'qrcode': return renderQrcode(el)
+    case 'multilabel': return renderMultiLabel(el)
+    case 'rect': return renderRect(el)
+    case 'circle': return renderCircle(el)
   }
 }
 

@@ -124,9 +124,80 @@ export interface LineElement extends BaseElement {
   color?: string
 }
 
+// ========== PageNum(页码) ==========
+
+export interface PageNumElement extends BaseElement {
+  type: 'pagenum'
+  /** 显示模板,支持 {page} / {total} 占位符 */
+  format: string
+  fontSize: number
+  fontWeight?: FontWeight
+  color?: string
+  fontFamily?: string
+  align?: Align
+  verticalAlign?: VerticalAlign
+}
+
+// ========== Barcode(条形码) ==========
+
+export interface BarcodeElement extends BaseElement {
+  type: 'barcode'
+  /** 条形码内容 */
+  value: string
+  /** 条码类型,如 'code128' / 'ean13' / 'qrcode'(由 bwip-js 支持) */
+  symbology: string
+}
+
+// ========== Qrcode(二维码) ==========
+
+export interface QrcodeElement extends BaseElement {
+  type: 'qrcode'
+  /** 二维码内容 */
+  value: string
+  /** 容错级别 L/M/H */
+  errorLevel?: 'L' | 'M' | 'H'
+}
+
+// ========== MultiLabel(多标签,一格多标签) ==========
+
+export interface MultiLabelElement extends BaseElement {
+  type: 'multilabel'
+  /** 标签块数组 */
+  labels: Array<{ text: string; color?: string }>
+  /** 每行列数 */
+  cols: number
+  fontSize: number
+  color?: string
+}
+
+// ========== Rect(矩形) ==========
+
+export interface RectElement extends BaseElement {
+  type: 'rect'
+  fill?: string
+  /** 描边由 border* 字段控制(共享 BaseElement 4 边) */
+}
+
+// ========== Circle(圆形) ==========
+
+export interface CircleElement extends BaseElement {
+  type: 'circle'
+  fill?: string
+}
+
 // ========== Element 联合 ==========
 
-export type Element = TextElement | ImageElement | TableElement | LineElement
+export type Element =
+  | TextElement
+  | ImageElement
+  | TableElement
+  | LineElement
+  | PageNumElement
+  | BarcodeElement
+  | QrcodeElement
+  | MultiLabelElement
+  | RectElement
+  | CircleElement
 export type ElementType = Element['type']
 
 export type ElementOfType<T extends ElementType> = Extract<Element, { type: T }>

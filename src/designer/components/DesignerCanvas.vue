@@ -377,12 +377,13 @@ function onElementMouseDown(e: MouseEvent, id: string) {
 }
 .canvas-element {
   position: absolute;
-  border: 1px dashed #bbb;
+  border: 1px dashed #c0c4cc;
   cursor: move;
   user-select: none;
   box-sizing: border-box;
   /* 默认 visible,让外凸的删除叉子能漏出来 */
   background: transparent;
+  transition: background 120ms, border-color 120ms;
 }
 .canvas-element.is-image {
   /* image 需要裁剪溢出 */
@@ -390,11 +391,11 @@ function onElementMouseDown(e: MouseEvent, id: string) {
 }
 .canvas-element:hover {
   border-color: #1890ff;
+  background: rgba(24, 144, 255, 0.05);
 }
 .canvas-element.selected {
   border: 1px solid #1890ff;
-  outline: 1px solid #1890ff;
-  outline-offset: -2px;
+  background: rgba(24, 144, 255, 0.1);
 }
 .el-remove {
   position: absolute;

@@ -10,20 +10,39 @@
       <printer-outlined class="brand-icon" />
       <span class="brand-text">打印设计器</span>
     </div>
-    <nav class="topbar-elements">
-      <button
-        v-for="item in items"
-        :key="item.type"
-        class="el-btn"
-        :title="`${item.label}(可拖拽到画布)`"
-        draggable="true"
-        @click="$emit('add', item.type)"
-        @dragstart="onDragStart($event, item.type)"
-      >
-        <span class="el-icon" v-html="item.icon" />
-        <span class="el-label">{{ item.label }}</span>
-      </button>
-    </nav>
+
+    <div class="topbar-elements">
+      <div class="elements-inner">
+        <button
+          class="el-btn el-btn-custom"
+          title="自定义(预留)"
+          @click="onCustom"
+        ><span v-html="customIcon" /><span class="el-label">自定义</span></button>
+
+        <div class="vsep" />
+
+        <div class="elements-scroll">
+          <div class="elements-row">
+            <template v-for="(group, gi) in elementGroups" :key="gi">
+              <button
+                v-for="item in group"
+                :key="item.type"
+                class="el-btn"
+                :title="`${item.label}(可拖拽到画布)`"
+                draggable="true"
+                @click="$emit('add', item.type)"
+                @dragstart="onDragStart($event, item.type)"
+              >
+                <span class="el-icon" v-html="item.icon" />
+                <span class="el-label">{{ item.label }}</span>
+              </button>
+              <div v-if="gi < elementGroups.length - 1" class="vsep" />
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="topbar-actions">
       <div ref="saveMenuRef" class="save-group">
         <button
@@ -66,6 +85,7 @@ defineProps<{
 
 const emit = defineEmits<{
   add: [type: ElementType]
+  custom: []
   save: []
   print: []
   printPreview: []
@@ -106,28 +126,66 @@ interface PaletteItem {
 
 const stroke = 'currentColor'
 const sw = 1.6
-const items: PaletteItem[] = [
-  {
-    type: 'text',
-    label: '文本',
-    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>`,
-  },
-  {
-    type: 'image',
-    label: '图片',
-    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`,
-  },
-  {
-    type: 'table',
-    label: '表格',
-    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>`,
-  },
-  {
-    type: 'line',
-    label: '线条',
-    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="20" y2="4"/></svg>`,
-  },
+// 双向箭头(自定义按钮)
+const customIcon = `<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="m7 20l-5-5l5-5l1.4 1.425L5.825 14H13v2H5.825L8.4 18.575zm10-6l-1.4-1.425L18.175 10H11V8h7.175L15.6 5.425L17 4l5 5z"/></svg>`
+
+const elementGroups: PaletteItem[][] = [
+  // 组 1:文本类
+  [
+    {
+      type: 'text', label: '文本',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M7 20V7H2V4h13v3h-5v13zm9 0v-8h-3V9h9v3h-3v8z"/></svg>`,
+    },
+    {
+      type: 'image', label: '图片',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21zm1-4h12l-3.75-5l-3 4L9 13z"/></svg>`,
+    },
+    {
+      type: 'pagenum', label: '页码',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="m6 20l1-4H3l.5-2h4l1-4h-4L5 8h4l1-4h2l-1 4h4l1-4h2l-1 4h4l-.5 2h-4l-1 4h4l-.5 2h-4l-1 4h-2l1-4H9l-1 4zm3.5-6h4l1-4h-4z"/></svg>`,
+    },
+  ],
+  // 组 2:数据/码类
+  [
+    {
+      type: 'table', label: '表格',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M3 8V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v3zm2 13q-.825 0-1.412-.587T3 19v-9h4.5v11zm11.5 0V10H21v9q0 .825-.587 1.413T19 21zm-7 0V10h5v11z"/></svg>`,
+    },
+    {
+      type: 'barcode', label: '条形码',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M1 19V5h2v14zm3 0V5h2v14zm3 0V5h1v14zm3 0V5h2v14zm3 0V5h3v14zm4 0V5h1v14zm3 0V5h3v14z"/></svg>`,
+    },
+    {
+      type: 'qrcode', label: '二维码',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M3 11V3h8v8zm2-2h4V5H5zM3 21v-8h8v8zm2-2h4v-4H5zm8-8V3h8v8zm2-2h4V5h-4zm4 12v-2h2v2zm-6-6v-2h2v2zm2 2v-2h2v2zm-2 2v-2h2v2zm2 2v-2h2v2zm2-2v-2h2v2zm0-4v-2h2v2zm2 2v-2h2v2z"/></svg>`,
+    },
+    {
+      type: 'multilabel', label: '多标签',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M3 11V3h8v8zm0 10v-8h8v8zm10-10V3h8v8zm0 10v-8h8v8z"/></svg>`,
+    },
+  ],
+  // 组 3:形状类
+  [
+    {
+      type: 'line', label: '直线',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M4 13v-2h16v2z"/></svg>`,
+    },
+    {
+      type: 'rect', label: '矩形',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21zm0-2h14V5H5z"/></svg>`,
+    },
+    {
+      type: 'circle', label: '圆形',
+      icon: `<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22m0-2q3.35 0 5.675-2.325T20 12t-2.325-5.675T12 4T6.325 6.325T4 12t2.325 5.675T12 20"/></svg>`,
+    },
+  ],
 ]
+
+function onCustom() {
+  // 自定义元素(预留),消费方可在 PrintDesigner 监听 'custom' 事件。
+  // MVP:仅做占位,实际不创建元素。
+  emit('custom')
+}
 </script>
 
 <style scoped>
@@ -135,11 +193,11 @@ const items: PaletteItem[] = [
   display: flex;
   align-items: center;
   flex: 0 0 auto;
-  height: 56px;
+  height: 64px;
   padding: 0 16px;
   background: #fff;
   border-bottom: 1px solid #f0f0f0;
-  gap: 24px;
+  gap: 16px;
 }
 .topbar-brand {
   display: flex;
@@ -157,40 +215,96 @@ const items: PaletteItem[] = [
 .brand-text {
   white-space: nowrap;
 }
+
+/* 元素区:整体居中,内部 max-w-860,自定义按钮 + 滚动元素组 */
 .topbar-elements {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+.elements-inner {
   display: flex;
   align-items: center;
-  gap: 4px;
-  flex: 1;
+  width: 100%;
+  max-width: 860px;
   justify-content: center;
+  gap: 0;
+  min-width: 0;
+}
+.elements-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.elements-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.elements-row {
+  display: flex;
+  width: max-content;
+  min-width: max-content;
+  align-items: center;
+  gap: 6px;
+  padding-right: 4px;
+}
+.vsep {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 32px;
+  background: #e0e0e0;
+  margin: 0 8px;
 }
 .el-btn {
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 6px 12px;
-  background: transparent;
+  justify-content: center;
+  gap: 4px;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  background: #fff;
   border: 1px solid transparent;
-  border-radius: 4px;
-  cursor: pointer;
-  color: #555;
-  font-size: 12px;
-  transition: all 120ms;
+  border-radius: 6px;
+  color: #595959;
+  cursor: move;
+  font-size: 10px;
+  line-height: 1.2;
+  transition: background 120ms, border-color 120ms, color 120ms;
 }
 .el-btn:hover {
-  background: #f0f7ff;
-  border-color: #91caff;
+  background: #f5f5f5;
   color: #1677ff;
+}
+.el-btn-custom {
+  cursor: pointer;
 }
 .el-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  line-height: 0;
 }
 .el-label {
-  line-height: 1;
+  width: 100%;
+  padding: 0 2px;
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 .topbar-actions {
   display: flex;
   align-items: center;

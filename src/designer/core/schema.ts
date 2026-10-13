@@ -74,6 +74,94 @@ export function createLine(overrides: Partial<ElementOfType<'line'>> = {}): Elem
   }
 }
 
+export function createPageNum(overrides: Partial<ElementOfType<'pagenum'>> = {}): ElementOfType<'pagenum'> {
+  return {
+    id: nextId(),
+    type: 'pagenum',
+    x: 10,
+    y: 10,
+    w: 60,
+    h: 8,
+    format: '第 {page} 页 / 共 {total} 页',
+    fontSize: DEFAULT_FONT_SIZE,
+    ...overrides,
+  }
+}
+
+export function createBarcode(overrides: Partial<ElementOfType<'barcode'>> = {}): ElementOfType<'barcode'> {
+  return {
+    id: nextId(),
+    type: 'barcode',
+    x: 10,
+    y: 10,
+    w: 50,
+    h: 20,
+    value: '12345678',
+    symbology: 'code128',
+    ...overrides,
+  }
+}
+
+export function createQrcode(overrides: Partial<ElementOfType<'qrcode'>> = {}): ElementOfType<'qrcode'> {
+  return {
+    id: nextId(),
+    type: 'qrcode',
+    x: 10,
+    y: 10,
+    w: 30,
+    h: 30,
+    value: 'https://example.com',
+    errorLevel: 'M',
+    ...overrides,
+  }
+}
+
+export function createMultiLabel(overrides: Partial<ElementOfType<'multilabel'>> = {}): ElementOfType<'multilabel'> {
+  return {
+    id: nextId(),
+    type: 'multilabel',
+    x: 10,
+    y: 10,
+    w: 60,
+    h: 20,
+    labels: [
+      { text: '标签1' },
+      { text: '标签2' },
+      { text: '标签3' },
+      { text: '标签4' },
+    ],
+    cols: 2,
+    fontSize: DEFAULT_FONT_SIZE,
+    ...overrides,
+  }
+}
+
+export function createRect(overrides: Partial<ElementOfType<'rect'>> = {}): ElementOfType<'rect'> {
+  return {
+    id: nextId(),
+    type: 'rect',
+    x: 10,
+    y: 10,
+    w: 30,
+    h: 20,
+    fill: '#e6f4ff',
+    ...overrides,
+  }
+}
+
+export function createCircle(overrides: Partial<ElementOfType<'circle'>> = {}): ElementOfType<'circle'> {
+  return {
+    id: nextId(),
+    type: 'circle',
+    x: 10,
+    y: 10,
+    w: 30,
+    h: 30,
+    fill: '#1677ff',
+    ...overrides,
+  }
+}
+
 /** 按 type 分发到对应 factory */
 export function createElement(type: ElementType, overrides: Partial<Element> = {}): Element {
   switch (type) {
@@ -81,6 +169,12 @@ export function createElement(type: ElementType, overrides: Partial<Element> = {
     case 'image': return createImage(overrides as Partial<ElementOfType<'image'>>)
     case 'table': return createTable(overrides as Partial<ElementOfType<'table'>>)
     case 'line': return createLine(overrides as Partial<ElementOfType<'line'>>)
+    case 'pagenum': return createPageNum(overrides as Partial<ElementOfType<'pagenum'>>)
+    case 'barcode': return createBarcode(overrides as Partial<ElementOfType<'barcode'>>)
+    case 'qrcode': return createQrcode(overrides as Partial<ElementOfType<'qrcode'>>)
+    case 'multilabel': return createMultiLabel(overrides as Partial<ElementOfType<'multilabel'>>)
+    case 'rect': return createRect(overrides as Partial<ElementOfType<'rect'>>)
+    case 'circle': return createCircle(overrides as Partial<ElementOfType<'circle'>>)
   }
 }
 
