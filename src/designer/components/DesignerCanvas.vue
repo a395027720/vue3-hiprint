@@ -619,14 +619,15 @@ const selectedEdgeMarks = computed<{ h: EdgeMark[]; v: EdgeMark[] }>(() => {
       const k = Math.round(m * 100) // 去重 mm
       if (seenH.has(k)) continue
       seenH.add(k)
-      h.push({ id: e.id, edge: m === e.x ? 'l' : 'r', x: mmToPxScaled(m) + 24 })
+      // svg viewBox 坐标 = mmToPxScaled(m)(ruler 元素本身 left:24 已经对齐 canvas 的 0mm)
+      h.push({ id: e.id, edge: m === e.x ? 'l' : 'r', x: mmToPxScaled(m) })
     }
     for (const m of [e.y, e.y + e.h]) {
       if (m < 0 || m > props.template.paper.height) continue
       const k = Math.round(m * 100)
       if (seenV.has(k)) continue
       seenV.add(k)
-      v.push({ id: e.id, edge: m === e.y ? 't' : 'b', x: mmToPxScaled(m) + 24 })
+      v.push({ id: e.id, edge: m === e.y ? 't' : 'b', x: mmToPxScaled(m) })
     }
   }
   return { h, v }
