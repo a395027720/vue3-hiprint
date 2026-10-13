@@ -127,21 +127,39 @@
             {{ formatMm(marquee.wMm) }} × {{ formatMm(marquee.hMm) }} mm
           </span>
         </div>
-
-        <!-- 吸附辅助线 -->
-        <div
-          v-for="x in snapLines.vertical"
-          :key="`v-${x}`"
-          class="snap-line snap-v"
-          :style="{ left: mmToPxScaled(x) + 'px' }"
-        />
-        <div
-          v-for="y in snapLines.horizontal"
-          :key="`h-${y}`"
-          class="snap-line snap-h"
-          :style="{ top: mmToPxScaled(y) + 'px' }"
-        />
       </div>
+
+      <!-- 吸附辅助线:放在 frame 层级,top/bottom = 0 让竖线贯穿 frame 高度
+           (含 ruler 区域),left/top 加 24px 偏移对齐到 canvas 内坐标。
+           ruler z-index 比 snap-line 高,故 ruler 区域内的线被 ruler 盖住。 -->
+      <div
+        v-for="x in snapLines.vertical"
+        :key="`v-${x}`"
+        class="snap-line snap-v"
+        :style="{ left: (24 + mmToPxScaled(x)) + 'px' }"
+      />
+      <div
+        v-for="y in snapLines.horizontal"
+        :key="`h-${y}`"
+        class="snap-line snap-h"
+        :style="{ top: (24 + mmToPxScaled(y)) + 'px' }"
+      />
+
+      <!-- 多选组的 4 边对齐线(框选后静态显示,延伸到 ruler) -->
+      <template v-if="multiGroupLines">
+        <div
+          v-for="x in multiGroupLines.v"
+          :key="`mg-v-${x}`"
+          class="snap-line snap-v multi-group"
+          :style="{ left: (24 + mmToPxScaled(x)) + 'px' }"
+        />
+        <div
+          v-for="y in multiGroupLines.h"
+          :key="`mg-h-${y}`"
+          class="snap-line snap-h multi-group"
+          :style="{ top: (24 + mmToPxScaled(y)) + 'px' }"
+        />
+      </template>
     </div>
 
     <!-- 右键菜单 -->
@@ -487,6 +505,24 @@ const selectedEl = computed<Element | null>(() =>
   props.selectedId ? props.template.elements.find((e) => e.id === props.selectedId) ?? null : null,
 )
 
+/** 多选组的 bounding box 4 边(mm 坐标),用于画静态对齐线 + 组拖动时的吸附候选。
+ *  框选后持续显示,直到选中集合变化;组拖动时跟 snapLines 一起更新(也会画吸附线)。 */
+const multiGroupLines = computed<{ v: number[]; h: number[] } | null>(() => {
+  const ids = props.multiSelectedIds ?? []
+  if (ids.length < 2) return null
+  const idSet = new Set(ids)
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  for (const e of props.template.elements) {
+    if (!idSet.has(e.id)) continue
+    if (e.x < minX) minX = e.x
+    if (e.y < minY) minY = e.y
+    if (e.x + e.w > maxX) maxX = e.x + e.w
+    if (e.y + e.h > maxY) maxY = e.y + e.h
+  }
+  if (!Number.isFinite(minX)) return null
+  return { v: [minX, maxX], h: [minY, maxY] }
+})
+
 function elBox(el: Element) {
   return {
     left: mmToPxScaled(el.x) + 'px',
@@ -608,38 +644,42 @@ function startGroupDrag(e: MouseEvent, primaryId: string) {
   const startX = e.clientX
   const startY = e.clientY
   const pxPerMmLocal = mmToPx(1) * zoomValue.value
-  // 吸附候选:用主选(第一个 draggable)的 4 条边为锚点
-  const primary = props.template.elements.find((x) => x.id === primaryId)
-  const vCandidates = primary ? collectCandidates('x', primaryId) : []
-  const hCandidates = primary ? collectCandidates('y', primaryId) : []
+  // 吸附候选:组 4 边作为"自己",跟其它元素(非组内)+ 画布边界做吸附
+  // 组内元素互不吸附(组已经是一个整体)
+  const groupX = origs.reduce((acc, o) => Math.min(acc, o.x), Infinity)
+  const groupY = origs.reduce((acc, o) => Math.min(acc, o.y), Infinity)
+  const groupRight = origs.reduce((acc, o) => Math.max(acc, o.x), -Infinity) + (draggables[0] ? props.template.elements.find((e) => e.id === draggables[0].id)?.w ?? 0 : 0)
+  const groupBottom = origs.reduce((acc, o) => Math.max(acc, o.y), -Infinity) + (draggables[0] ? props.template.elements.find((e) => e.id === draggables[0].id)?.h ?? 0 : 0)
+  // 用组原始 w/h(拖动过程中变化),这里 groupRight - groupX = 组原始宽
+  const groupW = groupRight - groupX
+  const groupH = groupBottom - groupY
+  // 其它元素的边(排除组内全部 id)
+  const vCandidates = collectCandidatesForGroup('x', new Set(origs.map((o) => o.id)))
+  const hCandidates = collectCandidatesForGroup('y', new Set(origs.map((o) => o.id)))
 
   function onMove(ev: MouseEvent) {
     const dx = (ev.clientX - startX) / pxPerMmLocal
     const dy = (ev.clientY - startY) / pxPerMmLocal
-    // 用主选计算"是否吸附",其它元素跟随主选位移
-    const primaryOrig = origs.find((o) => o.id === primaryId)!
-    let newX = Math.max(0, primaryOrig.x + dx)
-    let newY = Math.max(0, primaryOrig.y + dy)
-    const w = primary?.w ?? 0
-    const h = primary?.h ?? 0
-    const newRight = newX + w
-    const newBottom = newY + h
+    let newX = Math.max(0, groupX + dx)
+    let newY = Math.max(0, groupY + dy)
+    const newRight = newX + groupW
+    const newBottom = newY + groupH
     const sxLeft = snapValue(newX, vCandidates, SNAP_THRESHOLD_MM)
     const sxRight = snapValue(newRight, vCandidates, SNAP_THRESHOLD_MM)
     const syTop = snapValue(newY, hCandidates, SNAP_THRESHOLD_MM)
     const syBottom = snapValue(newBottom, hCandidates, SNAP_THRESHOLD_MM)
     if (sxLeft.lineAt !== null) newX = sxLeft.value
-    else if (sxRight.lineAt !== null) newX = sxRight.value - w
+    else if (sxRight.lineAt !== null) newX = sxRight.value - groupW
     if (syTop.lineAt !== null) newY = syTop.value
-    else if (syBottom.lineAt !== null) newY = syBottom.value - h
+    else if (syBottom.lineAt !== null) newY = syBottom.value - groupH
 
     const vLines = [sxLeft.lineAt, sxRight.lineAt].filter((v): v is number => v !== null)
     const hLines = [syTop.lineAt, syBottom.lineAt].filter((v): v is number => v !== null)
     snapLines.vertical = vLines
     snapLines.horizontal = hLines
 
-    const finalDx = newX - primaryOrig.x
-    const finalDy = newY - primaryOrig.y
+    const finalDx = newX - groupX
+    const finalDy = newY - groupY
     const updates = draggables.map((o) => ({ id: o.id, x: o.x + finalDx, y: o.y + finalDy }))
     emit('moveMany', updates)
   }
@@ -651,6 +691,23 @@ function startGroupDrag(e: MouseEvent, primaryId: string) {
   }
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
+}
+
+/** 类似 collectCandidates,但可以排除一组 id(组拖动用) */
+function collectCandidatesForGroup(
+  axis: 'x' | 'y',
+  excludeIds: Set<string>,
+): number[] {
+  const tpl = props.template
+  const list: number[] = axis === 'x'
+    ? [0, tpl.paper.width]
+    : [0, tpl.paper.height]
+  for (const e of tpl.elements) {
+    if (excludeIds.has(e.id)) continue
+    if (axis === 'x') list.push(e.x, e.x + e.w)
+    else list.push(e.y, e.y + e.h)
+  }
+  return list
 }
 
 // ========== Resize / Rotate ==========
@@ -996,6 +1053,7 @@ watch(() => props.template.elements, () => {
   background: #fafafa;
   display: block;
   pointer-events: none;
+  z-index: 5; /* 在 snap-line 之上,让辅助线延伸到 ruler 位置时 ruler 仍然可见 */
 }
 .ruler-h {
   top: 0;
@@ -1079,12 +1137,14 @@ watch(() => props.template.elements, () => {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
-/* 吸附辅助线 */
+/* 吸附辅助线:放在 .canvas-frame 内,top:0 / bottom:0 跨越 ruler 区域(被 ruler 盖住) */
 .snap-line {
   position: absolute;
   background: #ff4d4f;
   pointer-events: none;
-  z-index: 9999;
+  z-index: 3;
+  /* 拖动时显示/隐藏,平滑过渡 */
+  transition: opacity 100ms;
 }
 .snap-v {
   top: 0;
@@ -1097,6 +1157,17 @@ watch(() => props.template.elements, () => {
   right: 0;
   height: 1px;
   transform: translateY(-0.5px);
+}
+/* 多选组的 4 边对齐线:浅蓝虚线,跟吸附红实线区分 */
+.snap-line.multi-group {
+  background: transparent;
+  border-color: #69c0ff;
+}
+.snap-v.multi-group {
+  border-left: 1px dashed #69c0ff;
+}
+.snap-h.multi-group {
+  border-top: 1px dashed #69c0ff;
 }
 
 /* ========== Resize / Rotate handles ==========
