@@ -7,6 +7,15 @@
 -->
 <template>
   <div class="ftb">
+    <button
+      class="ftb-scroll"
+      :disabled="!canScrollLeft"
+      title="向左滚动工具栏"
+      aria-label="向左滚动工具栏"
+      @click="scrollBy(-1)"
+    ><span v-html="chevronLeftIcon" /></button>
+
+    <div ref="scrollerRef" class="ftb-main" @scroll="updateScrollState">
     <div class="ftb-group">
       <div ref="printMenuRef" class="ftb-dropdown">
         <button
@@ -291,6 +300,15 @@
         @click="onClear"
       ><span v-html="trashIcon" /></button>
     </div>
+    </div><!-- /.ftb-main -->
+
+    <button
+      class="ftb-scroll"
+      :disabled="!canScrollRight"
+      title="向右滚动工具栏"
+      aria-label="向右滚动工具栏"
+      @click="scrollBy(1)"
+    ><span v-html="chevronRightIcon" /></button>
 
     <!-- 设置 modal -->
     <div v-if="settingsOpen" class="ftb-modal-mask" @click.self="settingsOpen = false">
@@ -428,6 +446,26 @@ const settingsOpen = ref(false)
 const helpOpen = ref(false)
 const theme = ref<'light' | 'dark'>('light')
 
+// 工具条横向滚动按钮:监听 scroller ref 的 scroll 状态
+const scrollerRef = ref<HTMLElement | null>(null)
+const canScrollLeft = ref(false)
+const canScrollRight = ref(false)
+function updateScrollState() {
+  const el = scrollerRef.value
+  if (!el) {
+    canScrollLeft.value = false
+    canScrollRight.value = false
+    return
+  }
+  canScrollLeft.value = el.scrollLeft > 1
+  canScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+}
+function scrollBy(direction: -1 | 1) {
+  const el = scrollerRef.value
+  if (!el) return
+  el.scrollBy({ left: direction * Math.max(120, el.clientWidth * 0.6), behavior: 'smooth' })
+}
+
 function onZoomChange(e: Event) {
   const v = Number((e.target as HTMLSelectElement).value)
   emit('setZoom', v / 100)
@@ -465,8 +503,17 @@ function onDocumentMouseDown(e: MouseEvent) {
   }
 }
 
-onMounted(() => document.addEventListener('mousedown', onDocumentMouseDown))
-onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentMouseDown))
+onMounted(() => {
+  document.addEventListener('mousedown', onDocumentMouseDown)
+  // 初始化滚动状态(可能一上来就能向右滚)
+  setTimeout(updateScrollState, 0)
+  // 内容宽度变化时也更新(放 resize listener 简化)
+  window.addEventListener('resize', updateScrollState)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', onDocumentMouseDown)
+  window.removeEventListener('resize', updateScrollState)
+})
 
 // 内联 SVG icons(heroicons-style 1.5px stroke)
 const stroke = 'currentColor'
@@ -478,21 +525,68 @@ const alignLeftIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="non
 const alignCenterHIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>`
 const alignRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>`
 const trashIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>`
+const chevronLeftIcon = `<svg viewBox="0 0 24 24" width="16" height="16" class="relative z-10 h-4 w-4"><path fill="currentColor" d="M15.4 16.6L10.8 12l4.6-4.6L14 6l-6 6l6 6z"/></svg>`
+const chevronRightIcon = `<svg viewBox="0 0 24 24" width="16" height="16" class="relative z-10 h-4 w-4"><path fill="currentColor" d="M12.6 12L8 7.4L9.4 6l6 6l-6 6L8 16.6z"/></svg>`
 </script>
 
 <style scoped>
 .ftb {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   flex: 0 0 auto;
   height: 44px;
-  padding: 0 12px;
   background: #fff;
   border-bottom: 1px solid #f0f0f0;
-  gap: 4px;
   user-select: none;
+}
+.ftb-main {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
   overflow-x: auto;
+  overflow-y: hidden;
   white-space: nowrap;
+  min-width: 0;
+  scrollbar-width: thin;
+}
+.ftb-main::-webkit-scrollbar {
+  height: 6px;
+}
+.ftb-main::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+  border-radius: 3px;
+}
+.ftb-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ftb-scroll {
+  position: relative;
+  z-index: 10;
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  padding: 0;
+  background: #fff;
+  border: 0;
+  border-left: 1px solid #f0f0f0;
+  border-right: 1px solid #f0f0f0;
+  border-radius: 0;
+  color: #595959;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+.ftb-scroll:hover:not(:disabled) {
+  background: #f5f5f5;
+  color: #1677ff;
+}
+.ftb-scroll:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 .ftb-group {
   display: flex;
