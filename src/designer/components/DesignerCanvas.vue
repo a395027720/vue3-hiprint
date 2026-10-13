@@ -693,7 +693,11 @@ function onDocMouseDown(e: MouseEvent) {
   if (!target) return
   // 命中 .canvas-element → 保留选中(元素的 mousedown 会自己处理 select)
   if (target.closest('.canvas-element')) return
-  // 命中画布外部(如 TopBar / FormatToolbar / PropertyPanel / 右键菜单)→ 不动
+  // 命中右键菜单 → 保留选中(菜单的 action handler 自己处理;否则点菜单
+  // 时 mousedown 会先于 click 触发,把 selected 置 null,导致 toggleLock
+  // 读到 e?.locked === undefined,反复 setLocked(id, true))
+  if (target.closest('.ctx-menu')) return
+  // 命中画布外部(如 TopBar / FormatToolbar / PropertyPanel)→ 不动
   if (!target.closest('.canvas-wrap')) return
   // 命中画布空白(canvas / ruler / frame 等都算空白)→ 取消选中
   if (props.selectedId) emit('select', null)
