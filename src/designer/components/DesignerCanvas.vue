@@ -72,7 +72,13 @@
           v-for="el in template.elements"
           :key="el.id"
           class="canvas-element"
-          :class="{ selected: el.id === selectedId, 'is-image': el.type === 'image', locked: el.locked }"
+          :class="{
+            selected: el.id === selectedId,
+            'is-image': el.type === 'image',
+            locked: el.locked,
+            'multi-selected': isMultiSelected(el.id) && el.id !== selectedId,
+            'marquee-hit': marqueeHits.has(el.id),
+          }"
           :style="elBox(el)"
           @mousedown="onElementMouseDown($event, el.id)"
           @contextmenu.prevent.stop="onContextMenu($event, el.id)"
@@ -109,6 +115,17 @@
             </span>
             <span class="rotate-deg" :style="rotateDegStyle(el)">{{ el.rotate ?? 0 }}°</span>
           </template>
+        </div>
+
+        <!-- 框选矩形(屏幕坐标,覆盖在 .canvas 上) -->
+        <div
+          v-if="marquee"
+          class="marquee-rect"
+          :style="marqueeStyle"
+        >
+          <span v-if="marquee.w >= 4 && marquee.h >= 4" class="marquee-size">
+            {{ formatMm(marquee.wMm) }} × {{ formatMm(marquee.hMm) }} mm
+          </span>
         </div>
 
         <!-- 吸附辅助线 -->
@@ -157,7 +174,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import type { Element, ElementType, Template } from '../core/types'
 import { mmToPx } from '../core/render'
 import { snapValue } from '../utils/snap'
@@ -183,6 +200,8 @@ const props = defineProps<{
   canUndo?: boolean
   /** 重做是否可用 */
   canRedo?: boolean
+  /** 多选 id 列表(单选时也含 1 个) */
+  multiSelectedIds?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -190,14 +209,22 @@ const emit = defineEmits<{
   add: [type: ElementType]
   /** 选中元素 id(传 null 取消选中) */
   select: [id: string | null]
+  /** 框选结束:批量选中 */
+  selectMany: [ids: string[]]
+  /** Shift+点击元素:在多选集合里 toggle */
+  selectToggle: [id: string]
   /** 元素被拖动(连续触发) */
   move: [id: string, x: number, y: number]
+  /** 多选组拖动(连续触发) */
+  moveMany: [updates: Array<{ id: string; x: number; y: number }>]
   /** 元素被 resize(连续触发),patch 含 x/y/w/h */
   resize: [id: string, patch: { x: number; y: number; w: number; h: number }]
   /** 元素被旋转(连续触发) */
   rotate: [id: string, deg: number]
   /** 删除元素 */
   remove: [id: string]
+  /** 批量删除(多选时 Delete 键) */
+  removeMany: [ids: string[]]
   /** 画布被拖动(连续触发) */
   pan: [dx: number, dy: number]
   /** 右键菜单 / 按钮触发(粘贴时携带鼠标 mm 坐标,父组件用) */
@@ -219,6 +246,84 @@ const zoomValue = computed(() => props.zoom ?? 1)
 function mmToPxScaled(mm: number): number {
   return mmToPx(mm) * zoomValue.value
 }
+
+/** 屏幕像素 → mm(用于框选时把屏幕距离转 mm) */
+const pxPerMmScreen = computed(() => mmToPx(1) * zoomValue.value)
+
+// ========== 框选 / 多选 ==========
+
+/** 框选矩形(屏幕像素坐标),null = 不在框选 */
+const marquee = ref<{
+  x1: number; y1: number; x2: number; y2: number
+  w: number; h: number; wMm: number; hMm: number
+} | null>(null)
+
+/** 框选过程中实时命中的元素 id(用于实时高亮) */
+const marqueeHits = ref<Set<string>>(new Set())
+
+/** 框选启动瞬间的标志:防止 onDocMouseDown 同帧把多选清空 */
+const marqueeStarting = ref(false)
+
+/** 当前 multi 集合(含主选) */
+const multiIds = computed<Set<string>>(() => new Set(props.multiSelectedIds ?? []))
+
+function isMultiSelected(id: string): boolean {
+  return multiIds.value.has(id)
+}
+
+/** 把 mm 数保留 1 位小数 */
+function formatMm(mm: number): string {
+  return mm.toFixed(1).replace(/\.0$/, '')
+}
+
+/** 框选矩形的渲染样式:.marquee-rect 是 .canvas 的子元素,
+ *  left/top 用 canvas 内的相对像素(屏幕 clientX - canvas.left) */
+const marqueeStyle = computed(() => {
+  const m = marquee.value
+  if (!m) return {}
+  const canvas = document.querySelector('.canvas') as HTMLElement | null
+  if (!canvas) return {}
+  const cr = canvas.getBoundingClientRect()
+  return {
+    left: (m.x1 - cr.left) + 'px',
+    top: (m.y1 - cr.top) + 'px',
+    width: m.w + 'px',
+    height: m.h + 'px',
+  }
+})
+
+/** 元素在屏幕坐标系下的 AABB(已应用 zoom,未考虑 rotate——旋转元素的 AABB 会偏大,框选命中范围更宽容,可接受) */
+function elScreenRect(el: Element): { left: number; top: number; right: number; bottom: number } | null {
+  const canvas = document.querySelector('.canvas') as HTMLElement | null
+  if (!canvas) return null
+  const cr = canvas.getBoundingClientRect()
+  const px = mmToPxScaled(el.w)
+  const py = mmToPxScaled(el.h)
+  return {
+    left: cr.left + mmToPxScaled(el.x),
+    top: cr.top + mmToPxScaled(el.y),
+    right: cr.left + mmToPxScaled(el.x) + px,
+    bottom: cr.top + mmToPxScaled(el.y) + py,
+  }
+}
+
+/** 框选过程中实时算命中元素(每帧更新 marqueeHits,用于实时高亮) */
+watch(marquee, (m) => {
+  if (!m) {
+    marqueeHits.value = new Set()
+    return
+  }
+  const hits = new Set<string>()
+  for (const el of props.template.elements) {
+    if (el.locked) continue
+    const r = elScreenRect(el)
+    if (!r) continue
+    if (m.x1 <= r.right && m.x2 >= r.left && m.y1 <= r.bottom && m.y2 >= r.top) {
+      hits.add(el.id)
+    }
+  }
+  marqueeHits.value = hits
+})
 
 /** 5mm 网格背景:横竖各画一道浅灰 1px 线,间距 5mm。showGrid=false 时透明 */
 const gridStyle = computed(() => {
@@ -258,22 +363,89 @@ const frameStyleWithPan = computed(() => ({
   transform: `translate(${props.panX ?? 0}px, ${props.panY ?? 0}px)`,
 }))
 
-/** 画布 wrap 上的 mousedown:panMode 时启动平移拖动 */
+/** 画布 wrap 上的 mousedown:
+ *  - panMode 时启动平移拖动
+ *  - 否则在 .canvas 空白处启动框选(非元素 / 非 handle)
+ *  注意:shift 按下时走元素自己的 toggle 分支(元素 mousedown 自行处理),
+ *  不在这里启动框选。 */
 function onWrapMouseDown(e: MouseEvent) {
-  if (!props.panMode) return
-  // 仅在 wrap 空白处启动(不响应冒泡自元素上的 mousedown)
-  if (e.target !== e.currentTarget) return
+  const target = e.target as HTMLElement | null
+  if (!target) return
+  if (e.shiftKey) return
+  // panMode:启动平移
+  if (props.panMode) {
+    if (target.closest('.canvas-element')) return
+    e.preventDefault()
+    const startX = e.clientX
+    const startY = e.clientY
+    const baseX = props.panX ?? 0
+    const baseY = props.panY ?? 0
+    function onMove(ev: MouseEvent) {
+      emit('pan', (baseX + (ev.clientX - startX)) - (props.panX ?? 0), (baseY + (ev.clientY - startY)) - (props.panY ?? 0))
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    return
+  }
+  // 元素 / handle / 菜单 / ruler 上不启动框选
+  if (target.closest('.canvas-element')) return
+  if (target.closest('.ctx-menu')) return
+  // 框选必须落在画布纸上(.canvas),ruler / frame 留白处不启动(避免误框)
+  if (!target.closest('.canvas') && !target.classList.contains('canvas')) return
+
   e.preventDefault()
+  e.stopPropagation() // 阻止冒泡到 document 触发 onDocMouseDown 把多选清空
+  // 启动时清掉单选/多选(进入"全新框选"模式)
+  if (props.selectedId || (props.multiSelectedIds && props.multiSelectedIds.length > 0)) {
+    emit('selectMany', [])
+  }
+  marqueeStarting.value = true
+  queueMicrotask(() => { marqueeStarting.value = false })
   const startX = e.clientX
   const startY = e.clientY
-  const baseX = props.panX ?? 0
-  const baseY = props.panY ?? 0
+
   function onMove(ev: MouseEvent) {
-    emit('pan', (baseX + (ev.clientX - startX)) - (props.panX ?? 0), (baseY + (ev.clientY - startY)) - (props.panY ?? 0))
+    const x1 = Math.min(startX, ev.clientX)
+    const y1 = Math.min(startY, ev.clientY)
+    const x2 = Math.max(startX, ev.clientX)
+    const y2 = Math.max(startY, ev.clientY)
+    marquee.value = {
+      x1, y1, x2, y2,
+      w: x2 - x1,
+      h: y2 - y1,
+      wMm: (x2 - x1) / pxPerMmScreen,
+      hMm: (y2 - y1) / pxPerMmScreen,
+    }
   }
-  function onUp() {
+  function onUp(ev: MouseEvent) {
     document.removeEventListener('mousemove', onMove)
     document.removeEventListener('mouseup', onUp)
+    const m = marquee.value
+    if (!m) return
+    // 鼠标没动:当作"点空白处"→ 清选中
+    if (m.w < 3 && m.h < 3) {
+      marquee.value = null
+      marqueeHits.value = new Set()
+      return
+    }
+    // 收集命中的元素 id(屏幕坐标相交,锁定元素除外)
+    const hits: string[] = []
+    for (const el of props.template.elements) {
+      if (el.locked) continue
+      const r = elScreenRect(el)
+      if (!r) continue
+      if (m.x1 <= r.right && m.x2 >= r.left && m.y1 <= r.bottom && m.y2 >= r.top) {
+        hits.push(el.id)
+      }
+    }
+    marquee.value = null
+    marqueeHits.value = new Set()
+    emit('selectMany', hits)
+    void ev
   }
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
@@ -353,15 +525,33 @@ function collectCandidates(
 }
 
 function onElementMouseDown(e: MouseEvent, id: string) {
-  emit('select', id)
   const el = props.template.elements.find((x) => x.id === id)
   if (!el) return
-  if (el.locked) return // 锁定后画布不允许拖动
+  // Shift+点击:在多选里 toggle,不发 selectMany(只是 toggle 1 个)
+  if (e.shiftKey) {
+    e.preventDefault()
+    emit('selectToggle', id)
+    return
+  }
+  // 多选组拖动:如果点中的元素在多选集合里,整组一起平移
+  if (props.multiSelectedIds && props.multiSelectedIds.length > 1 && props.multiSelectedIds.includes(id)) {
+    startGroupDrag(e, id)
+    return
+  }
+  // 普通:单选(也清空多选)
+  emit('select', id)
+  if (el.locked) return
+  startElementDrag(e, id)
+}
+
+/** 单元素拖动(原 onElementMouseDown 主体) */
+function startElementDrag(e: MouseEvent, id: string) {
+  const el = props.template.elements.find((x) => x.id === id)
+  if (!el) return
   const startX = e.clientX
   const startY = e.clientY
   const origX = el.x
   const origY = el.y
-  // mousemove 像素 → mm,需除以 zoom 让缩放下视觉拖动距离一致
   const pxPerMmLocal = mmToPx(1) * zoomValue.value
   const vCandidates = collectCandidates('x', id)
   const hCandidates = collectCandidates('y', id)
@@ -374,26 +564,83 @@ function onElementMouseDown(e: MouseEvent, id: string) {
     const newRight = newX + el.w
     const newBottom = newY + el.h
 
-    // 4 条边都参与吸附
     const sxLeft = snapValue(newX, vCandidates, SNAP_THRESHOLD_MM)
     const sxRight = snapValue(newRight, vCandidates, SNAP_THRESHOLD_MM)
     const syTop = snapValue(newY, hCandidates, SNAP_THRESHOLD_MM)
     const syBottom = snapValue(newBottom, hCandidates, SNAP_THRESHOLD_MM)
 
-    // 优先吸附 left/right,再 top/bottom
     if (sxLeft.lineAt !== null) newX = sxLeft.value
     else if (sxRight.lineAt !== null) newX = sxRight.value - el.w
-
     if (syTop.lineAt !== null) newY = syTop.value
     else if (syBottom.lineAt !== null) newY = syBottom.value - el.h
 
-    // 收集辅助线
     const vLines = [sxLeft.lineAt, sxRight.lineAt].filter((v): v is number => v !== null)
     const hLines = [syTop.lineAt, syBottom.lineAt].filter((v): v is number => v !== null)
     snapLines.vertical = vLines
     snapLines.horizontal = hLines
 
     emit('move', id, newX, newY)
+  }
+  function onUp() {
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+    snapLines.vertical = []
+    snapLines.horizontal = []
+  }
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp)
+}
+
+/** 多选组拖动:点中元素如果在多选集合里,所有选中元素(锁定除外)一起平移,保持相对位置 */
+function startGroupDrag(e: MouseEvent, primaryId: string) {
+  const ids = (props.multiSelectedIds ?? []).filter((x) => x !== primaryId)
+  ids.unshift(primaryId) // 主选放第一个(让吸附候选收集时排除自己)
+  // 收集每个元素的起始位置
+  const origs = ids
+    .map((id) => {
+      const el = props.template.elements.find((x) => x.id === id)
+      return el ? { id, x: el.x, y: el.y, locked: !!el.locked } : null
+    })
+    .filter((x): x is { id: string; x: number; y: number; locked: boolean } => x !== null)
+  const draggables = origs.filter((o) => !o.locked)
+  if (draggables.length === 0) return
+  const startX = e.clientX
+  const startY = e.clientY
+  const pxPerMmLocal = mmToPx(1) * zoomValue.value
+  // 吸附候选:用主选(第一个 draggable)的 4 条边为锚点
+  const primary = props.template.elements.find((x) => x.id === primaryId)
+  const vCandidates = primary ? collectCandidates('x', primaryId) : []
+  const hCandidates = primary ? collectCandidates('y', primaryId) : []
+
+  function onMove(ev: MouseEvent) {
+    const dx = (ev.clientX - startX) / pxPerMmLocal
+    const dy = (ev.clientY - startY) / pxPerMmLocal
+    // 用主选计算"是否吸附",其它元素跟随主选位移
+    const primaryOrig = origs.find((o) => o.id === primaryId)!
+    let newX = Math.max(0, primaryOrig.x + dx)
+    let newY = Math.max(0, primaryOrig.y + dy)
+    const w = primary?.w ?? 0
+    const h = primary?.h ?? 0
+    const newRight = newX + w
+    const newBottom = newY + h
+    const sxLeft = snapValue(newX, vCandidates, SNAP_THRESHOLD_MM)
+    const sxRight = snapValue(newRight, vCandidates, SNAP_THRESHOLD_MM)
+    const syTop = snapValue(newY, hCandidates, SNAP_THRESHOLD_MM)
+    const syBottom = snapValue(newBottom, hCandidates, SNAP_THRESHOLD_MM)
+    if (sxLeft.lineAt !== null) newX = sxLeft.value
+    else if (sxRight.lineAt !== null) newX = sxRight.value - w
+    if (syTop.lineAt !== null) newY = syTop.value
+    else if (syBottom.lineAt !== null) newY = syBottom.value - h
+
+    const vLines = [sxLeft.lineAt, sxRight.lineAt].filter((v): v is number => v !== null)
+    const hLines = [syTop.lineAt, syBottom.lineAt].filter((v): v is number => v !== null)
+    snapLines.vertical = vLines
+    snapLines.horizontal = hLines
+
+    const finalDx = newX - primaryOrig.x
+    const finalDy = newY - primaryOrig.y
+    const updates = draggables.map((o) => ({ id: o.id, x: o.x + finalDx, y: o.y + finalDy }))
+    emit('moveMany', updates)
   }
   function onUp() {
     document.removeEventListener('mousemove', onMove)
@@ -689,6 +936,7 @@ function onCtxRedo() { emit('ctxAction', 'redo'); closeCtxMenu() }
 // 时不取消,其它都取消。canvas-frame / ruler / snap-line 也算"内部"。
 
 function onDocMouseDown(e: MouseEvent) {
+  if (marqueeStarting.value) return
   const target = e.target as HTMLElement | null
   if (!target) return
   // 命中 .canvas-element → 保留选中(元素的 mousedown 会自己处理 select)
@@ -697,14 +945,29 @@ function onDocMouseDown(e: MouseEvent) {
   // 时 mousedown 会先于 click 触发,把 selected 置 null,导致 toggleLock
   // 读到 e?.locked === undefined,反复 setLocked(id, true))
   if (target.closest('.ctx-menu')) return
+  // 命中框选矩形 → 不动(矩形自身 pointer-events: none,但兜底)
+  if (target.closest('.marquee-rect')) return
   // 命中画布外部(如 TopBar / FormatToolbar / PropertyPanel)→ 不动
   if (!target.closest('.canvas-wrap')) return
   // 命中画布空白(canvas / ruler / frame 等都算空白)→ 取消选中
-  if (props.selectedId) emit('select', null)
+  if (props.selectedId || (props.multiSelectedIds && props.multiSelectedIds.length > 0)) {
+    emit('selectMany', [])
+  }
 }
 
 onMounted(() => document.addEventListener('mousedown', onDocMouseDown))
 onBeforeUnmount(() => document.removeEventListener('mousedown', onDocMouseDown))
+
+/** template 变化时实时同步 multi 集合(template 引用本身不变,但 elements 数组会换) */
+watch(() => props.template.elements, () => {
+  const ids = new Set(props.template.elements.map((e) => e.id))
+  if (props.multiSelectedIds) {
+    const valid = props.multiSelectedIds.filter((id) => ids.has(id))
+    if (valid.length !== props.multiSelectedIds.length) {
+      emit('selectMany', valid)
+    }
+  }
+})
 </script>
 
 <style scoped>
@@ -936,5 +1199,43 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocMouseDown))
 .rotate-handle:hover {
   transform: scale(1.15);
   box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.25), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ========== 框选 / 多选 ========== */
+.marquee-rect {
+  position: absolute;
+  pointer-events: none;
+  z-index: 9998;
+  background: rgba(24, 144, 255, 0.08);
+  border: 1.5px dashed #1890ff;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(24, 144, 255, 0.15);
+  box-sizing: border-box;
+}
+.marquee-size {
+  position: absolute;
+  right: -2px;
+  bottom: -28px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 500;
+  color: #fff;
+  background: #1890ff;
+  border-radius: 3px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  user-select: none;
+}
+/* 多选但非主选:蓝虚线包围(跟单选实线区分) */
+.canvas-element.multi-selected {
+  border: 1.5px dashed #1890ff !important;
+  background: rgba(24, 144, 255, 0.06) !important;
+}
+/* 框选过程中实时高亮将要选中的元素 */
+.canvas-element.marquee-hit {
+  border: 1.5px dashed #69c0ff !important;
+  background: rgba(24, 144, 255, 0.14) !important;
+  transition: background 60ms, border-color 60ms;
 }
 </style>

@@ -57,6 +57,7 @@
       <DesignerCanvas
         :template="designer.template.value"
         :selected-id="designer.selectedId.value"
+        :multi-selected-ids="designer.multiSelectedIds.value"
         :zoom="designer.zoom.value"
         :show-grid="designer.showGrid.value"
         :pan-mode="panModeActive"
@@ -67,10 +68,14 @@
         :can-redo="designer.canRedo.value"
         @add="onAdd"
         @select="designer.select"
+        @select-many="onSelectMany"
+        @select-toggle="designer.toggleInMulti"
         @move="onMove"
+        @move-many="designer.moveMany"
         @resize="onResize"
         @rotate="onRotate"
         @remove="onRemove"
+        @remove-many="designer.removeMany"
         @pan="onCanvasPan"
         @ctx-action="onCtxAction"
       />
@@ -162,14 +167,14 @@ function onKeyDown(e: KeyboardEvent) {
   if (e.code === 'Delete' || e.code === 'Backspace') {
     const tag = (e.target as HTMLElement | null)?.tagName
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-    const id = designer.selectedId.value
-    if (id) {
+    const ids = designer.multiSelectedIds.value
+    if (ids.length > 0) {
       e.preventDefault()
-      designer.remove(id)
+      designer.removeMany(ids)
     }
   }
   if (e.key === 'Escape') {
-    designer.select(null)
+    designer.clearSelection()
   }
 }
 function onKeyUp(e: KeyboardEvent) {
@@ -274,6 +279,10 @@ function onUpdate(id: string, patch: Partial<Element>) {
 
 function onRemove(id: string) {
   designer.remove(id)
+}
+
+function onSelectMany(ids: string[]) {
+  designer.selectMany(ids)
 }
 
 function onDuplicate() {

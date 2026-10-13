@@ -40,12 +40,24 @@ export interface UseDesignerOptions {
 export interface UseDesignerReturn {
   /** 当前模板(整体替换触发响应) */
   template: Ref<Template>
-  /** 选中元素的 id */
+  /** 选中元素的 id(主选,空 = 0 个或 ≥2 个) */
   selectedId: Ref<string | null>
+  /** 多选 id 列表(单选时也含 1 个;空 = 无选中) */
+  multiSelectedIds: Ref<string[]>
   /** 选中元素(只读) */
   selected: ComputedRef<Element | null>
   /** 选中元素 id(响应式 set) */
   select: (id: string | null) => void
+  /** 框选:批量选中,单选时同步 selectedId */
+  selectMany: (ids: string[]) => void
+  /** Shift+点击:在多选集合里 toggle 一个;并把它设为主选 */
+  toggleInMulti: (id: string) => void
+  /** 清空所有选中(主选 + 多选) */
+  clearSelection: () => void
+  /** 批量删除(入 history) */
+  removeMany: (ids: string[]) => void
+  /** 批量移动(连续触发,不入 history) */
+  moveMany: (updates: Array<{ id: string; x: number; y: number }>) => void
   /** 添加新元素(在画布中央) */
   add: (type: ElementType) => Element
   /** 不可变更新元素 patch(update 不入 history,后续 PR 用事务) */
@@ -131,6 +143,70 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
   const selected = computed<Element | null>(() =>
     selectedId.value ? findElement(template.value, selectedId.value) ?? null : null,
   )
+
+  // 多选:单选时也走 multi(便于上层统一处理)。
+  // 约定:selectedId 是 handles / 属性面板用的"主选";"primary" 始终是最后点中的。
+  const multiSelectedIds = ref<string[]>([])
+
+  function select(id: string | null): void {
+    selectedId.value = id
+    multiSelectedIds.value = id ? [id] : []
+  }
+
+  function selectMany(ids: string[]): void {
+    // 保持 elements 数组的顺序,这样 handles / 主选更稳定
+    const order = props.template?.elements?.map((e) => e.id) ?? []
+    // 没有 template 引用,直接用 ids 顺序
+    void order
+    multiSelectedIds.value = ids
+    selectedId.value = ids.length === 1 ? ids[0]! : null
+  }
+
+  function toggleInMulti(id: string): void {
+    if (multiSelectedIds.value.includes(id)) {
+      const next = multiSelectedIds.value.filter((x) => x !== id)
+      multiSelectedIds.value = next
+      if (selectedId.value === id) selectedId.value = next[0] ?? null
+    } else {
+      multiSelectedIds.value = [...multiSelectedIds.value, id]
+      selectedId.value = id
+    }
+  }
+
+  function clearSelection(): void {
+    selectedId.value = null
+    multiSelectedIds.value = []
+  }
+
+  function removeMany(ids: string[]): void {
+    if (ids.length === 0) return
+    const tpl = template.value
+    const next = tpl.elements.filter((e) => !ids.includes(e.id))
+    commit({ ...tpl, elements: next })
+    multiSelectedIds.value = multiSelectedIds.value.filter((id) => !ids.includes(id))
+    if (selectedId.value && ids.includes(selectedId.value)) selectedId.value = null
+  }
+
+  function moveMany(updates: Array<{ id: string; x: number; y: number }>): void {
+    if (updates.length === 0) return
+    const tpl = template.value
+    const map = new Map(updates.map((u) => [u.id, u]))
+    const next = tpl.elements.map((e) => {
+      const u = map.get(e.id)
+      return u ? { ...e, x: u.x, y: u.y } : e
+    })
+    // 连续触发,不入 history
+    template.value = { ...tpl, elements: next }
+  }
+
+  /** undo / redo / 外部修改 template 后,清掉多选里已不存在的 id */
+  function pruneSelection(): void {
+    const ids = new Set(template.value.elements.map((e) => e.id))
+    multiSelectedIds.value = multiSelectedIds.value.filter((id) => ids.has(id))
+    if (selectedId.value && !ids.has(selectedId.value)) {
+      selectedId.value = multiSelectedIds.value[0] ?? null
+    }
+  }
 
   /** 把 newTpl 提交为"下一个状态",History 自动把 current 入 past + setCurrent(new)。 */
   function commit(newTpl: Template): void {
@@ -238,7 +314,7 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
   function clearElements(): void {
     if (template.value.elements.length === 0) return
     commit({ ...template.value, elements: [] })
-    selectedId.value = null
+    clearSelection()
   }
 
   function setPaper(paper: Template['paper']): void {
@@ -247,17 +323,19 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
 
   function load(tpl: Template): void {
     commit(tpl)
-    selectedId.value = null
+    clearSelection()
   }
 
   function undo(): void {
     history.undo()
     histCount.value = { past: history.pastSize, future: history.futureSize }
+    pruneSelection()
   }
 
   function redo(): void {
     history.redo()
     histCount.value = { past: history.pastSize, future: history.futureSize }
+    pruneSelection()
   }
 
   function toJson(): string {
@@ -292,8 +370,14 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
   return {
     template,
     selectedId,
+    multiSelectedIds,
     selected,
-    select: (id) => { selectedId.value = id },
+    select,
+    selectMany,
+    toggleInMulti,
+    clearSelection,
+    removeMany,
+    moveMany,
     add,
     update,
     remove,

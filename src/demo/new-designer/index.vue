@@ -1,22 +1,12 @@
+<!--
+ * @Description: 新打印设计器(实验)
+ * @Author: GaoJQiang
+ * @Date: 2026-10-13 15:28:09
+ * @LastEditors: GaoJQiang
+ * @LastEditTime: 2026-10-13 15:31:35
+-->
 <template>
   <a-card>
-    <a-page-header
-      title="新打印设计器(实验)"
-      sub-title="src/designer · TypeScript + Vue 3 + 不可变 schema"
-      style="padding: 0 0 16px 0"
-    />
-
-    <a-space style="margin-bottom: 12px" wrap>
-      <a-popconfirm
-        title="重置当前模板?"
-        ok-text="重置"
-        cancel-text="取消"
-        @confirm="onReset"
-      >
-        <a-button danger>重置</a-button>
-      </a-popconfirm>
-    </a-space>
-
     <div class="designer-area">
       <PrintDesigner
         ref="designerRef"
