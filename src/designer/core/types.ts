@@ -40,6 +40,8 @@ interface BaseElement {
   rotate?: number
   /** 元素层级(数字越大越靠上) */
   zIndex?: number
+  /** 锁定:true 时画布不允许拖动/resize/旋转(右键菜单可解锁) */
+  locked?: boolean
 }
 
 // ========== Text ==========

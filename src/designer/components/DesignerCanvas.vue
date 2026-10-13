@@ -72,22 +72,17 @@
           v-for="el in template.elements"
           :key="el.id"
           class="canvas-element"
-          :class="{ selected: el.id === selectedId, 'is-image': el.type === 'image' }"
+          :class="{ selected: el.id === selectedId, 'is-image': el.type === 'image', locked: el.locked }"
           :style="elBox(el)"
           @mousedown="onElementMouseDown($event, el.id)"
+          @contextmenu.prevent="onContextMenu($event, el.id)"
         >
           <ElementRenderer :element="el" />
+          <span v-if="el.locked" class="lock-badge" title="已锁定">🔒</span>
         </div>
 
         <!-- 选中元素的 handle 层(独立于 .canvas-element,避免受 rotate 影响) -->
-        <template v-if="selectedEl">
-          <button
-            class="el-remove"
-            title="删除元素"
-            :style="elRemoveStyle"
-            @mousedown.stop
-            @click.stop="$emit('remove', selectedEl.id)"
-          >×</button>
+        <template v-if="selectedEl && !selectedEl.locked">
           <span
             v-for="h in resizeHandles"
             :key="h.dir"
@@ -131,15 +126,43 @@
         />
       </div>
     </div>
+
+    <!-- 右键菜单 -->
+    <ContextMenu
+      :open="ctxMenu.open"
+      :pos="ctxMenu.pos"
+      :element="ctxMenu.element"
+      :has-selection="!!ctxMenu.element"
+      :has-clipboard="!!props.hasClipboard"
+      :can-undo="!!props.canUndo"
+      :can-redo="!!props.canRedo"
+      :can-bring-to-front="canBringToFront"
+      :can-send-to-back="canSendToBack"
+      :can-move-up="canMoveUp"
+      :can-move-down="canMoveDown"
+      @close="closeCtxMenu"
+      @remove="onCtxRemove"
+      @copy="onCtxCopy"
+      @cut="onCtxCut"
+      @paste="onCtxPaste"
+      @bring-to-front="onCtxBringToFront"
+      @send-to-back="onCtxSendToBack"
+      @move-up="onCtxMoveUp"
+      @move-down="onCtxMoveDown"
+      @toggle-lock="onCtxToggleLock"
+      @undo="onCtxUndo"
+      @redo="onCtxRedo"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import type { Element, ElementType, Template } from '../core/types'
 import { mmToPx } from '../core/render'
 import { snapValue } from '../utils/snap'
 import ElementRenderer from './ElementRenderer.vue'
+import ContextMenu from './ContextMenu.vue'
 
 const props = defineProps<{
   template: Template
@@ -154,6 +177,12 @@ const props = defineProps<{
   panX?: number
   /** 画布纵向偏移 */
   panY?: number
+  /** 内部剪贴板是否有元素(右键菜单 "粘贴" 是否可用) */
+  hasClipboard?: boolean
+  /** 撤销是否可用 */
+  canUndo?: boolean
+  /** 重做是否可用 */
+  canRedo?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -171,6 +200,14 @@ const emit = defineEmits<{
   remove: [id: string]
   /** 画布被拖动(连续触发) */
   pan: [dx: number, dy: number]
+  /** 右键菜单 / 按钮触发(粘贴时携带鼠标 mm 坐标,父组件用) */
+  ctxAction: [
+    action:
+      | 'copy' | 'cut' | 'paste'
+      | 'bringToFront' | 'sendToBack' | 'moveUp' | 'moveDown'
+      | 'toggleLock' | 'undo' | 'redo',
+    payload?: { id?: string; x?: number; y?: number },
+  ]
 }>()
 
 // 吸附阈值(单位:mm,4px / 3.78 ≈ 1mm,这里取 1mm 适中)
@@ -319,6 +356,7 @@ function onElementMouseDown(e: MouseEvent, id: string) {
   emit('select', id)
   const el = props.template.elements.find((x) => x.id === id)
   if (!el) return
+  if (el.locked) return // 锁定后画布不允许拖动
   const startX = e.clientX
   const startY = e.clientY
   const origX = el.x
@@ -410,15 +448,6 @@ function handleStyle(el: Element, dir: ResizeDir) {
   }
 }
 
-/** 删除按钮(右上角外侧,让出 ne resize handle 的位置) */
-const elRemoveStyle = computed(() => {
-  const e = selectedEl.value
-  if (!e) return {}
-  return {
-    left: (mmToPxScaled(e.x + e.w) + 4) + 'px',
-    top: (mmToPxScaled(e.y) - 20) + 'px',
-  }
-})
 
 /** 旋转连杆线(元素顶边中点 → 旋转手柄) */
 const rotateLineStyle = computed(() => {
@@ -456,6 +485,7 @@ function onResizeStart(e: MouseEvent, id: string, dir: ResizeDir) {
   const idx = tpl.elements.findIndex((x) => x.id === id)
   if (idx < 0) return
   const el = tpl.elements[idx]
+  if (el.locked) return // 锁定后不允许 resize
   const startMouseX = e.clientX
   const startMouseY = e.clientY
   const origX = el.x
@@ -520,6 +550,7 @@ function onRotateStart(e: MouseEvent, id: string) {
   const idx = tpl.elements.findIndex((x) => x.id === id)
   if (idx < 0) return
   const el = tpl.elements[idx]
+  if (el.locked) return // 锁定后不允许旋转
   // canvas-frame 在 .canvas-wrap 内,wrap padding 24 + canvas top:24 left:24
   const wrap = (e.currentTarget as HTMLElement).closest('.canvas-wrap') as HTMLElement | null
   if (!wrap) return
@@ -548,6 +579,83 @@ function onRotateStart(e: MouseEvent, id: string) {
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
 }
+
+// ========== Context Menu ==========
+
+const ctxMenu = reactive<{
+  open: boolean
+  pos: { x: number; y: number }
+  element: Element | null
+}>({ open: false, pos: { x: 0, y: 0 }, element: null })
+
+/** 右键点击元素时记录鼠标屏幕坐标(用于 paste 定位:把元素粘到鼠标处) */
+const lastCtxClient = ref<{ x: number; y: number } | null>(null)
+
+function onContextMenu(e: MouseEvent, id: string) {
+  const el = props.template.elements.find((x) => x.id === id)
+  if (!el) return
+  emit('select', id)
+  ctxMenu.open = true
+  ctxMenu.element = el
+  ctxMenu.pos = { x: e.clientX, y: e.clientY }
+  lastCtxClient.value = { x: e.clientX, y: e.clientY }
+}
+
+function closeCtxMenu() {
+  ctxMenu.open = false
+  ctxMenu.element = null
+}
+
+/** 把屏幕 client 坐标转 canvas-mm(给 paste 用) */
+function clientToCanvasMm(clientX: number, clientY: number): { x: number; y: number } | null {
+  const wrap = document.querySelector('.canvas-wrap') as HTMLElement | null
+  const frame = document.querySelector('.canvas-frame') as HTMLElement | null
+  if (!wrap || !frame) return null
+  const fr = frame.getBoundingClientRect()
+  const localX = clientX - fr.left - 24
+  const localY = clientY - fr.top - 24
+  if (localX < 0 || localY < 0) return null
+  const z = zoomValue.value
+  return { x: localX / (mmToPx(1) * z), y: localY / (mmToPx(1) * z) }
+}
+
+/** 计算置顶/置底/上移/下移按钮是否可用(已在最顶/底则禁) */
+const canBringToFront = computed(() => {
+  const e = ctxMenu.element
+  if (!e) return false
+  return props.template.elements[props.template.elements.length - 1]?.id !== e.id
+})
+const canSendToBack = computed(() => {
+  const e = ctxMenu.element
+  if (!e) return false
+  return props.template.elements[0]?.id !== e.id
+})
+const canMoveUp = canBringToFront
+const canMoveDown = canSendToBack
+
+function onCtxRemove() {
+  if (ctxMenu.element) emit('remove', ctxMenu.element.id)
+  closeCtxMenu()
+}
+function onCtxCopy() { emit('ctxAction', 'copy', { id: ctxMenu.element?.id }); closeCtxMenu() }
+function onCtxCut() { emit('ctxAction', 'cut', { id: ctxMenu.element?.id }); closeCtxMenu() }
+function onCtxPaste() {
+  let x: number | undefined
+  let y: number | undefined
+  if (lastCtxClient.value) {
+    const mm = clientToCanvasMm(lastCtxClient.value.x, lastCtxClient.value.y)
+    if (mm) { x = mm.x; y = mm.y }
+  }
+  emit('ctxAction', 'paste', { x, y })
+  closeCtxMenu()
+}
+function onCtxBringToFront() { emit('ctxAction', 'bringToFront', { id: ctxMenu.element?.id }); closeCtxMenu() }
+function onCtxSendToBack() { emit('ctxAction', 'sendToBack', { id: ctxMenu.element?.id }); closeCtxMenu() }
+function onCtxMoveUp() { emit('ctxAction', 'moveUp', { id: ctxMenu.element?.id }); closeCtxMenu() }
+function onCtxMoveDown() { emit('ctxAction', 'moveDown', { id: ctxMenu.element?.id }); closeCtxMenu() }
+function onCtxToggleLock() { emit('ctxAction', 'toggleLock', { id: ctxMenu.element?.id }); closeCtxMenu() }
+function onCtxUndo() { emit('ctxAction', 'undo'); closeCtxMenu() }
+function onCtxRedo() { emit('ctxAction', 'redo'); closeCtxMenu() }
 </script>
 
 <style scoped>
@@ -620,28 +728,28 @@ function onRotateStart(e: MouseEvent, id: string) {
   border: 1px solid #1890ff;
   background: rgba(24, 144, 255, 0.1);
 }
-.el-remove {
+/* 锁定元素:边色变金黄 + 不允许拖动光标 */
+.canvas-element.locked {
+  border-color: #faad14 !important;
+  cursor: not-allowed !important;
+}
+/* 锁定徽标(元素左上角) */
+.lock-badge {
   position: absolute;
+  top: -10px;
+  left: -10px;
   width: 20px;
   height: 20px;
-  padding: 0;
-  font-size: 14px;
-  font-weight: bold;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+  background: #faad14;
   color: #fff;
-  background: #ff4d4f;
   border: 2px solid #fff;
   border-radius: 50%;
-  cursor: pointer;
-  z-index: 102;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-  transition: background 120ms, transform 120ms;
-}
-.el-remove:hover {
-  background: #ff7875;
-  transform: scale(1.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 100;
 }
 /* 吸附辅助线 */
 .snap-line {

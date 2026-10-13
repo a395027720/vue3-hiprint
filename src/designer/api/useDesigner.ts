@@ -58,6 +58,20 @@ export interface UseDesignerReturn {
   moveUp: (id: string) => void
   /** 元素下移一层(数组顺序 -1,入 history) */
   moveDown: (id: string) => void
+  /** 元素置顶(数组末尾,入 history) */
+  bringToFront: (id: string) => void
+  /** 元素置底(数组开头,入 history) */
+  sendToBack: (id: string) => void
+  /** 复制元素到剪贴板(不删原,不入 history) */
+  copyElement: (id: string) => void
+  /** 剪切元素(复制到剪贴板 + 删除,入 history) */
+  cutElement: (id: string) => void
+  /** 在指定位置粘贴剪贴板元素(若存在,入 history) */
+  pasteElement: (atX?: number, atY?: number) => Element | null
+  /** 切换/设置锁定状态(入 history) */
+  setLocked: (id: string, locked: boolean) => void
+  /** 剪贴板是否非空 */
+  hasClipboard: ComputedRef<boolean>
   /** 清空全部元素(入 history) */
   clearElements: () => void
   /** 替换 paper(入 history) */
@@ -174,6 +188,53 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     commit({ ...tpl, elements: next })
   }
 
+  function bringToFront(id: string): void {
+    const tpl = template.value
+    const idx = tpl.elements.findIndex((e) => e.id === id)
+    if (idx < 0 || idx === tpl.elements.length - 1) return
+    const el = tpl.elements[idx]
+    commit({ ...tpl, elements: [...tpl.elements.filter((x) => x.id !== id), el] })
+  }
+
+  function sendToBack(id: string): void {
+    const tpl = template.value
+    const idx = tpl.elements.findIndex((e) => e.id === id)
+    if (idx <= 0) return
+    const el = tpl.elements[idx]
+    commit({ ...tpl, elements: [el, ...tpl.elements.filter((x) => x.id !== id)] })
+  }
+
+  // 剪贴板(只放一份元素的不可变快照,粘贴时给新 id)
+  const clipboard = shallowRef<Element | null>(null)
+  const hasClipboard = computed(() => clipboard.value != null)
+
+  function copyElement(id: string): void {
+    const el = findElement(template.value, id)
+    if (el) clipboard.value = el
+  }
+
+  function cutElement(id: string): void {
+    copyElement(id)
+    remove(id)
+  }
+
+  function pasteElement(atX?: number, atY?: number): Element | null {
+    const src = clipboard.value
+    if (!src) return null
+    const dx = atX != null ? atX - src.x : 8
+    const dy = atY != null ? atY - src.y : 8
+    const copy = { ...src, id: createId(), x: src.x + dx, y: src.y + dy } as typeof src
+    commit(addEl(template.value, copy))
+    selectedId.value = copy.id
+    return copy
+  }
+
+  function setLocked(id: string, locked: boolean): void {
+    const tpl = template.value
+    const next = tpl.elements.map((e) => (e.id === id ? { ...e, locked } : e))
+    commit({ ...tpl, elements: next })
+  }
+
   function clearElements(): void {
     if (template.value.elements.length === 0) return
     commit({ ...template.value, elements: [] })
@@ -239,6 +300,13 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     duplicate,
     moveUp,
     moveDown,
+    bringToFront,
+    sendToBack,
+    copyElement,
+    cutElement,
+    pasteElement,
+    setLocked,
+    hasClipboard,
     clearElements,
     setPaper,
     load,

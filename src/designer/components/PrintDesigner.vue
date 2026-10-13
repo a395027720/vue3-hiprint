@@ -62,6 +62,9 @@
         :pan-mode="panModeActive"
         :pan-x="panOffset.x"
         :pan-y="panOffset.y"
+        :has-clipboard="designer.hasClipboard.value"
+        :can-undo="designer.canUndo.value"
+        :can-redo="designer.canRedo.value"
         @add="onAdd"
         @select="designer.select"
         @move="onMove"
@@ -69,6 +72,7 @@
         @rotate="onRotate"
         @remove="onRemove"
         @pan="onCanvasPan"
+        @ctx-action="onCtxAction"
       />
       <PropertyPanel
         :element="designer.selected.value"
@@ -236,6 +240,32 @@ function onResize(id: string, patch: { x: number; y: number; w: number; h: numbe
 
 function onRotate(id: string, deg: number) {
   designer.update(id, { rotate: deg } as Partial<Element>)
+}
+
+function onCtxAction(
+  action:
+    | 'copy' | 'cut' | 'paste'
+    | 'bringToFront' | 'sendToBack' | 'moveUp' | 'moveDown'
+    | 'toggleLock' | 'undo' | 'redo',
+  payload?: { id?: string; x?: number; y?: number },
+) {
+  switch (action) {
+    case 'copy': if (payload?.id) designer.copyElement(payload.id); break
+    case 'cut': if (payload?.id) designer.cutElement(payload.id); break
+    case 'paste': designer.pasteElement(payload?.x, payload?.y); break
+    case 'bringToFront': if (payload?.id) designer.bringToFront(payload.id); break
+    case 'sendToBack': if (payload?.id) designer.sendToBack(payload.id); break
+    case 'moveUp': if (payload?.id) designer.moveUp(payload.id); break
+    case 'moveDown': if (payload?.id) designer.moveDown(payload.id); break
+    case 'toggleLock': {
+      if (!payload?.id) break
+      const e = designer.selected.value
+      designer.setLocked(payload.id, !e?.locked)
+      break
+    }
+    case 'undo': designer.undo(); break
+    case 'redo': designer.redo(); break
+  }
 }
 
 function onUpdate(id: string, patch: Partial<Element>) {
