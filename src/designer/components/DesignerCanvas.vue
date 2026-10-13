@@ -131,8 +131,8 @@
     <ContextMenu
       :open="ctxMenu.open"
       :pos="ctxMenu.pos"
-      :element="ctxMenu.element"
-      :has-selection="!!ctxMenu.element"
+      :element="computedMenuEl"
+      :has-selection="!!computedMenuEl"
       :has-clipboard="!!props.hasClipboard"
       :can-undo="!!props.canUndo"
       :can-redo="!!props.canRedo"
@@ -595,33 +595,40 @@ function onRotateStart(e: MouseEvent, id: string) {
 const ctxMenu = reactive<{
   open: boolean
   pos: { x: number; y: number }
-  element: Element | null
-}>({ open: false, pos: { x: 0, y: 0 }, element: null })
+  /** 仅记录"是不是在元素上右键打开的菜单";具体 element 用 computedMenuEl 实时查 */
+  onElement: boolean
+}>({ open: false, pos: { x: 0, y: 0 }, onElement: false })
+
+/** 菜单要展示/操作的元素 = 选中元素。响应式跟随 template + selectedId 变化,
+ *  避免右键打开后元素状态变更时菜单的 label (锁定/取消锁定) 失真。 */
+const computedMenuEl = computed<Element | null>(() => {
+  if (!ctxMenu.open || !ctxMenu.onElement) return null
+  const id = props.selectedId
+  return id ? props.template.elements.find((x) => x.id === id) ?? null : null
+})
 
 /** 右键点击元素时记录鼠标屏幕坐标(用于 paste 定位:把元素粘到鼠标处) */
 const lastCtxClient = ref<{ x: number; y: number } | null>(null)
 
 function onContextMenu(e: MouseEvent, id: string) {
-  const el = props.template.elements.find((x) => x.id === id)
-  if (!el) return
   emit('select', id)
   ctxMenu.open = true
-  ctxMenu.element = el
+  ctxMenu.onElement = true
   ctxMenu.pos = { x: e.clientX, y: e.clientY }
   lastCtxClient.value = { x: e.clientX, y: e.clientY }
 }
 
-/** 在 .canvas-wrap 空白处右键时也弹出菜单(element=null,部分项 disabled) */
+/** 在 .canvas-wrap 空白处右键时也弹出菜单(onElement=false → computedMenuEl=null) */
 function onWrapContextMenu(e: MouseEvent) {
   ctxMenu.open = true
-  ctxMenu.element = null
+  ctxMenu.onElement = false
   ctxMenu.pos = { x: e.clientX, y: e.clientY }
   lastCtxClient.value = { x: e.clientX, y: e.clientY }
 }
 
 function closeCtxMenu() {
   ctxMenu.open = false
-  ctxMenu.element = null
+  ctxMenu.onElement = false
 }
 
 /** 把屏幕 client 坐标转 canvas-mm(给 paste 用) */
@@ -639,12 +646,12 @@ function clientToCanvasMm(clientX: number, clientY: number): { x: number; y: num
 
 /** 计算置顶/置底/上移/下移按钮是否可用(已在最顶/底则禁) */
 const canBringToFront = computed(() => {
-  const e = ctxMenu.element
+  const e = computedMenuEl.value
   if (!e) return false
   return props.template.elements[props.template.elements.length - 1]?.id !== e.id
 })
 const canSendToBack = computed(() => {
-  const e = ctxMenu.element
+  const e = computedMenuEl.value
   if (!e) return false
   return props.template.elements[0]?.id !== e.id
 })
@@ -652,11 +659,12 @@ const canMoveUp = canBringToFront
 const canMoveDown = canSendToBack
 
 function onCtxRemove() {
-  if (ctxMenu.element) emit('remove', ctxMenu.element.id)
+  const e = computedMenuEl.value
+  if (e) emit('remove', e.id)
   closeCtxMenu()
 }
-function onCtxCopy() { emit('ctxAction', 'copy', { id: ctxMenu.element?.id }); closeCtxMenu() }
-function onCtxCut() { emit('ctxAction', 'cut', { id: ctxMenu.element?.id }); closeCtxMenu() }
+function onCtxCopy() { emit('ctxAction', 'copy', { id: computedMenuEl.value?.id }); closeCtxMenu() }
+function onCtxCut() { emit('ctxAction', 'cut', { id: computedMenuEl.value?.id }); closeCtxMenu() }
 function onCtxPaste() {
   let x: number | undefined
   let y: number | undefined
@@ -667,11 +675,11 @@ function onCtxPaste() {
   emit('ctxAction', 'paste', { x, y })
   closeCtxMenu()
 }
-function onCtxBringToFront() { emit('ctxAction', 'bringToFront', { id: ctxMenu.element?.id }); closeCtxMenu() }
-function onCtxSendToBack() { emit('ctxAction', 'sendToBack', { id: ctxMenu.element?.id }); closeCtxMenu() }
-function onCtxMoveUp() { emit('ctxAction', 'moveUp', { id: ctxMenu.element?.id }); closeCtxMenu() }
-function onCtxMoveDown() { emit('ctxAction', 'moveDown', { id: ctxMenu.element?.id }); closeCtxMenu() }
-function onCtxToggleLock() { emit('ctxAction', 'toggleLock', { id: ctxMenu.element?.id }); closeCtxMenu() }
+function onCtxBringToFront() { emit('ctxAction', 'bringToFront', { id: computedMenuEl.value?.id }); closeCtxMenu() }
+function onCtxSendToBack() { emit('ctxAction', 'sendToBack', { id: computedMenuEl.value?.id }); closeCtxMenu() }
+function onCtxMoveUp() { emit('ctxAction', 'moveUp', { id: computedMenuEl.value?.id }); closeCtxMenu() }
+function onCtxMoveDown() { emit('ctxAction', 'moveDown', { id: computedMenuEl.value?.id }); closeCtxMenu() }
+function onCtxToggleLock() { emit('ctxAction', 'toggleLock', { id: computedMenuEl.value?.id }); closeCtxMenu() }
 function onCtxUndo() { emit('ctxAction', 'undo'); closeCtxMenu() }
 function onCtxRedo() { emit('ctxAction', 'redo'); closeCtxMenu() }
 
