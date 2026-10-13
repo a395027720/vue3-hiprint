@@ -17,25 +17,6 @@
 
     <div ref="scrollerRef" class="ftb-main" @scroll="updateScrollState">
     <div class="ftb-group">
-      <div ref="printMenuRef" class="ftb-dropdown">
-        <button
-          class="tb-btn"
-          :class="{ active: printMenuOpen }"
-          title="打印"
-          @click="printMenuOpen = !printMenuOpen"
-        >
-          <printer-outlined />
-          <down-outlined style="font-size: 10px; margin-left: 2px" />
-        </button>
-        <div v-if="printMenuOpen" class="ftb-menu">
-          <button class="ftb-menu-item" @click="$emit('printPreview')">
-            <eye-outlined /> 打印预览
-          </button>
-          <button class="ftb-menu-item" @click="$emit('print')">
-            <printer-outlined /> 打印
-          </button>
-        </div>
-      </div>
       <button
         class="tb-btn"
         :disabled="!canUndo"
@@ -419,8 +400,6 @@ const emit = defineEmits<{
   alignH: [mode: HorizontalAlign]
   alignV: [mode: VerticalAlign]
   clear: []
-  print: []
-  printPreview: []
   setZoom: [z: number]
   setPaper: [key: string]
   fontSizeStep: [delta: number]
@@ -440,8 +419,6 @@ const emit = defineEmits<{
 }>()
 
 const zoomPercent = computed(() => Math.round((props.zoom ?? 1) * 100))
-const printMenuOpen = ref(false)
-const printMenuRef = ref<HTMLElement | null>(null)
 const settingsOpen = ref(false)
 const helpOpen = ref(false)
 const theme = ref<'light' | 'dark'>('light')
@@ -496,22 +473,13 @@ function onClear() {
   }
 }
 
-function onDocumentMouseDown(e: MouseEvent) {
-  if (!printMenuOpen.value) return
-  if (printMenuRef.value && !printMenuRef.value.contains(e.target as Node)) {
-    printMenuOpen.value = false
-  }
-}
-
 onMounted(() => {
-  document.addEventListener('mousedown', onDocumentMouseDown)
   // 初始化滚动状态(可能一上来就能向右滚)
   setTimeout(updateScrollState, 0)
   // 内容宽度变化时也更新(放 resize listener 简化)
   window.addEventListener('resize', updateScrollState)
 })
 onBeforeUnmount(() => {
-  document.removeEventListener('mousedown', onDocumentMouseDown)
   window.removeEventListener('resize', updateScrollState)
 })
 

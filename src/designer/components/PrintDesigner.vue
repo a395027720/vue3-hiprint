@@ -32,8 +32,6 @@
       @align-h="onAlignH"
       @align-v="onAlignV"
       @clear="designer.clearElements"
-      @print="onPrint"
-      @print-preview="onPreview"
       @set-zoom="designer.setZoom"
       @set-paper="onSetPaper"
       @font-size-step="onFontSizeStep"
