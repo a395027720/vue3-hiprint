@@ -38,6 +38,7 @@ import printDesign from "@/demo/design/index";
 import printCustom from "@/demo/custom/index";
 import printTasks from "@/demo/tasks/index";
 import printPanels from "@/demo/panels/index";
+import printNewDesigner from "@/demo/new-designer/index";
 import templates from "@/demo/templates/index";
 
 export default {
@@ -47,6 +48,7 @@ export default {
     printCustom,
     printTasks,
     printPanels,
+    printNewDesigner,
     templates,
   },
   data() {
@@ -57,6 +59,7 @@ export default {
         { name: "printCustom", title: "自定义设计" },
         { name: "printTasks", title: "队列/批量打印" },
         { name: "printPanels", title: "多面板设计" },
+        { name: "printNewDesigner", title: "新设计器(实验)" },
       ],
     };
   },

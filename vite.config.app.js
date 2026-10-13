@@ -18,7 +18,7 @@ export default defineConfig({
       // 改用 CJS 入口 lib/index.js（该路径无 bug）
       'concurrent-tasks': 'concurrent-tasks/lib/index.js',
     },
-    extensions: ['.mjs', '.js', '.json', '.vue'],
+    extensions: ['.mjs', '.js', '.ts', '.json', '.vue'],
   },
   base: '/vue3-hiprint/',
   // 避免写入 node_modules/.vite（当 node_modules 是 root-owned 时普通用户无权创建）

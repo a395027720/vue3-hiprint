@@ -43,6 +43,7 @@
     "build-demo": "vite build --config vite.config.app.js && : > demo/.nojekyll",
     "build-lib": "vite build --config vite.config.lib.js",
     "build": "npm run build-lib",
+    "test": "node scripts/build-test.mjs && node --test src/designer/core/__tests__/*.test.mjs",
     "pub": "npm run build && npm --registry https://registry.npmjs.org/ publish",
     "pub-beta": "npm run build && npm --registry https://registry.npmjs.org/ publish --tag beta",
     "up-version": "node ./scripts/change-version.js"
