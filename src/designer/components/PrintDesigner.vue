@@ -4,6 +4,7 @@
       :dirty="designer.dirty.value"
       @add="onAdd"
       @save="onSave"
+      @reset="onReset"
       @view-json="onViewJson"
       @export-json="onExportJson"
       @import-json="onImportJson"
@@ -108,6 +109,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { Element, ElementType, Template, TextElement } from '../core/types'
 import { useDesigner } from '../api/useDesigner'
+import { createTemplate } from '../core/schema'
 import { alignHorizontal, alignVertical, type HorizontalAlign, type VerticalAlign } from '../core/align'
 import { printTemplate, previewTemplate } from '../utils/print'
 import { exportPdf } from '../utils/pdf'
@@ -360,6 +362,11 @@ async function onPreview() {
 function onSave() {
   designer.markClean()
   emit('save', designer.template.value)
+}
+
+function onReset() {
+  designer.load(createTemplate())
+  emit('notice', '已重置为空白模板', 'info')
 }
 
 async function onExportPdf() {

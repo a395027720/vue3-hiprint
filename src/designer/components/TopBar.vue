@@ -44,6 +44,13 @@
     </div>
 
     <div class="topbar-actions">
+      <button
+        class="reset-btn"
+        title="重置为空白模板"
+        @click="onResetClick"
+      >
+        <reload-outlined /> 重置
+      </button>
       <div ref="saveMenuRef" class="save-group">
         <button
           class="save-btn"
@@ -97,6 +104,7 @@ const emit = defineEmits<{
   add: [type: ElementType]
   custom: []
   save: []
+  reset: []
   viewJson: []
   exportJson: []
   importJson: []
@@ -116,6 +124,12 @@ function onPick(action: 'viewJson' | 'exportJson' | 'importJson' | 'print' | 'pr
   else if (action === 'print') emit('print')
   else if (action === 'printPreview') emit('printPreview')
   else emit('exportPdf')
+}
+
+function onResetClick() {
+  if (window.confirm('确定要重置为空白模板吗?当前所有元素将被清空。')) {
+    emit('reset')
+  }
 }
 
 function onDragStart(e: DragEvent, type: ElementType) {
@@ -326,6 +340,24 @@ function onCustom() {
   align-items: center;
   gap: 8px;
   flex: 0 0 auto;
+}
+.reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #595959;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+.reset-btn:hover {
+  background: #fff7e6;
+  color: #d46b08;
+  border-color: #ffd591;
 }
 .save-group {
   position: relative;
