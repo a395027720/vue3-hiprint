@@ -79,3 +79,78 @@ export function printTemplate(tpl: Template, data: unknown): Promise<boolean> {
     }
   })
 }
+
+/**
+ * 弹出打印预览 modal:每张 paper 按真实尺寸居中显示,
+ * 底部"打印"/"关闭"按钮。返回的 promise 在 modal 关闭时 resolve。
+ *
+ * MVP 局限:简单套一个固定定位容器,不支持缩放、翻页、暗色背景。
+ * 后续 PR 可换 PDF.js 或专门的 preview 组件。
+ */
+export function previewTemplate(tpl: Template, data: unknown): Promise<void> {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div')
+    overlay.className = 'designer-preview-overlay'
+    Object.assign(overlay.style, {
+      position: 'fixed', inset: '0', zIndex: '99999',
+      background: 'rgba(0,0,0,0.5)',
+      display: 'flex', flexDirection: 'column',
+    } as CSSStyleDeclaration)
+
+    const toolbar = document.createElement('div')
+    Object.assign(toolbar.style, {
+      flex: '0 0 auto', padding: '12px 16px',
+      background: '#fff', borderBottom: '1px solid #e8e8e8',
+      display: 'flex', alignItems: 'center', gap: '8px',
+    } as CSSStyleDeclaration)
+
+    const title = document.createElement('div')
+    title.textContent = '打印预览'
+    Object.assign(title.style, {
+      fontSize: '14px', fontWeight: '600', flex: '1',
+    } as CSSStyleDeclaration)
+
+    const printBtn = document.createElement('button')
+    printBtn.textContent = '打印'
+    Object.assign(printBtn.style, buttonStyle('#1677ff', '#fff'))
+
+    const closeBtn = document.createElement('button')
+    closeBtn.textContent = '关闭'
+    Object.assign(closeBtn.style, buttonStyle('#fff', '#333', '#d0d0d0'))
+
+    toolbar.append(title, printBtn, closeBtn)
+
+    const body = document.createElement('div')
+    Object.assign(body.style, {
+      flex: '1', overflow: 'auto', padding: '24px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
+    } as CSSStyleDeclaration)
+    body.innerHTML = renderTemplate(tpl, data)
+
+    overlay.append(toolbar, body)
+    document.body.appendChild(overlay)
+
+    function close() {
+      overlay.remove()
+      document.removeEventListener('keydown', onKey)
+      resolve()
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') close()
+    }
+    closeBtn.addEventListener('click', close)
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close()
+    })
+    document.addEventListener('keydown', onKey)
+    printBtn.addEventListener('click', () => {
+      close()
+      // 等 modal 关闭动画完成再调 print,避免遮挡打印对话框
+      setTimeout(() => printTemplate(tpl, data), 50)
+    })
+  })
+}
+
+function buttonStyle(bg: string, color: string, border = bg): string {
+  return `background:${bg};color:${color};border:1px solid ${border};border-radius:4px;padding:4px 16px;font-size:13px;cursor:pointer;`
+}

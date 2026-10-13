@@ -15,6 +15,7 @@
         @align-v="onAlignV"
         @clear="onClear"
         @print="onPrint"
+        @print-preview="onPreview"
         @set-zoom="designer.setZoom"
       />
       <DesignerCanvas
@@ -40,7 +41,7 @@
 import type { Element, ElementType, Template } from '../core/types'
 import { useDesigner } from '../api/useDesigner'
 import { alignHorizontal, alignVertical, type HorizontalAlign, type VerticalAlign } from '../core/align'
-import { printTemplate } from '../utils/print'
+import { printTemplate, previewTemplate } from '../utils/print'
 import ElementPalette from './ElementPalette.vue'
 import DesignerCanvas from './DesignerCanvas.vue'
 import PropertyPanel from './PropertyPanel.vue'
@@ -99,6 +100,10 @@ async function onPrint() {
   const ok = await printTemplate(designer.template.value, props.printData)
   if (ok) emit('printOk')
   else emit('printError')
+}
+
+async function onPreview() {
+  await previewTemplate(designer.template.value, props.printData)
 }
 
 // 暴露给父组件:打印 / 导入导出

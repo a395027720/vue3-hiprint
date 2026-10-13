@@ -13,25 +13,34 @@
 -->
 <template>
   <div class="ctb">
-    <div class="ctb-group">
-      <button
-        class="ctb-btn primary"
-        title="打印 (Ctrl+P)"
-        @click="$emit('print')"
-      ><span v-html="printIcon" /></button>
+    <div ref="printMenuRef" class="ctb-group ctb-dropdown">
       <button
         class="ctb-btn"
-        :disabled="!canUndo"
-        title="撤销 (Ctrl+Z)"
-        @click="$emit('undo')"
-      ><span v-html="undoIcon" /></button>
-      <button
-        class="ctb-btn"
-        :disabled="!canRedo"
-        title="重做 (Ctrl+Y)"
-        @click="$emit('redo')"
-      ><span v-html="redoIcon" /></button>
+        :class="{ active: printMenuOpen }"
+        title="打印"
+        @click="printMenuOpen = !printMenuOpen"
+      ><printer-outlined /><down-outlined style="font-size: 10px; margin-left: 2px" /></button>
+      <div v-if="printMenuOpen" class="ctb-menu">
+        <button class="ctb-menu-item" @click="$emit('printPreview')">
+          <eye-outlined /> 打印预览
+        </button>
+        <button class="ctb-menu-item" @click="$emit('print')">
+          <printer-outlined /> 打印
+        </button>
+      </div>
     </div>
+    <button
+      class="ctb-btn"
+      :disabled="!canUndo"
+      title="撤销 (Ctrl+Z)"
+      @click="$emit('undo')"
+    ><span v-html="undoIcon" /></button>
+    <button
+      class="ctb-btn"
+      :disabled="!canRedo"
+      title="重做 (Ctrl+Y)"
+      @click="$emit('redo')"
+    ><span v-html="redoIcon" /></button>
 
     <span class="ctb-sep" />
 
@@ -113,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { HorizontalAlign, VerticalAlign } from '../core/align'
 
 const ZOOM_OPTIONS = [50, 75, 100, 125, 150, 200] as const
@@ -134,10 +143,13 @@ const emit = defineEmits<{
   alignV: [mode: VerticalAlign]
   clear: []
   print: []
+  printPreview: []
   setZoom: [z: number]
 }>()
 
 const zoomPercent = computed(() => Math.round((props.zoom ?? 1) * 100))
+const printMenuOpen = ref(false)
+const printMenuRef = ref<HTMLElement | null>(null)
 
 function onZoomChange(e: Event) {
   const v = Number((e.target as HTMLSelectElement).value)
@@ -149,6 +161,16 @@ function onClear() {
     emit('clear')
   }
 }
+
+function onDocumentMouseDown(e: MouseEvent) {
+  if (!printMenuOpen.value) return
+  if (printMenuRef.value && !printMenuRef.value.contains(e.target as Node)) {
+    printMenuOpen.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('mousedown', onDocumentMouseDown))
+onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentMouseDown))
 
 // 内联 SVG icons(用 heroicons-style 1.5px stroke),避免拉新依赖
 const stroke = 'currentColor'
@@ -179,6 +201,42 @@ const trashIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
   display: flex;
   align-items: center;
   gap: 2px;
+}
+.ctb-dropdown {
+  position: relative;
+}
+.ctb-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 140px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ctb-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #333;
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+.ctb-menu-item:hover {
+  background: #f5f5f5;
+  color: #1677ff;
 }
 .ctb-btn {
   display: inline-flex;
