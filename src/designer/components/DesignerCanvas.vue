@@ -104,8 +104,16 @@
           <span
             class="rotate-handle"
             :style="rotateHandleStyle"
+            title="拖动旋转"
             @mousedown.stop="onRotateStart($event, selectedEl.id)"
-          />
+          >
+            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M8 2.5a5.5 5.5 0 1 0 5.45 6.3.85.85 0 0 0-1.69-.18 3.8 3.8 0 1 1-1-3.7l-1.3 1.3a.6.6 0 0 0 .42 1.03h3.5a.6.6 0 0 0 .6-.6V3.15a.6.6 0 0 0-1.03-.42l-1.1 1.1A5.48 5.48 0 0 0 8 2.5Z"
+              />
+            </svg>
+          </span>
         </template>
 
         <!-- 吸附辅助线 -->
@@ -432,8 +440,8 @@ const rotateHandleStyle = computed(() => {
   const e = selectedEl.value
   if (!e) return {}
   return {
-    left: (mmToPxScaled(e.x) + mmToPxScaled(e.w) / 2 - 6) + 'px',
-    top: (mmToPxScaled(e.y) - 26) + 'px',
+    left: (mmToPxScaled(e.x) + mmToPxScaled(e.w) / 2 - 9) + 'px',
+    top: (mmToPxScaled(e.y) - 30) + 'px',
   }
 })
 
@@ -732,24 +740,29 @@ function onRotateStart(e: MouseEvent, id: string) {
 .rotate-line {
   position: absolute;
   background: #1890ff;
-  opacity: 0.6;
+  opacity: 0.75;
   pointer-events: auto;
   z-index: 100;
 }
 .rotate-handle {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 18px;
+  height: 18px;
   background: #1890ff;
   border: 2px solid #fff;
   border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   pointer-events: auto;
   cursor: crosshair;
   z-index: 101;
-  transition: transform 120ms;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 120ms, box-shadow 120ms;
 }
 .rotate-handle:hover {
-  transform: scale(1.2);
+  transform: scale(1.15);
+  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.25), 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 </style>
