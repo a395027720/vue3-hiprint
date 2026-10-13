@@ -19,7 +19,7 @@
     <div class="ftb-group">
       <div ref="printMenuRef" class="ftb-dropdown">
         <button
-          class="ftb-btn"
+          class="tb-btn"
           :class="{ active: printMenuOpen }"
           title="打印"
           @click="printMenuOpen = !printMenuOpen"
@@ -37,13 +37,13 @@
         </div>
       </div>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :disabled="!canUndo"
         title="撤销 (Ctrl+Z)"
         @click="$emit('undo')"
       ><span v-html="undoIcon" /></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :disabled="!canRedo"
         title="重做 (Ctrl+Y)"
         @click="$emit('redo')"
@@ -54,13 +54,13 @@
 
     <div class="ftb-group">
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :class="{ active: showGrid }"
         title="网格"
         @click="$emit('toggleGrid')"
       ><span v-html="gridIcon" /></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :class="{ active: panMode }"
         title="手型拖动(空格临时)"
         @click="$emit('togglePan')"
@@ -71,38 +71,38 @@
 
     <div class="ftb-group">
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :disabled="!hasSelection"
         :title="hasSelection ? '水平左对齐' : '水平左对齐(未选中)'"
         @click="$emit('alignH', 'left')"
       ><span v-html="alignLeftIcon" /></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :disabled="!hasSelection"
         :title="hasSelection ? '水平居中' : '水平居中(未选中)'"
         @click="$emit('alignH', 'center')"
       ><span v-html="alignCenterHIcon" /></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :disabled="!hasSelection"
         :title="hasSelection ? '水平右对齐' : '水平右对齐(未选中)'"
         @click="$emit('alignH', 'right')"
       ><span v-html="alignRightIcon" /></button>
       <span class="ftb-mini-sep" />
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :disabled="!hasSelection"
         :title="hasSelection ? '垂直顶对齐' : '垂直顶对齐(未选中)'"
         @click="$emit('alignV', 'top')"
       ><vertical-align-top-outlined /></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :disabled="!hasSelection"
         :title="hasSelection ? '垂直居中' : '垂直居中(未选中)'"
         @click="$emit('alignV', 'middle')"
       ><vertical-align-middle-outlined /></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :disabled="!hasSelection"
         :title="hasSelection ? '垂直底对齐' : '垂直底对齐(未选中)'"
         @click="$emit('alignV', 'bottom')"
@@ -152,28 +152,28 @@
 
     <div class="ftb-group">
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :class="{ active: boldActive }"
         :disabled="!isText"
         title="粗体 (Ctrl+B)"
         @click="$emit('toggleBold')"
       ><b>B</b></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :class="{ active: italicActive }"
         :disabled="!isText"
         title="斜体 (Ctrl+I)"
         @click="$emit('toggleItalic')"
       ><i>I</i></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :class="{ active: underlineActive }"
         :disabled="!isText"
         title="下划线 (Ctrl+U)"
         @click="$emit('toggleUnderline')"
       ><u>U</u></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :class="{ active: strikeActive }"
         :disabled="!isText"
         title="删除线"
@@ -181,14 +181,14 @@
       ><s>S</s></button>
       <span class="ftb-mini-sep" />
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :class="{ active: listType === 'ul' }"
         :disabled="!isText"
         title="无序列表"
         @click="$emit('toggleList', listType === 'ul' ? 'none' : 'ul')"
       ><unordered-list-outlined /></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :class="{ active: listType === 'ol' }"
         :disabled="!isText"
         title="有序列表"
@@ -265,37 +265,37 @@
 
     <div class="ftb-group">
       <button
-        class="ftb-btn"
+        class="tb-btn"
         title="HTML 预览"
         @click="$emit('htmlPreview')"
       ><span style="font-size: 11px; font-weight: 600">HTML</span></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         title="截图"
         @click="$emit('screenshot')"
       ><camera-outlined /></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         title="画笔(预留)"
         @click="$emit('pen')"
       ><edit-outlined /></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         :title="theme === 'dark' ? '切换到亮色主题' : '切换到暗色主题'"
         @click="onToggleTheme"
       ><sun-outlined v-if="theme === 'dark'" /><moon-outlined v-else /></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         title="设置"
         @click="settingsOpen = true"
       ><setting-outlined /></button>
       <button
-        class="ftb-btn"
+        class="tb-btn"
         title="帮助"
         @click="helpOpen = true"
       ><question-circle-outlined /></button>
       <button
-        class="ftb-btn danger"
+        class="tb-btn danger"
         title="清空全部"
         @click="onClear"
       ><span v-html="trashIcon" /></button>
@@ -626,7 +626,7 @@ const chevronRightIcon = `<svg viewBox="0 0 24 24" width="16" height="16" class=
   background: #f5f5f5;
   color: #1677ff;
 }
-.ftb-btn,
+.tb-btn,
 .ftb-step {
   display: inline-flex;
   align-items: center;
@@ -640,7 +640,7 @@ const chevronRightIcon = `<svg viewBox="0 0 24 24" width="16" height="16" class=
   cursor: pointer;
   transition: background 120ms, border-color 120ms, color 120ms;
 }
-.ftb-btn {
+.tb-btn {
   width: 28px;
 }
 .ftb-step {
@@ -648,23 +648,23 @@ const chevronRightIcon = `<svg viewBox="0 0 24 24" width="16" height="16" class=
   font-size: 14px;
   font-weight: 500;
 }
-.ftb-btn:hover:not(:disabled),
+.tb-btn:hover:not(:disabled),
 .ftb-step:hover:not(:disabled) {
   background: #e6f4ff;
   border-color: #91caff;
   color: #1677ff;
 }
-.ftb-btn.active {
+.tb-btn.active {
   background: #e6f4ff;
   border-color: #1677ff;
   color: #1677ff;
 }
-.ftb-btn:disabled,
+.tb-btn:disabled,
 .ftb-step:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
-.ftb-btn.danger:hover:not(:disabled) {
+.tb-btn.danger:hover:not(:disabled) {
   background: #fff1f0;
   border-color: #ffa39e;
   color: #ff4d4f;
@@ -769,7 +769,7 @@ const chevronRightIcon = `<svg viewBox="0 0 24 24" width="16" height="16" class=
 .ftb-color.disabled input[type="color"] {
   pointer-events: none;
 }
-.ftb-btn :deep(.anticon) {
+.tb-btn :deep(.anticon) {
   font-size: 16px;
   line-height: 1;
   display: inline-flex;
