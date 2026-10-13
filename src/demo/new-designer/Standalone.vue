@@ -11,12 +11,6 @@
     <header class="toolbar">
       <div class="brand">vue3-hiprint · 新设计器(实验)</div>
       <a-space :size="4" wrap>
-        <a-button size="small" @click="showJson = true">查看 JSON</a-button>
-        <a-button size="small" @click="onExport">导出 JSON</a-button>
-        <a-upload :before-upload="onImport" :show-upload-list="false" accept="application/json">
-          <a-button size="small">导入 JSON</a-button>
-        </a-upload>
-        <a-divider type="vertical" />
         <a-tag color="blue">A4 · 210×297mm</a-tag>
         <a-button size="small" @click="backToDemo">返回 demo 列表</a-button>
       </a-space>
@@ -34,20 +28,11 @@
         @save="onSave"
       />
     </div>
-
-    <a-modal
-      v-model:open="showJson"
-      title="当前模板 JSON"
-      :footer="null"
-      width="720px"
-    >
-      <pre style="max-height: 60vh; overflow: auto; background: #f6f8fa; padding: 12px; font-size: 12px">{{ jsonText }}</pre>
-    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   PrintDesigner,
@@ -58,7 +43,6 @@ import {
 } from '../../designer'
 
 const designerRef = ref<InstanceType<typeof PrintDesigner> | null>(null)
-const showJson = ref(false)
 
 const initialTemplate: Template = createTemplate({
   elements: [
@@ -83,32 +67,6 @@ const printData = {
     { name: '商品 G', qty: 5, price: 30 },
     { name: '商品 H', qty: 1, price: 999 },
   ],
-}
-
-const jsonText = computed(() => designerRef.value?.toJson() ?? '')
-
-function onExport() {
-  const json = designerRef.value?.toJson() ?? ''
-  if (!json) return
-  const blob = new Blob([json], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'template.json'
-  a.click()
-  URL.revokeObjectURL(url)
-  message.success('已导出')
-}
-
-function onImport(file: File): boolean {
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    const raw = (e.target?.result as string) ?? ''
-    const ok = designerRef.value?.loadJson(raw) ?? false
-    if (ok) message.success('导入成功')
-  }
-  reader.readAsText(file)
-  return false
 }
 
 function onJsonError() {
