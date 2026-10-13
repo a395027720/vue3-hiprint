@@ -402,13 +402,13 @@ function handleStyle(el: Element, dir: ResizeDir) {
   }
 }
 
-/** 删除按钮(右上角外侧) */
+/** 删除按钮(右上角外侧,让出 ne resize handle 的位置) */
 const elRemoveStyle = computed(() => {
   const e = selectedEl.value
   if (!e) return {}
   return {
-    left: (mmToPxScaled(e.x + e.w) - 8) + 'px',
-    top: (mmToPxScaled(e.y) - 8) + 'px',
+    left: (mmToPxScaled(e.x + e.w) + 4) + 'px',
+    top: (mmToPxScaled(e.y) - 20) + 'px',
   }
 })
 
@@ -614,25 +614,27 @@ function onRotateStart(e: MouseEvent, id: string) {
 }
 .el-remove {
   position: absolute;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   padding: 0;
-  line-height: 14px;
-  font-size: 14px;
+  line-height: 18px;
+  font-size: 16px;
   font-weight: bold;
   color: #fff;
   background: #ff4d4f;
-  border: 1px solid #fff;
-  border-radius: 2px;
+  border: 2px solid #fff;
+  border-radius: 50%;
   cursor: pointer;
   z-index: 102;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transition: background 120ms, transform 120ms;
 }
 .el-remove:hover {
   background: #ff7875;
+  transform: scale(1.1);
 }
 /* 吸附辅助线 */
 .snap-line {
