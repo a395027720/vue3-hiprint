@@ -129,9 +129,24 @@
         </div>
       </div>
 
-      <!-- 吸附辅助线:放在 frame 层级,top/bottom = 0 让竖线贯穿 frame 高度
-           (含 ruler 区域),left/top 加 24px 偏移对齐到 canvas 内坐标。
-           ruler z-index 比 snap-line 高,故 ruler 区域内的线被 ruler 盖住。 -->
+      <!-- 拖动中的"延长线":从元素/组 4 边出发,贯穿画布到 ruler(浅蓝虚线)
+           只在拖动时显示(mousedown 起,mouseup 清) -->
+      <template v-if="selfLines">
+        <div
+          v-for="x in selfLines.v"
+          :key="`self-v-${x}`"
+          class="self-line self-v"
+          :style="{ left: (24 + mmToPxScaled(x)) + 'px' }"
+        />
+        <div
+          v-for="y in selfLines.h"
+          :key="`self-h-${y}`"
+          class="self-line self-h"
+          :style="{ top: (24 + mmToPxScaled(y)) + 'px' }"
+        />
+      </template>
+
+      <!-- 吸附命中:候选线跟元素/组 4 边重合时,该条线变红实线高亮(z-index 高于 self-line) -->
       <div
         v-for="x in snapLines.vertical"
         :key="`v-${x}`"
@@ -144,22 +159,6 @@
         class="snap-line snap-h"
         :style="{ top: (24 + mmToPxScaled(y)) + 'px' }"
       />
-
-      <!-- 多选组的 4 边对齐线(框选后静态显示,延伸到 ruler) -->
-      <template v-if="multiGroupLines">
-        <div
-          v-for="x in multiGroupLines.v"
-          :key="`mg-v-${x}`"
-          class="snap-line snap-v multi-group"
-          :style="{ left: (24 + mmToPxScaled(x)) + 'px' }"
-        />
-        <div
-          v-for="y in multiGroupLines.h"
-          :key="`mg-h-${y}`"
-          class="snap-line snap-h multi-group"
-          :style="{ top: (24 + mmToPxScaled(y)) + 'px' }"
-        />
-      </template>
     </div>
 
     <!-- 右键菜单 -->
@@ -505,23 +504,9 @@ const selectedEl = computed<Element | null>(() =>
   props.selectedId ? props.template.elements.find((e) => e.id === props.selectedId) ?? null : null,
 )
 
-/** 多选组的 bounding box 4 边(mm 坐标),用于画静态对齐线 + 组拖动时的吸附候选。
- *  框选后持续显示,直到选中集合变化;组拖动时跟 snapLines 一起更新(也会画吸附线)。 */
-const multiGroupLines = computed<{ v: number[]; h: number[] } | null>(() => {
-  const ids = props.multiSelectedIds ?? []
-  if (ids.length < 2) return null
-  const idSet = new Set(ids)
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-  for (const e of props.template.elements) {
-    if (!idSet.has(e.id)) continue
-    if (e.x < minX) minX = e.x
-    if (e.y < minY) minY = e.y
-    if (e.x + e.w > maxX) maxX = e.x + e.w
-    if (e.y + e.h > maxY) maxY = e.y + e.h
-  }
-  if (!Number.isFinite(minX)) return null
-  return { v: [minX, maxX], h: [minY, maxY] }
-})
+/** 拖动中"延长线":从元素/组的 4 边出发画虚线(贯穿画布到 ruler)。
+ *  null = 不在拖动。跟 snapLines(吸附命中红线)叠加:吸附时红线盖在虚线上表示"已对齐"。 */
+const selfLines = ref<{ v: number[]; h: number[] } | null>(null)
 
 function elBox(el: Element) {
   return {
@@ -592,6 +577,11 @@ function startElementDrag(e: MouseEvent, id: string) {
   const pxPerMmLocal = mmToPx(1) * zoomValue.value
   const vCandidates = collectCandidates('x', id)
   const hCandidates = collectCandidates('y', id)
+  // 启动时设延长线
+  selfLines.value = {
+    v: [origX, origX + el.w],
+    h: [origY, origY + el.h],
+  }
 
   function onMove(ev: MouseEvent) {
     const dx = (ev.clientX - startX) / pxPerMmLocal
@@ -615,6 +605,13 @@ function startElementDrag(e: MouseEvent, id: string) {
     const hLines = [syTop.lineAt, syBottom.lineAt].filter((v): v is number => v !== null)
     snapLines.vertical = vLines
     snapLines.horizontal = hLines
+    // 延长线跟随
+    if (selfLines.value) {
+      selfLines.value = {
+        v: [newX, newX + el.w],
+        h: [newY, newY + el.h],
+      }
+    }
 
     emit('move', id, newX, newY)
   }
@@ -623,6 +620,7 @@ function startElementDrag(e: MouseEvent, id: string) {
     document.removeEventListener('mouseup', onUp)
     snapLines.vertical = []
     snapLines.horizontal = []
+    selfLines.value = null
   }
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
@@ -656,6 +654,11 @@ function startGroupDrag(e: MouseEvent, primaryId: string) {
   // 其它元素的边(排除组内全部 id)
   const vCandidates = collectCandidatesForGroup('x', new Set(origs.map((o) => o.id)))
   const hCandidates = collectCandidatesForGroup('y', new Set(origs.map((o) => o.id)))
+  // 启动时设延长线(组 4 边)
+  selfLines.value = {
+    v: [groupX, groupRight],
+    h: [groupY, groupBottom],
+  }
 
   function onMove(ev: MouseEvent) {
     const dx = (ev.clientX - startX) / pxPerMmLocal
@@ -677,6 +680,13 @@ function startGroupDrag(e: MouseEvent, primaryId: string) {
     const hLines = [syTop.lineAt, syBottom.lineAt].filter((v): v is number => v !== null)
     snapLines.vertical = vLines
     snapLines.horizontal = hLines
+    // 延长线跟随
+    if (selfLines.value) {
+      selfLines.value = {
+        v: [newX, newRight],
+        h: [newY, newBottom],
+      }
+    }
 
     const finalDx = newX - groupX
     const finalDy = newY - groupY
@@ -688,6 +698,7 @@ function startGroupDrag(e: MouseEvent, primaryId: string) {
     document.removeEventListener('mouseup', onUp)
     snapLines.vertical = []
     snapLines.horizontal = []
+    selfLines.value = null
   }
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
@@ -1137,12 +1148,36 @@ watch(() => props.template.elements, () => {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
+/* 拖动中的延长线(从元素/组 4 边出发,贯穿画布到 ruler):浅蓝虚线 */
+.self-line {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+  transition: opacity 80ms;
+}
+.self-v {
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px dashed #69c0ff;
+  opacity: 0.7;
+  transform: translateX(-0.5px);
+}
+.self-h {
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed #69c0ff;
+  opacity: 0.7;
+  transform: translateY(-0.5px);
+}
+
 /* 吸附辅助线:放在 .canvas-frame 内,top:0 / bottom:0 跨越 ruler 区域(被 ruler 盖住) */
 .snap-line {
   position: absolute;
   background: #ff4d4f;
   pointer-events: none;
-  z-index: 3;
+  z-index: 4;
   /* 拖动时显示/隐藏,平滑过渡 */
   transition: opacity 100ms;
 }
@@ -1157,17 +1192,6 @@ watch(() => props.template.elements, () => {
   right: 0;
   height: 1px;
   transform: translateY(-0.5px);
-}
-/* 多选组的 4 边对齐线:浅蓝虚线,跟吸附红实线区分 */
-.snap-line.multi-group {
-  background: transparent;
-  border-color: #69c0ff;
-}
-.snap-v.multi-group {
-  border-left: 1px dashed #69c0ff;
-}
-.snap-h.multi-group {
-  border-top: 1px dashed #69c0ff;
 }
 
 /* ========== Resize / Rotate handles ==========
