@@ -617,8 +617,7 @@ function onRotateStart(e: MouseEvent, id: string) {
   width: 20px;
   height: 20px;
   padding: 0;
-  line-height: 18px;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: bold;
   color: #fff;
   background: #ff4d4f;
