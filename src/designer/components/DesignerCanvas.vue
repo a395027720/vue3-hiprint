@@ -3,6 +3,7 @@
     class="canvas-wrap"
     :class="{ 'pan-mode': panMode }"
     @mousedown="onWrapMouseDown"
+    @contextmenu.prevent="onWrapContextMenu"
   >
     <div class="canvas-frame" :style="frameStyleWithPan">
       <!-- 水平标尺 -->
@@ -74,7 +75,7 @@
           :class="{ selected: el.id === selectedId, 'is-image': el.type === 'image', locked: el.locked }"
           :style="elBox(el)"
           @mousedown="onElementMouseDown($event, el.id)"
-          @contextmenu.prevent="onContextMenu($event, el.id)"
+          @contextmenu.prevent.stop="onContextMenu($event, el.id)"
         >
           <ElementRenderer :element="el" />
           <span v-if="el.locked" class="lock-badge" title="已锁定">🔒</span>
@@ -595,7 +596,8 @@ const ctxMenu = reactive<{
   open: boolean
   pos: { x: number; y: number }
   element: Element | null
-}>({ open: false, pos: { x: 0, y: 0 }, element: null })
+  variant: 'element' | 'canvas'
+}>({ open: false, pos: { x: 0, y: 0 }, element: null, variant: 'element' })
 
 /** 右键点击元素时记录鼠标屏幕坐标(用于 paste 定位:把元素粘到鼠标处) */
 const lastCtxClient = ref<{ x: number; y: number } | null>(null)
@@ -606,6 +608,16 @@ function onContextMenu(e: MouseEvent, id: string) {
   emit('select', id)
   ctxMenu.open = true
   ctxMenu.element = el
+  ctxMenu.variant = 'element'
+  ctxMenu.pos = { x: e.clientX, y: e.clientY }
+  lastCtxClient.value = { x: e.clientX, y: e.clientY }
+}
+
+/** 在 .canvas-wrap 空白处右键时弹出"画布菜单"(只 粘贴/撤销/重做) */
+function onWrapContextMenu(e: MouseEvent) {
+  ctxMenu.open = true
+  ctxMenu.element = null
+  ctxMenu.variant = 'canvas'
   ctxMenu.pos = { x: e.clientX, y: e.clientY }
   lastCtxClient.value = { x: e.clientX, y: e.clientY }
 }

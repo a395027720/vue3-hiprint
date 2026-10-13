@@ -18,41 +18,52 @@
     :style="{ left: pos.x + 'px', top: pos.y + 'px' }"
     @contextmenu.prevent
   >
-    <button class="ctx-item" :disabled="!hasSelection" @click="$emit('remove')">
-      <span class="ctx-icon">×</span>删除
-    </button>
-    <button class="ctx-item" :disabled="!hasSelection" @click="$emit('copy')">
-      <span class="ctx-icon">⎘</span>复制
-    </button>
-    <button class="ctx-item" :disabled="!hasSelection" @click="$emit('cut')">
-      <span class="ctx-icon">✂</span>剪切
-    </button>
-    <button class="ctx-item" :disabled="!hasClipboard" @click="$emit('paste')">
-      <span class="ctx-icon">⎗</span>粘贴
-    </button>
+    <!-- 元素菜单:编辑组 + 层级组 + 锁定 -->
+    <template v-if="variant === 'element'">
+      <button class="ctx-item" :disabled="!hasSelection" @click="$emit('remove')">
+        <span class="ctx-icon">×</span>删除
+      </button>
+      <button class="ctx-item" :disabled="!hasSelection" @click="$emit('copy')">
+        <span class="ctx-icon">⎘</span>复制
+      </button>
+      <button class="ctx-item" :disabled="!hasSelection" @click="$emit('cut')">
+        <span class="ctx-icon">✂</span>剪切
+      </button>
+      <button class="ctx-item" :disabled="!hasClipboard" @click="$emit('paste')">
+        <span class="ctx-icon">⎗</span>粘贴
+      </button>
 
-    <div class="ctx-sep" />
+      <div class="ctx-sep" />
 
-    <button class="ctx-item" :disabled="!canBringToFront" @click="$emit('bringToFront')">
-      <span class="ctx-icon">⤒</span>置于顶层
-    </button>
-    <button class="ctx-item" :disabled="!canSendToBack" @click="$emit('sendToBack')">
-      <span class="ctx-icon">⤓</span>置于底层
-    </button>
-    <button class="ctx-item" :disabled="!canMoveUp" @click="$emit('moveUp')">
-      <span class="ctx-icon">↑</span>上移一层
-    </button>
-    <button class="ctx-item" :disabled="!canMoveDown" @click="$emit('moveDown')">
-      <span class="ctx-icon">↓</span>下移一层
-    </button>
+      <button class="ctx-item" :disabled="!canBringToFront" @click="$emit('bringToFront')">
+        <span class="ctx-icon">⤒</span>置于顶层
+      </button>
+      <button class="ctx-item" :disabled="!canSendToBack" @click="$emit('sendToBack')">
+        <span class="ctx-icon">⤓</span>置于底层
+      </button>
+      <button class="ctx-item" :disabled="!canMoveUp" @click="$emit('moveUp')">
+        <span class="ctx-icon">↑</span>上移一层
+      </button>
+      <button class="ctx-item" :disabled="!canMoveDown" @click="$emit('moveDown')">
+        <span class="ctx-icon">↓</span>下移一层
+      </button>
 
-    <div class="ctx-sep" />
+      <div class="ctx-sep" />
 
-    <button class="ctx-item" :disabled="!hasSelection" @click="$emit('toggleLock')">
-      <span class="ctx-icon">{{ element?.locked ? '🔓' : '🔒' }}</span>{{ element?.locked ? '取消锁定' : '锁定' }}
-    </button>
+      <button class="ctx-item" :disabled="!hasSelection" @click="$emit('toggleLock')">
+        <span class="ctx-icon">{{ element?.locked ? '🔓' : '🔒' }}</span>{{ element?.locked ? '取消锁定' : '锁定' }}
+      </button>
 
-    <div class="ctx-sep" />
+      <div class="ctx-sep" />
+    </template>
+
+    <!-- 画布空白菜单:只 粘贴 / 撤销 / 重做 -->
+    <template v-else>
+      <button class="ctx-item" :disabled="!hasClipboard" @click="$emit('paste')">
+        <span class="ctx-icon">⎗</span>粘贴
+      </button>
+      <div class="ctx-sep" />
+    </template>
 
     <button class="ctx-item" :disabled="!canUndo" @click="$emit('undo')">
       <span class="ctx-icon">↶</span>撤销
@@ -71,6 +82,8 @@ const props = defineProps<{
   open: boolean
   pos: { x: number; y: number }
   element: Element | null
+  /** 'element' = 完整 4 组菜单;'canvas' = 只粘贴/撤销/重做 */
+  variant?: 'element' | 'canvas'
   hasSelection: boolean
   hasClipboard: boolean
   canUndo: boolean
