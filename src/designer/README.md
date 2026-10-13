@@ -129,9 +129,13 @@ npm test
 
 ```bash
 npm run dev
-# 打开 http://localhost:3000
-# 点 "新设计器(实验)" tab
+# 默认:http://localhost:3000  → 5-tab demo 列表(原 App.vue 入口)
+# 全屏:http://localhost:3000/#/designer  → 独立新设计器,无 antd 顶栏与 tab 切换,画布撑满视口
 ```
+
+全屏入口来自 `src/demo/new-designer/Standalone.vue` + `main.js` 顶层 hash 分支。
+工具栏与三栏布局与 tab 入口的 `printNewDesigner` 保持一致,仅去掉 `a-card` / `a-page-header` 包装,
+画布高度从 720px 改为 `calc(100vh - 64px)`。
 
 或在自己项目里直接用(待 npm 子路径发布):
 
