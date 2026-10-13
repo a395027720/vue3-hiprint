@@ -2,7 +2,6 @@
   <div
     class="canvas-wrap"
     :class="{ 'pan-mode': panMode }"
-    @click.self="$emit('select', null)"
     @mousedown="onWrapMouseDown"
   >
     <div class="canvas-frame" :style="frameStyleWithPan">
@@ -79,37 +78,37 @@
         >
           <ElementRenderer :element="el" />
           <span v-if="el.locked" class="lock-badge" title="已锁定">🔒</span>
+          <!-- 选中元素的 handle 层(放在 .canvas-element 内,跟着 rotate 一起转) -->
+          <template v-if="el.id === selectedId && !el.locked">
+            <span
+              v-for="h in resizeHandles"
+              :key="h.dir"
+              class="resize-handle"
+              :class="`rh-${h.kind} rh-${h.dir}`"
+              :style="handleStyle(el, h.dir)"
+              @mousedown.stop="onResizeStart($event, el.id, h.dir)"
+            />
+            <span
+              class="rotate-line"
+              :style="rotateLineStyle"
+              @mousedown.stop="onRotateStart($event, el.id)"
+            />
+            <span
+              class="rotate-handle"
+              :style="rotateHandleStyleReversed(el)"
+              title="拖动旋转"
+              @mousedown.stop="onRotateStart($event, el.id)"
+            >
+              <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M8 2.5a5.5 5.5 0 1 0 5.45 6.3.85.85 0 0 0-1.69-.18 3.8 3.8 0 1 1-1-3.7l-1.3 1.3a.6.6 0 0 0 .42 1.03h3.5a.6.6 0 0 0 .6-.6V3.15a.6.6 0 0 0-1.03-.42l-1.1 1.1A5.48 5.48 0 0 0 8 2.5Z"
+                />
+              </svg>
+            </span>
+            <span class="rotate-deg" :style="rotateDegStyle(el)">{{ el.rotate ?? 0 }}°</span>
+          </template>
         </div>
-
-        <!-- 选中元素的 handle 层(独立于 .canvas-element,避免受 rotate 影响) -->
-        <template v-if="selectedEl && !selectedEl.locked">
-          <span
-            v-for="h in resizeHandles"
-            :key="h.dir"
-            class="resize-handle"
-            :class="`rh-${h.kind} rh-${h.dir}`"
-            :style="handleStyle(selectedEl, h.dir)"
-            @mousedown.stop="onResizeStart($event, selectedEl.id, h.dir)"
-          />
-          <span
-            class="rotate-line"
-            :style="rotateLineStyle"
-            @mousedown.stop="onRotateStart($event, selectedEl.id)"
-          />
-          <span
-            class="rotate-handle"
-            :style="rotateHandleStyle"
-            title="拖动旋转"
-            @mousedown.stop="onRotateStart($event, selectedEl.id)"
-          >
-            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-              <path
-                fill="currentColor"
-                d="M8 2.5a5.5 5.5 0 1 0 5.45 6.3.85.85 0 0 0-1.69-.18 3.8 3.8 0 1 1-1-3.7l-1.3 1.3a.6.6 0 0 0 .42 1.03h3.5a.6.6 0 0 0 .6-.6V3.15a.6.6 0 0 0-1.03-.42l-1.1 1.1A5.48 5.48 0 0 0 8 2.5Z"
-              />
-            </svg>
-          </span>
-        </template>
 
         <!-- 吸附辅助线 -->
         <div
@@ -157,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import type { Element, ElementType, Template } from '../core/types'
 import { mmToPx } from '../core/render'
 import { snapValue } from '../utils/snap'
@@ -441,38 +440,48 @@ function handleStyle(el: Element, dir: ResizeDir) {
     w: { fx: 0, fy: 0.5, cursor: 'ew-resize' },
   }
   const p = posMap[dir]
+  // handle 现在是 .canvas-element 的子元素,坐标相对元素盒 0~w / 0~h
   return {
-    left: (mmToPxScaled(el.x) + p.fx * mmToPxScaled(el.w) - offX) + 'px',
-    top: (mmToPxScaled(el.y) + p.fy * mmToPxScaled(el.h) - offY) + 'px',
+    left: (p.fx * mmToPxScaled(el.w) - offX) + 'px',
+    top: (p.fy * mmToPxScaled(el.h) - offY) + 'px',
     cursor: p.cursor,
   }
 }
 
 
-/** 旋转连杆线(元素顶边中点 → 旋转手柄) */
+/** 旋转连杆线(元素顶边中点 → 旋转手柄,相对元素盒的 0~w / 0~h 坐标)
+ *  handle 现在在 .canvas-element 内,坐标以元素盒左上角为原点。 */
 const rotateLineStyle = computed(() => {
   const e = selectedEl.value
   if (!e) return {}
-  const x = mmToPxScaled(e.x) + mmToPxScaled(e.w) / 2
-  const y1 = mmToPxScaled(e.y)
-  const y2 = mmToPxScaled(e.y) - 20
+  const cx = mmToPxScaled(e.w) / 2
   return {
-    left: (x - 0.5) + 'px',
-    top: y1 + 'px',
+    left: (cx - 0.5) + 'px',
+    top: '0px',
     width: '1px',
-    height: (y2 - y1) + 'px',
+    height: '20px',
   }
 })
 
-/** 旋转手柄圆点 */
-const rotateHandleStyle = computed(() => {
-  const e = selectedEl.value
-  if (!e) return {}
+/** 旋转手柄圆点(handle 现在在 .canvas-element 内,坐标用相对位置;
+ *  反向旋转 -el.rotate 让旋转图标始终保持正向)。
+ *  元素盒 (x, y, w, h) 中:手柄放在顶边中点上方 30px 处。 */
+function rotateHandleStyleReversed(el: Element) {
   return {
-    left: (mmToPxScaled(e.x) + mmToPxScaled(e.w) / 2 - 9) + 'px',
-    top: (mmToPxScaled(e.y) - 30) + 'px',
+    left: (mmToPxScaled(el.w) / 2 - 9) + 'px',
+    top: (-30) + 'px',
+    transform: `rotate(${-(el.rotate ?? 0)}deg)`,
   }
-})
+}
+
+/** 实时旋转角度文本(元素底边中点下方,反向旋转保持正向可读) */
+function rotateDegStyle(el: Element) {
+  return {
+    left: (mmToPxScaled(el.w) / 2) + 'px',
+    top: (mmToPxScaled(el.h) + 6) + 'px',
+    transform: `translate(-50%, 0) rotate(${-(el.rotate ?? 0)}deg)`,
+  }
+}
 
 /**
  * 启动 resize 拖拽。
@@ -656,6 +665,25 @@ function onCtxMoveDown() { emit('ctxAction', 'moveDown', { id: ctxMenu.element?.
 function onCtxToggleLock() { emit('ctxAction', 'toggleLock', { id: ctxMenu.element?.id }); closeCtxMenu() }
 function onCtxUndo() { emit('ctxAction', 'undo'); closeCtxMenu() }
 function onCtxRedo() { emit('ctxAction', 'redo'); closeCtxMenu() }
+
+// ========== 点画布空白处取消选中 ==========
+// 用 document mousedown 监听(比 @click.self 更可靠:跨浏览器 + 不被
+// 元素内 mousedown 提前 stopPropagation 干扰),点中任意 .canvas-element
+// 时不取消,其它都取消。canvas-frame / ruler / snap-line 也算"内部"。
+
+function onDocMouseDown(e: MouseEvent) {
+  const target = e.target as HTMLElement | null
+  if (!target) return
+  // 命中 .canvas-element → 保留选中(元素的 mousedown 会自己处理 select)
+  if (target.closest('.canvas-element')) return
+  // 命中画布外部(如 TopBar / FormatToolbar / PropertyPanel / 右键菜单)→ 不动
+  if (!target.closest('.canvas-wrap')) return
+  // 命中画布空白(canvas / ruler / frame 等都算空白)→ 取消选中
+  if (props.selectedId) emit('select', null)
+}
+
+onMounted(() => document.addEventListener('mousedown', onDocMouseDown))
+onBeforeUnmount(() => document.removeEventListener('mousedown', onDocMouseDown))
 </script>
 
 <style scoped>
@@ -750,6 +778,21 @@ function onCtxRedo() { emit('ctxAction', 'redo'); closeCtxMenu() }
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   pointer-events: none;
   z-index: 100;
+}
+/* 实时旋转角度文本(元素底边中点下方,反向旋转保持正向可读) */
+.rotate-deg {
+  position: absolute;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: #1890ff;
+  border-radius: 3px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 101;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 /* 吸附辅助线 */
 .snap-line {
