@@ -28,6 +28,7 @@ import {
   updateElement as updateEl,
 } from '../core/schema'
 import { History } from '../core/history'
+import { nextId as createId } from '../core/id'
 
 export interface UseDesignerOptions {
   /** 初始模板(可选,默认空白 A4) */
@@ -51,6 +52,12 @@ export interface UseDesignerReturn {
   update: (id: string, patch: Partial<Element>) => void
   /** 删除元素(入 history) */
   remove: (id: string) => void
+  /** 复制元素(浅复制 + 新 id,入 history) */
+  duplicate: (id: string) => void
+  /** 元素上移一层(数组顺序 +1,后绘制者在上,入 history) */
+  moveUp: (id: string) => void
+  /** 元素下移一层(数组顺序 -1,入 history) */
+  moveDown: (id: string) => void
   /** 清空全部元素(入 history) */
   clearElements: () => void
   /** 替换 paper(入 history) */
@@ -138,6 +145,35 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     if (selectedId.value === id) selectedId.value = null
   }
 
+  function duplicate(id: string): void {
+    const tpl = template.value
+    const idx = tpl.elements.findIndex((e) => e.id === id)
+    if (idx < 0) return
+    const src = tpl.elements[idx]
+    const copy = { ...src, id: createId(), x: src.x + 4, y: src.y + 4 } as typeof src
+    const next = { ...tpl, elements: [...tpl.elements, copy] }
+    commit(next)
+    selectedId.value = copy.id
+  }
+
+  function moveUp(id: string): void {
+    const tpl = template.value
+    const idx = tpl.elements.findIndex((e) => e.id === id)
+    if (idx < 0 || idx === tpl.elements.length - 1) return
+    const next = [...tpl.elements]
+    ;[next[idx], next[idx + 1]] = [next[idx + 1], next[idx]]
+    commit({ ...tpl, elements: next })
+  }
+
+  function moveDown(id: string): void {
+    const tpl = template.value
+    const idx = tpl.elements.findIndex((e) => e.id === id)
+    if (idx <= 0) return
+    const next = [...tpl.elements]
+    ;[next[idx], next[idx - 1]] = [next[idx - 1], next[idx]]
+    commit({ ...tpl, elements: next })
+  }
+
   function clearElements(): void {
     if (template.value.elements.length === 0) return
     commit({ ...template.value, elements: [] })
@@ -200,6 +236,9 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     add,
     update,
     remove,
+    duplicate,
+    moveUp,
+    moveDown,
     clearElements,
     setPaper,
     load,

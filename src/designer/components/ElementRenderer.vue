@@ -91,6 +91,7 @@ const textStyle = computed(() => {
     fontSize: e.fontSize + 'pt',
     fontFamily: e.fontFamily,
     fontWeight: e.fontWeight,
+    fontStyle: e.fontStyle && e.fontStyle !== 'normal' ? e.fontStyle : undefined,
     color: e.color ?? '#000',
     lineHeight: e.lineHeight,
     letterSpacing: e.letterSpacing != null ? e.letterSpacing + 'px' : undefined,

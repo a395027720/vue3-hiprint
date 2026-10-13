@@ -1,42 +1,100 @@
 <template>
   <div class="canvas-wrap" @click.self="$emit('select', null)">
-    <div
-      class="canvas"
-      :style="canvasStyle"
-      @dragover.prevent
-      @drop="onDrop"
-    >
-      <div
-        v-for="el in template.elements"
-        :key="el.id"
-        class="canvas-element"
-        :class="{ selected: el.id === selectedId, 'is-image': el.type === 'image' }"
-        :style="elBox(el)"
-        @mousedown="onElementMouseDown($event, el.id)"
+    <div class="canvas-frame" :style="frameStyle">
+      <!-- 水平标尺 -->
+      <svg
+        class="ruler ruler-h"
+        :width="frameStyle.width"
+        height="24"
+        :viewBox="`0 0 ${frameStyle.widthPx} 24`"
       >
-        <ElementRenderer :element="el" />
-        <button
-          v-if="el.id === selectedId"
-          class="el-remove"
-          title="删除元素"
-          @mousedown.stop
-          @click.stop="$emit('remove', el.id)"
-        >×</button>
-      </div>
+        <line
+          v-for="t in hTicks"
+          :key="`h-${t.mm}`"
+          :x1="t.x"
+          :x2="t.x"
+          y1="16"
+          :y2="t.major ? 6 : 12"
+          stroke="#bbb"
+          stroke-width="1"
+        />
+        <text
+          v-for="t in hTicks"
+          :key="`ht-${t.mm}`"
+          v-show="t.major"
+          :x="t.x + 2"
+          y="11"
+          font-size="9"
+          fill="#888"
+        >{{ t.mm }}</text>
+      </svg>
 
-      <!-- 吸附辅助线 -->
+      <!-- 垂直标尺 -->
+      <svg
+        class="ruler ruler-v"
+        width="24"
+        :height="frameStyle.height"
+        :viewBox="`0 0 24 ${frameStyle.heightPx}`"
+      >
+        <line
+          v-for="t in vTicks"
+          :key="`v-${t.mm}`"
+          x1="16"
+          :y1="t.x"
+          x2="6"
+          :y2="t.x"
+          stroke="#bbb"
+          stroke-width="1"
+        />
+        <text
+          v-for="t in vTicks"
+          :key="`vt-${t.mm}`"
+          v-show="t.major"
+          x="2"
+          :y="t.x + 8"
+          font-size="9"
+          fill="#888"
+        >{{ t.mm }}</text>
+      </svg>
+
       <div
-        v-for="x in snapLines.vertical"
-        :key="`v-${x}`"
-        class="snap-line snap-v"
-        :style="{ left: mmToPxScaled(x) + 'px' }"
-      />
-      <div
-        v-for="y in snapLines.horizontal"
-        :key="`h-${y}`"
-        class="snap-line snap-h"
-        :style="{ top: mmToPxScaled(y) + 'px' }"
-      />
+        class="canvas"
+        :style="canvasStyle"
+        @dragover.prevent
+        @drop="onDrop"
+      >
+        <div
+          v-for="el in template.elements"
+          :key="el.id"
+          class="canvas-element"
+          :class="{ selected: el.id === selectedId, 'is-image': el.type === 'image' }"
+          :style="elBox(el)"
+          @mousedown="onElementMouseDown($event, el.id)"
+        >
+          <ElementRenderer :element="el" />
+          <button
+            v-if="el.id === selectedId"
+            class="el-remove"
+            title="删除元素"
+            @mousedown.stop
+            @click.stop="$emit('remove', el.id)"
+          >×</button>
+        </div>
+
+        <!-- 吸附辅助线 -->
+        <div
+          v-for="x in snapLines.vertical"
+          :key="`v-${x}`"
+          class="snap-line snap-v"
+          :style="{ left: mmToPxScaled(x) + 'px' }"
+        />
+        <div
+          v-for="y in snapLines.horizontal"
+          :key="`h-${y}`"
+          class="snap-line snap-h"
+          :style="{ top: mmToPxScaled(y) + 'px' }"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -97,6 +155,43 @@ const canvasStyle = computed(() => ({
   backgroundImage: gridStyle.value.image,
   backgroundSize: gridStyle.value.size || undefined,
 }))
+
+/** 标尺 + 画布整体框的尺寸(画布尺寸 + 左右上下 24 标尺留白) */
+const frameStyle = computed(() => {
+  const w = mmToPxScaled(props.template.paper.width)
+  const h = mmToPxScaled(props.template.paper.height)
+  return {
+    width: w + 'px',
+    height: h + 'px',
+    widthPx: w,
+    heightPx: h,
+  }
+})
+
+/**
+ * 刻度数组:每 5mm 一个 minor,每 10mm 一个 major(带数字)。
+ * 数字从 -10mm 开始延伸到 paper.width + 10,模拟"画布外的世界"。
+ */
+const RULER_MAJOR = 10
+const RULER_MINOR = 5
+const RULER_PAD = 10 // mm
+
+function buildTicks(axisLen: number): Array<{ mm: number; x: number; major: boolean }> {
+  const ticks: Array<{ mm: number; x: number; major: boolean }> = []
+  const start = -RULER_PAD
+  const end = axisLen + RULER_PAD
+  for (let mm = start; mm <= end; mm += RULER_MINOR) {
+    const x = mmToPxScaled(mm)
+    const major = mm % RULER_MAJOR === 0
+    if (major || Math.abs(mm) % RULER_MINOR === 0) {
+      ticks.push({ mm, x, major })
+    }
+  }
+  return ticks
+}
+
+const hTicks = computed(() => buildTicks(props.template.paper.width))
+const vTicks = computed(() => buildTicks(props.template.paper.height))
 
 const snapLines = reactive<{ vertical: number[]; horizontal: number[] }>({
   vertical: [],
@@ -202,9 +297,35 @@ function onElementMouseDown(e: MouseEvent, id: string) {
   align-items: flex-start;
   justify-content: center;
 }
-.canvas {
-  background: white;
+.canvas-frame {
   position: relative;
+  flex-shrink: 0;
+}
+.ruler {
+  position: absolute;
+  background: #fafafa;
+  display: block;
+  pointer-events: none;
+}
+.ruler-h {
+  top: 0;
+  left: 24px;
+  height: 24px;
+  border-bottom: 1px solid #e0e0e0;
+  border-left: 1px solid #e0e0e0;
+}
+.ruler-v {
+  top: 24px;
+  left: 0;
+  width: 24px;
+  border-right: 1px solid #e0e0e0;
+  border-top: 1px solid #e0e0e0;
+}
+.canvas {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  background: white;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
 }

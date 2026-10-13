@@ -58,6 +58,7 @@ export interface TextElement extends BaseElement {
   text: string
   fontSize: number // pt
   fontWeight?: FontWeight
+  fontStyle?: 'normal' | 'italic'
   color?: string // hex, e.g. '#000000'
   align?: Align
   /** 字体族,如 'SimSun' / 'Microsoft YaHei' / 'sans-serif' */

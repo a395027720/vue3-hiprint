@@ -112,6 +112,7 @@ function textStyle(el: Extract<Element, { type: 'text' }>): string {
   return [
     `font-size:${el.fontSize}pt`,
     el.fontWeight ? `font-weight:${el.fontWeight}` : '',
+    el.fontStyle && el.fontStyle !== 'normal' ? `font-style:${el.fontStyle}` : '',
     el.color ? `color:${el.color}` : '',
     el.fontFamily ? `font-family:${escapeHtml(el.fontFamily)}` : '',
     el.lineHeight ? `line-height:${el.lineHeight}` : '',
