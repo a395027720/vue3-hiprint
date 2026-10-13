@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, defineComponent, h, ref, onMounted, onBeforeUnmount } from 'vue'
 import App from './App.vue'
 import StandaloneDesigner from './demo/new-designer/Standalone.vue'
 
@@ -20,11 +20,22 @@ let options = {
 
 // 顶层入口分支:hash=#/designer 走全屏独立新设计器,绕过 App.vue 的
 // antd 顶栏与 5-tab 切换,让 src/designer 独占整个窗口。
-// 任何其它 hash(或无 hash)都走默认 demo 列表。
-const Root =
-  typeof location !== 'undefined' && location.hash === '#/designer'
-    ? StandaloneDesigner
-    : App
+// 用一个响应式 Root 包裹 + 监听 hashchange,这样从 demo 列表点"新设计器"
+// 按钮改 location.hash 也能切到 Standalone(不再是启动时一次性决定)。
+const Root = defineComponent({
+  name: 'Root',
+  setup() {
+    const isStandalone = ref(
+      typeof location !== 'undefined' && location.hash === '#/designer',
+    )
+    const onHash = () => {
+      isStandalone.value = location.hash === '#/designer'
+    }
+    onMounted(() => window.addEventListener('hashchange', onHash))
+    onBeforeUnmount(() => window.removeEventListener('hashchange', onHash))
+    return () => h(isStandalone.value ? StandaloneDesigner : App)
+  },
+})
 
 const app = createApp(Root)
 app.use(Antd)
