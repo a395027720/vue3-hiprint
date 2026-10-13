@@ -1,10 +1,11 @@
 <!--
-  variant='element' 完整菜单(元素右键,4 组):
-    1. 删除 / 复制 / 剪切 / 粘贴
-    2. 置于顶层 / 置于底层 / 上移一层 / 下移一层
-    3. 锁定 / 取消锁定
-    4. 撤销 / 重做
-  variant='canvas' 画布右键(只粘贴 + 撤销 + 重做)。
+  始终渲染 4 组菜单,各项按需 enabled/disabled:
+    1. 删除 / 复制 / 剪切 / 粘贴(粘贴只看剪贴板;其余看 hasSelection)
+    2. 置于顶层 / 置于底层 / 上移一层 / 下移一层(看元素位置)
+    3. 锁定 / 取消锁定(看 hasSelection)
+    4. 撤销 / 重做(看 canUndo / canRedo)
+  画布空白处右键时 element=null,hasSelection=false,层级 4 项 + 编辑组
+  前 3 项 + 锁定自动 disabled,只粘贴/撤销/重做可能可用。
   click outside / ESC 关闭。
 -->
 <template>
@@ -15,50 +16,41 @@
     :style="{ left: pos.x + 'px', top: pos.y + 'px' }"
     @contextmenu.prevent
   >
-    <template v-if="variant === 'element'">
-      <button class="ctx-item" :disabled="!hasSelection" @click="$emit('remove')">
-        <span class="ctx-icon">×</span>删除
-      </button>
-      <button class="ctx-item" :disabled="!hasSelection" @click="$emit('copy')">
-        <span class="ctx-icon">⎘</span>复制
-      </button>
-      <button class="ctx-item" :disabled="!hasSelection" @click="$emit('cut')">
-        <span class="ctx-icon">✂</span>剪切
-      </button>
-      <button class="ctx-item" :disabled="!hasClipboard" @click="$emit('paste')">
-        <span class="ctx-icon">⎗</span>粘贴
-      </button>
+    <button class="ctx-item" :disabled="!hasSelection" @click="$emit('remove')">
+      <span class="ctx-icon">×</span>删除
+    </button>
+    <button class="ctx-item" :disabled="!hasSelection" @click="$emit('copy')">
+      <span class="ctx-icon">⎘</span>复制
+    </button>
+    <button class="ctx-item" :disabled="!hasSelection" @click="$emit('cut')">
+      <span class="ctx-icon">✂</span>剪切
+    </button>
+    <button class="ctx-item" :disabled="!hasClipboard" @click="$emit('paste')">
+      <span class="ctx-icon">⎗</span>粘贴
+    </button>
 
-      <div class="ctx-sep" />
+    <div class="ctx-sep" />
 
-      <button class="ctx-item" :disabled="!canBringToFront" @click="$emit('bringToFront')">
-        <span class="ctx-icon">⤒</span>置于顶层
-      </button>
-      <button class="ctx-item" :disabled="!canSendToBack" @click="$emit('sendToBack')">
-        <span class="ctx-icon">⤓</span>置于底层
-      </button>
-      <button class="ctx-item" :disabled="!canMoveUp" @click="$emit('moveUp')">
-        <span class="ctx-icon">↑</span>上移一层
-      </button>
-      <button class="ctx-item" :disabled="!canMoveDown" @click="$emit('moveDown')">
-        <span class="ctx-icon">↓</span>下移一层
-      </button>
+    <button class="ctx-item" :disabled="!canBringToFront" @click="$emit('bringToFront')">
+      <span class="ctx-icon">⤒</span>置于顶层
+    </button>
+    <button class="ctx-item" :disabled="!canSendToBack" @click="$emit('sendToBack')">
+      <span class="ctx-icon">⤓</span>置于底层
+    </button>
+    <button class="ctx-item" :disabled="!canMoveUp" @click="$emit('moveUp')">
+      <span class="ctx-icon">↑</span>上移一层
+    </button>
+    <button class="ctx-item" :disabled="!canMoveDown" @click="$emit('moveDown')">
+      <span class="ctx-icon">↓</span>下移一层
+    </button>
 
-      <div class="ctx-sep" />
+    <div class="ctx-sep" />
 
-      <button class="ctx-item" :disabled="!hasSelection" @click="$emit('toggleLock')">
-        <span class="ctx-icon">{{ element?.locked ? '🔓' : '🔒' }}</span>{{ element?.locked ? '取消锁定' : '锁定' }}
-      </button>
+    <button class="ctx-item" :disabled="!hasSelection" @click="$emit('toggleLock')">
+      <span class="ctx-icon">{{ element?.locked ? '🔓' : '🔒' }}</span>{{ element?.locked ? '取消锁定' : '锁定' }}
+    </button>
 
-      <div class="ctx-sep" />
-    </template>
-
-    <template v-else>
-      <button class="ctx-item" :disabled="!hasClipboard" @click="$emit('paste')">
-        <span class="ctx-icon">⎗</span>粘贴
-      </button>
-      <div class="ctx-sep" />
-    </template>
+    <div class="ctx-sep" />
 
     <button class="ctx-item" :disabled="!canUndo" @click="$emit('undo')">
       <span class="ctx-icon">↶</span>撤销
@@ -77,8 +69,6 @@ const props = defineProps<{
   open: boolean
   pos: { x: number; y: number }
   element: Element | null
-  /** 'element' = 完整 4 组菜单;'canvas' = 只粘贴/撤销/重做 */
-  variant?: 'element' | 'canvas'
   hasSelection: boolean
   hasClipboard: boolean
   canUndo: boolean
