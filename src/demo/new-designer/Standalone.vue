@@ -3,31 +3,20 @@
 
   通过 http://localhost:3000/#/designer 直接访问,绕过 App.vue 的 antd 顶栏
   与 tab 切换,让 src/designer 独占整个窗口。
-  工具栏与三栏布局与 printNewDesigner 保持一致,只是去掉了 a-card / a-page-header
-  包装,把画布高度从 720px 改为 calc(100vh - 64px) 撑满视口。
+  顶部品牌条已经在 PrintDesigner 内部(TopBar),这里不再额外包一层。
 -->
 <template>
   <div class="standalone">
-    <header class="toolbar">
-      <div class="brand">vue3-hiprint · 新设计器(实验)</div>
-      <a-space :size="4" wrap>
-        <a-tag color="blue">A4 · 210×297mm</a-tag>
-        <a-button size="small" @click="backToDemo">返回 demo 列表</a-button>
-      </a-space>
-    </header>
-
-    <div class="canvas">
-      <PrintDesigner
-        ref="designerRef"
-        :initial-template="initialTemplate"
-        :print-data="printData"
-        @json-import-error="onJsonError"
-        @print-error="message.error('打印失败')"
-        @print-ok="message.success('已发送打印任务')"
-        @notice="onNotice"
-        @save="onSave"
-      />
-    </div>
+    <PrintDesigner
+      ref="designerRef"
+      :initial-template="initialTemplate"
+      :print-data="printData"
+      @json-import-error="onJsonError"
+      @print-error="message.error('打印失败')"
+      @print-ok="message.success('已发送打印任务')"
+      @notice="onNotice"
+      @save="onSave"
+    />
   </div>
 </template>
 
@@ -80,40 +69,11 @@ function onNotice(msg: string, type: 'info' | 'success' | 'warning' | 'error') {
 function onSave() {
   message.success('已保存到内存(暂未持久化到后端)')
 }
-
-function backToDemo() {
-  location.hash = ''
-}
 </script>
 
 <style scoped>
 .standalone {
-  display: flex;
-  flex-direction: column;
   height: 100vh;
   background: #f5f5f5;
-}
-.toolbar {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  background: #fff;
-  border-bottom: 1px solid #e8e8e8;
-  overflow-x: auto;
-  white-space: nowrap;
-}
-.brand {
-  font-weight: 600;
-  font-size: 14px;
-  color: #1890ff;
-  flex: 0 0 auto;
-}
-.canvas {
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: 8px;
-  overflow: hidden;
 }
 </style>
