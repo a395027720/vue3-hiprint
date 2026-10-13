@@ -51,7 +51,6 @@ export type { HorizontalAlign, VerticalAlign } from './core/align'
 // 组件
 import PrintDesigner from './components/PrintDesigner.vue'
 export { PrintDesigner }
-export { default as ElementPalette } from './components/ElementPalette.vue'
 export { default as DesignerCanvas } from './components/DesignerCanvas.vue'
 export { default as PropertyPanel } from './components/PropertyPanel.vue'
 export { default as ElementRenderer } from './components/ElementRenderer.vue'

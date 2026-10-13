@@ -61,6 +61,8 @@
         @add="onAdd"
         @select="designer.select"
         @move="onMove"
+        @resize="onResize"
+        @rotate="onRotate"
         @remove="onRemove"
         @pan="onCanvasPan"
       />
@@ -198,6 +200,14 @@ function onAddDefault() {
 
 function onMove(id: string, x: number, y: number) {
   designer.update(id, { x, y })
+}
+
+function onResize(id: string, patch: { x: number; y: number; w: number; h: number }) {
+  designer.update(id, patch)
+}
+
+function onRotate(id: string, deg: number) {
+  designer.update(id, { rotate: deg } as Partial<Element>)
 }
 
 function onUpdate(id: string, patch: Partial<Element>) {

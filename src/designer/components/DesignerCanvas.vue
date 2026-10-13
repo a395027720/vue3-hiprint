@@ -77,14 +77,35 @@
           @mousedown="onElementMouseDown($event, el.id)"
         >
           <ElementRenderer :element="el" />
+        </div>
+
+        <!-- 选中元素的 handle 层(独立于 .canvas-element,避免受 rotate 影响) -->
+        <template v-if="selectedEl">
           <button
-            v-if="el.id === selectedId"
             class="el-remove"
             title="删除元素"
+            :style="elRemoveStyle"
             @mousedown.stop
-            @click.stop="$emit('remove', el.id)"
+            @click.stop="$emit('remove', selectedEl.id)"
           >×</button>
-        </div>
+          <span
+            v-for="h in resizeHandles"
+            :key="h.dir"
+            class="resize-handle"
+            :style="handleStyle(selectedEl, h.dir)"
+            @mousedown.stop="onResizeStart($event, selectedEl.id, h.dir)"
+          />
+          <span
+            class="rotate-line"
+            :style="rotateLineStyle"
+            @mousedown.stop="onRotateStart($event, selectedEl.id)"
+          />
+          <span
+            class="rotate-handle"
+            :style="rotateHandleStyle"
+            @mousedown.stop="onRotateStart($event, selectedEl.id)"
+          />
+        </template>
 
         <!-- 吸附辅助线 -->
         <div
@@ -133,6 +154,10 @@ const emit = defineEmits<{
   select: [id: string | null]
   /** 元素被拖动(连续触发) */
   move: [id: string, x: number, y: number]
+  /** 元素被 resize(连续触发),patch 含 x/y/w/h */
+  resize: [id: string, patch: { x: number; y: number; w: number; h: number }]
+  /** 元素被旋转(连续触发) */
+  rotate: [id: string, deg: number]
   /** 删除元素 */
   remove: [id: string]
   /** 画布被拖动(连续触发) */
@@ -238,12 +263,19 @@ const snapLines = reactive<{ vertical: number[]; horizontal: number[] }>({
   horizontal: [],
 })
 
+/** 当前选中元素(handle 层需要) */
+const selectedEl = computed<Element | null>(() =>
+  props.selectedId ? props.template.elements.find((e) => e.id === props.selectedId) ?? null : null,
+)
+
 function elBox(el: Element) {
   return {
     left: mmToPxScaled(el.x) + 'px',
     top: mmToPxScaled(el.y) + 'px',
     width: mmToPxScaled(el.w) + 'px',
     height: mmToPxScaled(el.h) + 'px',
+    transform: el.rotate ? `rotate(${el.rotate}deg)` : undefined,
+    transformOrigin: 'center',
   }
 }
 
@@ -325,6 +357,176 @@ function onElementMouseDown(e: MouseEvent, id: string) {
   document.addEventListener('mousemove', onMove)
   document.addEventListener('mouseup', onUp)
 }
+
+// ========== Resize / Rotate ==========
+
+type ResizeDir = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
+const MIN_SIZE_MM = 4
+
+const resizeHandles: Array<{ dir: ResizeDir }> = [
+  { dir: 'nw' }, { dir: 'n' }, { dir: 'ne' },
+  { dir: 'e' }, { dir: 'se' }, { dir: 's' },
+  { dir: 'sw' }, { dir: 'w' },
+]
+
+/** 计算单个 handle 的位置/光标(绝对像素,handle 在 canvas 坐标系下作为兄弟节点)。 */
+function handleStyle(el: Element, dir: ResizeDir) {
+  const posMap: Record<ResizeDir, { fx: number; fy: number; cursor: string }> = {
+    nw: { fx: 0, fy: 0, cursor: 'nwse-resize' },
+    n: { fx: 0.5, fy: 0, cursor: 'ns-resize' },
+    ne: { fx: 1, fy: 0, cursor: 'nesw-resize' },
+    e: { fx: 1, fy: 0.5, cursor: 'ew-resize' },
+    se: { fx: 1, fy: 1, cursor: 'nwse-resize' },
+    s: { fx: 0.5, fy: 1, cursor: 'ns-resize' },
+    sw: { fx: 0, fy: 1, cursor: 'nesw-resize' },
+    w: { fx: 0, fy: 0.5, cursor: 'ew-resize' },
+  }
+  const p = posMap[dir]
+  return {
+    left: (mmToPxScaled(el.x) + p.fx * mmToPxScaled(el.w) - 5) + 'px',
+    top: (mmToPxScaled(el.y) + p.fy * mmToPxScaled(el.h) - 5) + 'px',
+    cursor: p.cursor,
+  }
+}
+
+/** 删除按钮(右上角外侧) */
+const elRemoveStyle = computed(() => {
+  const e = selectedEl.value
+  if (!e) return {}
+  return {
+    left: (mmToPxScaled(e.x + e.w) - 8) + 'px',
+    top: (mmToPxScaled(e.y) - 8) + 'px',
+  }
+})
+
+/** 旋转连杆线(元素顶边中点 → 旋转手柄) */
+const rotateLineStyle = computed(() => {
+  const e = selectedEl.value
+  if (!e) return {}
+  const x = mmToPxScaled(e.x) + mmToPxScaled(e.w) / 2
+  const y1 = mmToPxScaled(e.y)
+  const y2 = mmToPxScaled(e.y) - 20
+  return {
+    left: (x - 0.5) + 'px',
+    top: y1 + 'px',
+    width: '1px',
+    height: (y2 - y1) + 'px',
+  }
+})
+
+/** 旋转手柄圆点 */
+const rotateHandleStyle = computed(() => {
+  const e = selectedEl.value
+  if (!e) return {}
+  return {
+    left: (mmToPxScaled(e.x) + mmToPxScaled(e.w) / 2 - 6) + 'px',
+    top: (mmToPxScaled(e.y) - 26) + 'px',
+  }
+})
+
+/**
+ * 启动 resize 拖拽。
+ * 用元素盒的屏幕坐标 + 鼠标增量来反推新 x/y/w/h(保证 zoom 下视觉一致),
+ * mouseup 提交最终值。Shift 修饰键在角 handle 上保持等比。
+ */
+function onResizeStart(e: MouseEvent, id: string, dir: ResizeDir) {
+  e.preventDefault()
+  const tpl = props.template
+  const idx = tpl.elements.findIndex((x) => x.id === id)
+  if (idx < 0) return
+  const el = tpl.elements[idx]
+  const startMouseX = e.clientX
+  const startMouseY = e.clientY
+  const origX = el.x
+  const origY = el.y
+  const origW = el.w
+  const origH = el.h
+  const pxPerMmLocal = mmToPx(1) * zoomValue.value
+  const ratio = origW / origH
+  const isCorner = dir === 'nw' || dir === 'ne' || dir === 'sw' || dir === 'se'
+
+  function onMove(ev: MouseEvent) {
+    const dxMm = (ev.clientX - startMouseX) / pxPerMmLocal
+    const dyMm = (ev.clientY - startMouseY) / pxPerMmLocal
+    const shift = ev.shiftKey && isCorner
+    let x = origX
+    let y = origY
+    let w = origW
+    let h = origH
+    // 横向(对 w / x 起作用的方向)
+    if (dir === 'nw' || dir === 'w' || dir === 'sw') {
+      w = Math.max(MIN_SIZE_MM, origW - dxMm)
+      x = origX + (origW - w)
+    } else if (dir === 'ne' || dir === 'e' || dir === 'se') {
+      w = Math.max(MIN_SIZE_MM, origW + dxMm)
+    }
+    // 纵向(对 h / y 起作用的方向)
+    if (dir === 'nw' || dir === 'n' || dir === 'ne') {
+      h = Math.max(MIN_SIZE_MM, origH - dyMm)
+      y = origY + (origH - h)
+    } else if (dir === 'sw' || dir === 's' || dir === 'se') {
+      h = Math.max(MIN_SIZE_MM, origH + dyMm)
+    }
+    // Shift 等比
+    if (shift) {
+      if (dir === 'nw' || dir === 'ne' || dir === 'se' || dir === 'sw') {
+        const newH = w / ratio
+        if (dir === 'nw' || dir === 'ne') y = origY + (origH - newH)
+        h = newH
+      }
+    }
+    emit('resize', id, { x, y, w, h })
+  }
+  function onUp() {
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+  }
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp)
+}
+
+/**
+ * 启动旋转拖拽。
+ * 用元素在未旋转时的几何中心(由 x/y/w/h 算出)作为旋转中心,
+ * 计算鼠标相对中心的 atan2 → 度数。+90° 偏移让"拖柄朝正上方"对应 0°。
+ *
+ * 用 canvas 的实际 bounding rect 把元素中心转屏幕坐标,这样不受 wrap padding /
+ * pan / scroll 影响。
+ */
+function onRotateStart(e: MouseEvent, id: string) {
+  e.preventDefault()
+  const tpl = props.template
+  const idx = tpl.elements.findIndex((x) => x.id === id)
+  if (idx < 0) return
+  const el = tpl.elements[idx]
+  // canvas-frame 在 .canvas-wrap 内,wrap padding 24 + canvas top:24 left:24
+  const wrap = (e.currentTarget as HTMLElement).closest('.canvas-wrap') as HTMLElement | null
+  if (!wrap) return
+  const wrapRect = wrap.getBoundingClientRect()
+  // canvas-frame 用了 transform(pan),所以 rect 已经反映了 pan
+  const frameEl = wrap.querySelector('.canvas-frame') as HTMLElement | null
+  if (!frameEl) return
+  const frameRect = frameEl.getBoundingClientRect()
+  // 元素未旋转中心(屏幕坐标) = frameRect.left + 24(canvas left 偏移) + (x + w/2) * pxPerMm
+  const cx = frameRect.left + 24 + mmToPxScaled(el.x + el.w / 2)
+  const cy = frameRect.top + 24 + mmToPxScaled(el.y + el.h / 2)
+  // wrapRect 暂未用到,留作 fallback
+  void wrapRect
+
+  function onMove(ev: MouseEvent) {
+    const dx = ev.clientX - cx
+    const dy = ev.clientY - cy
+    // atan2(dy, dx) 是从 x 轴正方向逆时针的角度;CSS rotate 顺时针为正
+    const deg = Math.atan2(dy, dx) * (180 / Math.PI) + 90
+    emit('rotate', id, Math.round(deg))
+  }
+  function onUp() {
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+  }
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp)
+}
 </script>
 
 <style scoped>
@@ -399,8 +601,6 @@ function onElementMouseDown(e: MouseEvent, id: string) {
 }
 .el-remove {
   position: absolute;
-  top: -8px;
-  right: -8px;
   width: 16px;
   height: 16px;
   padding: 0;
@@ -412,7 +612,7 @@ function onElementMouseDown(e: MouseEvent, id: string) {
   border: 1px solid #fff;
   border-radius: 2px;
   cursor: pointer;
-  z-index: 10;
+  z-index: 102;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -439,5 +639,69 @@ function onElementMouseDown(e: MouseEvent, id: string) {
   right: 0;
   height: 1px;
   transform: translateY(-0.5px);
+}
+
+/* ========== Resize / Rotate handles ==========
+   角 handle:18x18 框 + 内部 L 形(5x18 + 18x5)圆角条(参考 Vue-Print-Designer)
+   边 handle:6x6 圆点(简洁,不易和角 handle 混淆)
+   旋转 handle:圆点 + 连线
+*/
+.resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: transparent;
+  pointer-events: auto;
+  z-index: 100;
+}
+.resize-handle::before,
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  background: #1890ff;
+  border-radius: 2.5px;
+  opacity: 0.9;
+  transition: opacity 120ms;
+}
+.resize-handle:hover::before,
+.resize-handle:hover::after {
+  opacity: 1;
+}
+/* 水平条 */
+.resize-handle::before {
+  left: 0;
+  top: 0;
+  width: 10px;
+  height: 3px;
+}
+/* 垂直条 */
+.resize-handle::after {
+  left: 0;
+  top: 0;
+  width: 3px;
+  height: 10px;
+}
+.rotate-line {
+  position: absolute;
+  background: #1890ff;
+  opacity: 0.6;
+  pointer-events: auto;
+  z-index: 100;
+}
+.rotate-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #1890ff;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+  cursor: crosshair;
+  z-index: 101;
+  transition: transform 120ms;
+}
+.rotate-handle:hover {
+  transform: scale(1.2);
 }
 </style>

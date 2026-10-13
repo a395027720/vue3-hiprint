@@ -194,8 +194,6 @@ const textStyle = computed(() => {
     justifyContent: justifyV,
     alignItems: alignH,
     ...wrapStyle[tw],
-    transform: e.rotate ? `rotate(${e.rotate}deg)` : undefined,
-    transformOrigin: e.rotate ? 'center' : undefined,
     zIndex: e.zIndex,
     boxSizing: 'border-box',
   }
