@@ -549,17 +549,14 @@ const chevronRightIcon = `<svg viewBox="0 0 24 24" width="16" height="16" class=
   overflow-y: hidden;
   white-space: nowrap;
   min-width: 0;
-  scrollbar-width: thin;
+  /* 隐藏滚动条但保留滚动功能(让位给左右 scroll 按钮) */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .ftb-main::-webkit-scrollbar {
-  height: 6px;
-}
-.ftb-main::-webkit-scrollbar-thumb {
-  background: #d0d0d0;
-  border-radius: 3px;
-}
-.ftb-main::-webkit-scrollbar-track {
-  background: transparent;
+  display: none;
+  width: 0;
+  height: 0;
 }
 .ftb-scroll {
   position: relative;

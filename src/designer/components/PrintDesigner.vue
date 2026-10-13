@@ -4,8 +4,9 @@
       :dirty="designer.dirty.value"
       @add="onAdd"
       @save="onSave"
-      @save-as="onSaveAs"
-      @export-json="onExportJson"
+      @print="onPrint"
+      @print-preview="onPreview"
+      @export-pdf="onExportPdf"
     />
     <FormatToolbar
       :can-undo="designer.canUndo.value"
@@ -83,6 +84,7 @@ import type { Element, ElementType, Template, TextElement } from '../core/types'
 import { useDesigner } from '../api/useDesigner'
 import { alignHorizontal, alignVertical, type HorizontalAlign, type VerticalAlign } from '../core/align'
 import { printTemplate, previewTemplate } from '../utils/print'
+import { exportPdf } from '../utils/pdf'
 import TopBar from './TopBar.vue'
 import FormatToolbar from './FormatToolbar.vue'
 import DesignerCanvas from './DesignerCanvas.vue'
@@ -103,10 +105,6 @@ const emit = defineEmits<{
   printOk: []
   /** 保存按钮被点(由消费方决定写到哪里) */
   save: [tpl: Template]
-  /** 另存为 */
-  saveAs: [tpl: Template]
-  /** 导出 JSON 文件已下载 */
-  exportJson: [filename: string]
   /** 用户提示消费方 */
   notice: [message: string, type: 'info' | 'success' | 'warning' | 'error']
 }>()
@@ -330,20 +328,11 @@ function onSave() {
   emit('save', designer.template.value)
 }
 
-function onSaveAs() {
-  emit('saveAs', designer.template.value)
-}
-
-function onExportJson() {
-  const json = designer.toJson()
-  const blob = new Blob([json], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'template.json'
-  a.click()
-  URL.revokeObjectURL(url)
-  emit('exportJson', 'template.json')
+async function onExportPdf() {
+  emit('notice', '正在生成 PDF...', 'info')
+  const ok = await exportPdf(designer.template.value, props.printData)
+  if (ok) emit('notice', 'PDF 已下载', 'success')
+  else emit('notice', 'PDF 生成失败', 'error')
 }
 
 const theme = computed<'light' | 'dark'>(() => 'light')

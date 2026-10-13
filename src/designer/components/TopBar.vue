@@ -15,8 +15,10 @@
         v-for="item in items"
         :key="item.type"
         class="el-btn"
-        :title="item.label"
+        :title="`${item.label}(可拖拽到画布)`"
+        draggable="true"
         @click="$emit('add', item.type)"
+        @dragstart="onDragStart($event, item.type)"
       >
         <span class="el-icon" v-html="item.icon" />
         <span class="el-label">{{ item.label }}</span>
@@ -38,14 +40,14 @@
           @click="saveMenuOpen = !saveMenuOpen"
         ><down-outlined /></button>
         <div v-if="saveMenuOpen" class="save-menu">
-          <button class="save-menu-item" @click="onPick('save')">
-            <save-outlined /> 保存
+          <button class="save-menu-item" @click="onPick('print')">
+            <printer-outlined /> 打印
           </button>
-          <button class="save-menu-item" @click="onPick('saveAs')">
-            <file-image-outlined /> 另存为
+          <button class="save-menu-item" @click="onPick('printPreview')">
+            <eye-outlined /> 打印预览
           </button>
-          <button class="save-menu-item" @click="onPick('export')">
-            <download-outlined /> 导出 JSON
+          <button class="save-menu-item" @click="onPick('exportPdf')">
+            <file-pdf-outlined /> 导出 PDF
           </button>
         </div>
       </div>
@@ -65,18 +67,25 @@ defineProps<{
 const emit = defineEmits<{
   add: [type: ElementType]
   save: []
-  saveAs: []
-  exportJson: []
+  print: []
+  printPreview: []
+  exportPdf: []
 }>()
 
 const saveMenuOpen = ref(false)
 const saveMenuRef = ref<HTMLElement | null>(null)
 
-function onPick(action: 'save' | 'saveAs' | 'export') {
+function onPick(action: 'print' | 'printPreview' | 'exportPdf') {
   saveMenuOpen.value = false
-  if (action === 'save') emit('save')
-  else if (action === 'saveAs') emit('saveAs')
-  else emit('exportJson')
+  if (action === 'print') emit('print')
+  else if (action === 'printPreview') emit('printPreview')
+  else emit('exportPdf')
+}
+
+function onDragStart(e: DragEvent, type: ElementType) {
+  e.dataTransfer?.setData('text/plain', type)
+  e.dataTransfer?.setData('application/x-designer-element', type)
+  if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy'
 }
 
 function onDocumentMouseDown(e: MouseEvent) {

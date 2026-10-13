@@ -30,6 +30,8 @@
         @json-import-error="onJsonError"
         @print-error="message.error('打印失败')"
         @print-ok="message.success('已发送打印任务')"
+        @notice="onNotice"
+        @save="onSave"
       />
     </div>
 
@@ -111,6 +113,14 @@ function onImport(file: File): boolean {
 
 function onJsonError() {
   message.error('JSON 格式不合法(需要 version=1.0 + paper + elements)')
+}
+
+function onNotice(msg: string, type: 'info' | 'success' | 'warning' | 'error') {
+  message[type](msg)
+}
+
+function onSave() {
+  message.success('已保存到内存(暂未持久化到后端)')
 }
 
 function backToDemo() {
