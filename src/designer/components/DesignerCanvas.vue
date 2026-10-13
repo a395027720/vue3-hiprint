@@ -6,17 +6,17 @@
     @contextmenu.prevent="onWrapContextMenu"
   >
     <div class="canvas-frame" :style="frameStyleWithPan">
-      <!-- 水平标尺 -->
+      <!-- 水平标尺(只覆盖 canvas 宽度,跟 canvas 同宽,viewBox 1:1 对齐画布 1px) -->
       <svg
         class="ruler ruler-h"
-        :width="frameStyle.width"
+        :width="frameStyle.widthPx"
         height="24"
-        :viewBox="`0 0 ${frameStyle.widthPx + 24} 24`"
+        :viewBox="`0 0 ${frameStyle.widthPx} 24`"
       >
         <!-- 画布内填底(浅,让画布对应区域标尺更"实") -->
         <rect
-          x="24" y="0"
-          :width="frameStyle.widthPx - 24"
+          x="0" y="0"
+          :width="frameStyle.widthPx"
           height="24"
           fill="#fcfcfd"
         />
@@ -60,17 +60,17 @@
         </g>
       </svg>
 
-      <!-- 垂直标尺 -->
+      <!-- 垂直标尺(只覆盖 canvas 高度) -->
       <svg
         class="ruler ruler-v"
         width="24"
-        :height="frameStyle.height"
-        :viewBox="`0 0 24 ${frameStyle.heightPx + 24}`"
+        :height="frameStyle.heightPx"
+        :viewBox="`0 0 24 ${frameStyle.heightPx}`"
       >
         <rect
-          x="0" y="24"
+          x="0" y="0"
           width="24"
-          :height="frameStyle.heightPx - 24"
+          :height="frameStyle.heightPx"
           fill="#fcfcfd"
         />
         <line
