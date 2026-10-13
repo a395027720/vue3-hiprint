@@ -1,14 +1,11 @@
 <!--
-  元素右键菜单(仿 Vue-Print-Designer)
-
-  分组(从上到下):
+  variant='element' 完整菜单(元素右键,4 组):
     1. 删除 / 复制 / 剪切 / 粘贴
     2. 置于顶层 / 置于底层 / 上移一层 / 下移一层
-    3. 锁定(已锁定则显示"取消锁定")
+    3. 锁定 / 取消锁定
     4. 撤销 / 重做
-
-  通过 props 传入:当前元素、菜单位置、可用性状态、各 action handler。
-  click outside 关闭菜单。
+  variant='canvas' 画布右键(只粘贴 + 撤销 + 重做)。
+  click outside / ESC 关闭。
 -->
 <template>
   <div
@@ -18,7 +15,6 @@
     :style="{ left: pos.x + 'px', top: pos.y + 'px' }"
     @contextmenu.prevent
   >
-    <!-- 元素菜单:编辑组 + 层级组 + 锁定 -->
     <template v-if="variant === 'element'">
       <button class="ctx-item" :disabled="!hasSelection" @click="$emit('remove')">
         <span class="ctx-icon">×</span>删除
@@ -57,7 +53,6 @@
       <div class="ctx-sep" />
     </template>
 
-    <!-- 画布空白菜单:只 粘贴 / 撤销 / 重做 -->
     <template v-else>
       <button class="ctx-item" :disabled="!hasClipboard" @click="$emit('paste')">
         <span class="ctx-icon">⎗</span>粘贴
