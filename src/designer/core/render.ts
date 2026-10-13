@@ -130,6 +130,12 @@ function textStyle(el: Extract<Element, { type: 'text' }>): string {
 }
 
 function renderText(el: Extract<Element, { type: 'text' }>): string {
+  const listType = el.listType ?? 'none'
+  const inner = listType === 'none'
+    ? escapeHtml(el.text)
+    : `<${listType} style="margin:0;padding-left:1.2em;">${
+        el.text.split('\n').map((line) => `<li>${escapeHtml(line)}</li>`).join('')
+      }</${listType}>`
   return `<div class="el-text" style="
     position:absolute;
     left:${mmToPx(el.x)}px;top:${mmToPx(el.y)}px;
@@ -137,7 +143,7 @@ function renderText(el: Extract<Element, { type: 'text' }>): string {
     box-sizing:border-box;
     line-height:${el.lineHeight ?? 1.2};
     ${textStyle(el)}
-  ">${escapeHtml(el.text)}</div>`
+  ">${inner}</div>`
 }
 
 function renderImage(el: Extract<Element, { type: 'image' }>): string {

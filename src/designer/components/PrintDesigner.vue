@@ -4,6 +4,8 @@
       :dirty="designer.dirty.value"
       @add="onAdd"
       @save="onSave"
+      @save-as="onSaveAs"
+      @export-json="onExportJson"
     />
     <FormatToolbar
       :can-undo="designer.canUndo.value"
@@ -14,11 +16,15 @@
       :paper-key="paperKey"
       :is-text="isText"
       :font-size="currentFontSize"
+      :font-family="currentFontFamily"
+      :letter-spacing="currentLetterSpacing"
       :bold-active="boldActive"
       :italic-active="italicActive"
       :underline-active="underlineActive"
       :strike-active="strikeActive"
       :text-color="currentTextColor"
+      :list-type="currentListType"
+      :pan-mode="panModeActive"
       @undo="designer.undo"
       @redo="designer.redo"
       @toggle-grid="designer.toggleGrid"
@@ -30,11 +36,19 @@
       @set-zoom="designer.setZoom"
       @set-paper="onSetPaper"
       @font-size-step="onFontSizeStep"
+      @letter-spacing-step="onLetterSpacingStep"
+      @font-family="onFontFamily"
       @toggle-bold="onToggleBold"
       @toggle-italic="onToggleItalic"
       @toggle-underline="onToggleUnderline"
       @toggle-strike="onToggleStrike"
       @text-color="onTextColor"
+      @toggle-list="onToggleList"
+      @toggle-theme="onToggleTheme"
+      @html-preview="onPreview"
+      @screenshot="onScreenshot"
+      @pen="onPen"
+      @toggle-pan="onTogglePan"
     />
     <div class="main">
       <DesignerCanvas
@@ -42,10 +56,14 @@
         :selected-id="designer.selectedId.value"
         :zoom="designer.zoom.value"
         :show-grid="designer.showGrid.value"
+        :pan-mode="panModeActive"
+        :pan-x="panOffset.x"
+        :pan-y="panOffset.y"
         @add="onAdd"
         @select="designer.select"
         @move="onMove"
         @remove="onRemove"
+        @pan="onCanvasPan"
       />
       <PropertyPanel
         :element="designer.selected.value"
@@ -60,7 +78,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { Element, ElementType, Template, TextElement } from '../core/types'
 import { useDesigner } from '../api/useDesigner'
 import { alignHorizontal, alignVertical, type HorizontalAlign, type VerticalAlign } from '../core/align'
@@ -85,9 +103,65 @@ const emit = defineEmits<{
   printOk: []
   /** 保存按钮被点(由消费方决定写到哪里) */
   save: [tpl: Template]
+  /** 另存为 */
+  saveAs: [tpl: Template]
+  /** 导出 JSON 文件已下载 */
+  exportJson: [filename: string]
+  /** 用户提示消费方 */
+  notice: [message: string, type: 'info' | 'success' | 'warning' | 'error']
 }>()
 
 const designer = useDesigner({ template: props.initialTemplate })
+
+// 画布拖动模式(手型 / 空格键)
+const panOffset = ref({ x: 0, y: 0 })
+
+/** 空格键临时切换 panMode(松开恢复),不影响 toggle 后的状态 */
+const spaceHeld = ref(false)
+const togglePan = ref(false) // 用户通过手型按钮切到的状态
+
+const panModeActive = computed(() => togglePan.value || spaceHeld.value)
+
+function onKeyDown(e: KeyboardEvent) {
+  if (e.code === 'Space' && !spaceHeld.value) {
+    // 仅在非输入控件聚焦时响应
+    const tag = (e.target as HTMLElement | null)?.tagName
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+    spaceHeld.value = true
+  }
+  if (e.code === 'Delete' || e.code === 'Backspace') {
+    const tag = (e.target as HTMLElement | null)?.tagName
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+    const id = designer.selectedId.value
+    if (id) {
+      e.preventDefault()
+      designer.remove(id)
+    }
+  }
+  if (e.key === 'Escape') {
+    designer.select(null)
+  }
+}
+function onKeyUp(e: KeyboardEvent) {
+  if (e.code === 'Space') spaceHeld.value = false
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', onKeyDown)
+  document.addEventListener('keyup', onKeyUp)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeyDown)
+  document.removeEventListener('keyup', onKeyUp)
+})
+
+function onTogglePan() {
+  togglePan.value = !togglePan.value
+}
+
+function onCanvasPan(dx: number, dy: number) {
+  panOffset.value = { x: panOffset.value.x + dx, y: panOffset.value.y + dy }
+}
 
 // 派生:当前选中文本元素的状态
 const selectedText = computed<TextElement | null>(() => {
@@ -96,6 +170,8 @@ const selectedText = computed<TextElement | null>(() => {
 })
 const isText = computed(() => !!selectedText.value)
 const currentFontSize = computed<number | null>(() => selectedText.value?.fontSize ?? null)
+const currentFontFamily = computed<string | null>(() => selectedText.value?.fontFamily ?? null)
+const currentLetterSpacing = computed<number | null>(() => selectedText.value?.letterSpacing ?? null)
 const currentTextColor = computed<string | null>(() => selectedText.value?.color ?? null)
 const boldActive = computed(() => {
   const fw = selectedText.value?.fontWeight
@@ -104,6 +180,7 @@ const boldActive = computed(() => {
 const italicActive = computed(() => selectedText.value?.fontStyle === 'italic')
 const underlineActive = computed(() => selectedText.value?.textDecoration === 'underline')
 const strikeActive = computed(() => selectedText.value?.textDecoration === 'line-through')
+const currentListType = computed<'none' | 'ul' | 'ol'>(() => selectedText.value?.listType ?? 'none')
 
 // 派生:当前 paper key(用于 FormatToolbar 选中态)
 const paperKey = computed(() => {
@@ -181,6 +258,19 @@ function onFontSizeStep(delta: number) {
   designer.update(id, { fontSize: next } as Partial<TextElement>)
 }
 
+function onLetterSpacingStep(delta: number) {
+  const t = selectedText.value
+  if (!t) return
+  const next = Math.max(0, (t.letterSpacing ?? 0) + delta)
+  designer.update(t.id, { letterSpacing: next } as Partial<TextElement>)
+}
+
+function onFontFamily(family: string) {
+  const t = selectedText.value
+  if (!t) return
+  designer.update(t.id, { fontFamily: family || undefined } as Partial<TextElement>)
+}
+
 function onToggleBold() {
   const t = selectedText.value
   if (!t) return
@@ -219,6 +309,12 @@ function onTextColor(color: string) {
   designer.update(t.id, { color } as Partial<TextElement>)
 }
 
+function onToggleList(mode: 'none' | 'ul' | 'ol') {
+  const t = selectedText.value
+  if (!t) return
+  designer.update(t.id, { listType: mode } as Partial<TextElement>)
+}
+
 async function onPrint() {
   const ok = await printTemplate(designer.template.value, props.printData)
   if (ok) emit('printOk')
@@ -232,6 +328,38 @@ async function onPreview() {
 function onSave() {
   designer.markClean()
   emit('save', designer.template.value)
+}
+
+function onSaveAs() {
+  emit('saveAs', designer.template.value)
+}
+
+function onExportJson() {
+  const json = designer.toJson()
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'template.json'
+  a.click()
+  URL.revokeObjectURL(url)
+  emit('exportJson', 'template.json')
+}
+
+const theme = computed<'light' | 'dark'>(() => 'light')
+function onToggleTheme() {
+  emit('notice', '主题切换(预留,本设计器暂未实现深色配色)', 'info')
+}
+
+function onScreenshot() {
+  // 截图:用 printTemplate 触发系统打印(用户可选"另存为 PDF"模拟截图)
+  // 完整 html2canvas 截图需新加依赖,后续 PR
+  emit('notice', '截图:已触发系统打印,可另存为 PDF。需要像素级截图请等待后续 PR(html2canvas 集成)', 'info')
+  printTemplate(designer.template.value, props.printData)
+}
+
+function onPen() {
+  emit('notice', '画笔(预留,本设计器暂未实现手绘元素)', 'info')
 }
 
 // 暴露给父组件:打印 / 导入导出

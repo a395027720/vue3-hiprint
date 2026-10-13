@@ -50,6 +50,12 @@
         title="网格"
         @click="$emit('toggleGrid')"
       ><span v-html="gridIcon" /></button>
+      <button
+        class="ftb-btn"
+        :class="{ active: panMode }"
+        title="手型拖动(空格临时)"
+        @click="$emit('togglePan')"
+      ><drag-outlined v-if="!panMode" /><drag-outlined v-else style="color: #1677ff" /></button>
     </div>
 
     <span class="ftb-sep" />
@@ -97,6 +103,17 @@
     <span class="ftb-sep" />
 
     <div class="ftb-group">
+      <select
+        class="ftb-select"
+        :value="fontFamily ?? ''"
+        :disabled="!isText"
+        title="字体"
+        @change="onFontFamilyChange"
+      >
+        <option value="">默认</option>
+        <option v-for="f in FONT_OPTIONS" :key="f.value" :value="f.value">{{ f.label }}</option>
+      </select>
+      <span class="ftb-mini-sep" />
       <span class="ftb-label">字号</span>
       <button
         class="ftb-step"
@@ -153,6 +170,21 @@
         title="删除线"
         @click="$emit('toggleStrike')"
       ><s>S</s></button>
+      <span class="ftb-mini-sep" />
+      <button
+        class="ftb-btn"
+        :class="{ active: listType === 'ul' }"
+        :disabled="!isText"
+        title="无序列表"
+        @click="$emit('toggleList', listType === 'ul' ? 'none' : 'ul')"
+      ><unordered-list-outlined /></button>
+      <button
+        class="ftb-btn"
+        :class="{ active: listType === 'ol' }"
+        :disabled="!isText"
+        title="有序列表"
+        @click="$emit('toggleList', listType === 'ol' ? 'none' : 'ol')"
+      ><ordered-list-outlined /></button>
       <label
         class="ftb-color"
         :class="{ disabled: !isText }"
@@ -167,6 +199,29 @@
           @input="$emit('textColor', ($event.target as HTMLInputElement).value)"
         />
       </label>
+      <span class="ftb-mini-sep" />
+      <span class="ftb-label">字距</span>
+      <button
+        class="ftb-step"
+        :disabled="!isText"
+        title="减小字距"
+        @click="$emit('letterSpacingStep', -0.5)"
+      >−</button>
+      <input
+        class="ftb-num ftb-num-sm"
+        type="number"
+        :value="letterSpacing ?? 0"
+        :disabled="!isText"
+        step="0.5"
+        title="字距 (px)"
+        @change="onLetterSpacingChange"
+      />
+      <button
+        class="ftb-step"
+        :disabled="!isText"
+        title="增大字距"
+        @click="$emit('letterSpacingStep', 0.5)"
+      >+</button>
     </div>
 
     <span class="ftb-sep" />
@@ -201,10 +256,76 @@
 
     <div class="ftb-group">
       <button
+        class="ftb-btn"
+        title="HTML 预览"
+        @click="$emit('htmlPreview')"
+      ><span style="font-size: 11px; font-weight: 600">HTML</span></button>
+      <button
+        class="ftb-btn"
+        title="截图"
+        @click="$emit('screenshot')"
+      ><camera-outlined /></button>
+      <button
+        class="ftb-btn"
+        title="画笔(预留)"
+        @click="$emit('pen')"
+      ><edit-outlined /></button>
+      <button
+        class="ftb-btn"
+        :title="theme === 'dark' ? '切换到亮色主题' : '切换到暗色主题'"
+        @click="onToggleTheme"
+      ><sun-outlined v-if="theme === 'dark'" /><moon-outlined v-else /></button>
+      <button
+        class="ftb-btn"
+        title="设置"
+        @click="settingsOpen = true"
+      ><setting-outlined /></button>
+      <button
+        class="ftb-btn"
+        title="帮助"
+        @click="helpOpen = true"
+      ><question-circle-outlined /></button>
+      <button
         class="ftb-btn danger"
         title="清空全部"
         @click="onClear"
       ><span v-html="trashIcon" /></button>
+    </div>
+
+    <!-- 设置 modal -->
+    <div v-if="settingsOpen" class="ftb-modal-mask" @click.self="settingsOpen = false">
+      <div class="ftb-modal">
+        <div class="ftb-modal-title">设置</div>
+        <div class="ftb-modal-body">
+          <p class="ftb-modal-hint">全局设置(预留)</p>
+          <p class="ftb-modal-desc">后续 PR 可加:网格间距默认值 / 默认字号 / 缩放档位 / 撤销栈容量 / 自动保存间隔等。</p>
+        </div>
+        <div class="ftb-modal-footer">
+          <button class="ftb-modal-btn" @click="settingsOpen = false">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 帮助 modal -->
+    <div v-if="helpOpen" class="ftb-modal-mask" @click.self="helpOpen = false">
+      <div class="ftb-modal">
+        <div class="ftb-modal-title">关于 / 帮助</div>
+        <div class="ftb-modal-body">
+          <p><b>vue3-hiprint · 新设计器</b></p>
+          <p class="ftb-modal-desc">现代化打印模板设计器,基于 Vue 3 + TypeScript,不可变 schema,核心零依赖。</p>
+          <p class="ftb-modal-hint">快捷键</p>
+          <ul class="ftb-modal-list">
+            <li><kbd>Ctrl</kbd> + <kbd>Z</kbd> 撤销</li>
+            <li><kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> 重做</li>
+            <li><kbd>Delete</kbd> / <kbd>Backspace</kbd> 删除选中元素</li>
+            <li><kbd>Esc</kbd> 取消选中</li>
+            <li>画布点击空白处取消选中</li>
+          </ul>
+        </div>
+        <div class="ftb-modal-footer">
+          <button class="ftb-modal-btn" @click="helpOpen = false">关闭</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -214,6 +335,22 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { HorizontalAlign, VerticalAlign } from '../core/align'
 
 const ZOOM_OPTIONS = [50, 75, 100, 125, 150, 200] as const
+
+interface FontOption {
+  value: string
+  label: string
+}
+const FONT_OPTIONS: FontOption[] = [
+  { value: 'SimSun, "宋体", serif', label: '宋体' },
+  { value: 'SimHei, "黑体", sans-serif', label: '黑体' },
+  { value: '"Microsoft YaHei", "微软雅黑", sans-serif', label: '微软雅黑' },
+  { value: 'KaiTi, "楷体", serif', label: '楷体' },
+  { value: 'FangSong, "仿宋", serif', label: '仿宋' },
+  { value: 'Arial, sans-serif', label: 'Arial' },
+  { value: '"Times New Roman", serif', label: 'Times New Roman' },
+  { value: 'Georgia, serif', label: 'Georgia' },
+  { value: '"Courier New", monospace', label: 'Courier New' },
+]
 
 interface PaperOption {
   key: string
@@ -240,6 +377,10 @@ const props = defineProps<{
   isText: boolean
   /** 当前字号(text 元素) */
   fontSize: number | null
+  /** 当前字体(text 元素) */
+  fontFamily: string | null
+  /** 当前字距 px(text 元素) */
+  letterSpacing: number | null
   /** 粗体/斜体/下划线/删除线激活态 */
   boldActive: boolean
   italicActive: boolean
@@ -247,6 +388,10 @@ const props = defineProps<{
   strikeActive: boolean
   /** 当前文字颜色 */
   textColor: string | null
+  /** 列表模式:'none' | 'ul' | 'ol' */
+  listType: 'none' | 'ul' | 'ol'
+  /** 手型拖动模式激活态(用于按钮 active 样式) */
+  panMode: boolean
 }>()
 
 const emit = defineEmits<{
@@ -261,16 +406,27 @@ const emit = defineEmits<{
   setZoom: [z: number]
   setPaper: [key: string]
   fontSizeStep: [delta: number]
+  letterSpacingStep: [delta: number]
   toggleBold: []
   toggleItalic: []
   toggleUnderline: []
   toggleStrike: []
   textColor: [color: string]
+  fontFamily: [family: string]
+  toggleList: [mode: 'none' | 'ul' | 'ol']
+  togglePan: []
+  toggleTheme: []
+  htmlPreview: []
+  screenshot: []
+  pen: []
 }>()
 
 const zoomPercent = computed(() => Math.round((props.zoom ?? 1) * 100))
 const printMenuOpen = ref(false)
 const printMenuRef = ref<HTMLElement | null>(null)
+const settingsOpen = ref(false)
+const helpOpen = ref(false)
+const theme = ref<'light' | 'dark'>('light')
 
 function onZoomChange(e: Event) {
   const v = Number((e.target as HTMLSelectElement).value)
@@ -280,6 +436,20 @@ function onZoomChange(e: Event) {
 function onFontSizeChange(e: Event) {
   const v = Number((e.target as HTMLInputElement).value)
   if (!Number.isNaN(v) && v > 0) emit('fontSizeStep', v - (props.fontSize ?? 0))
+}
+
+function onLetterSpacingChange(e: Event) {
+  const v = Number((e.target as HTMLInputElement).value)
+  if (!Number.isNaN(v)) emit('letterSpacingStep', v - (props.letterSpacing ?? 0))
+}
+
+function onFontFamilyChange(e: Event) {
+  emit('fontFamily', (e.target as HTMLSelectElement).value)
+}
+
+function onToggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
+  emit('toggleTheme')
 }
 
 function onClear() {
@@ -442,6 +612,9 @@ const trashIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
   outline: none;
   margin: 0 2px;
 }
+.ftb-num-sm {
+  width: 38px;
+}
 .ftb-num:hover:not(:disabled),
 .ftb-num:focus {
   border-color: #1677ff;
@@ -509,5 +682,85 @@ const trashIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
   font-size: 16px;
   line-height: 1;
   display: inline-flex;
+}
+.ftb-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ftb-modal {
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  min-width: 360px;
+  max-width: 480px;
+  overflow: hidden;
+}
+.ftb-modal-title {
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  border-bottom: 1px solid #f0f0f0;
+}
+.ftb-modal-body {
+  padding: 20px;
+  font-size: 13px;
+  color: #333;
+  line-height: 1.6;
+}
+.ftb-modal-body p {
+  margin: 0 0 8px;
+}
+.ftb-modal-hint {
+  font-weight: 600;
+  margin-top: 12px !important;
+}
+.ftb-modal-desc {
+  color: #666;
+  font-size: 12px;
+}
+.ftb-modal-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #555;
+}
+.ftb-modal-list li {
+  margin-bottom: 4px;
+}
+.ftb-modal-list kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  font-family: monospace;
+  font-size: 11px;
+  background: #f5f5f5;
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  box-shadow: 0 1px 0 #d0d0d0;
+}
+.ftb-modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.ftb-modal-btn {
+  padding: 4px 16px;
+  background: #1677ff;
+  color: #fff;
+  border: 1px solid #1677ff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.ftb-modal-btn:hover {
+  background: #4096ff;
+  border-color: #4096ff;
 }
 </style>

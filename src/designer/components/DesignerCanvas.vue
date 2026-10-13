@@ -1,6 +1,11 @@
 <template>
-  <div class="canvas-wrap" @click.self="$emit('select', null)">
-    <div class="canvas-frame" :style="frameStyle">
+  <div
+    class="canvas-wrap"
+    :class="{ 'pan-mode': panMode }"
+    @click.self="$emit('select', null)"
+    @mousedown="onWrapMouseDown"
+  >
+    <div class="canvas-frame" :style="frameStyleWithPan">
       <!-- 水平标尺 -->
       <svg
         class="ruler ruler-h"
@@ -113,6 +118,12 @@ const props = defineProps<{
   zoom?: number
   /** 是否显示 5mm 网格 */
   showGrid?: boolean
+  /** 手型拖动模式(空格 / 工具条按钮) */
+  panMode?: boolean
+  /** 画布横向偏移(由父组件控制) */
+  panX?: number
+  /** 画布纵向偏移 */
+  panY?: number
 }>()
 
 const emit = defineEmits<{
@@ -124,6 +135,8 @@ const emit = defineEmits<{
   move: [id: string, x: number, y: number]
   /** 删除元素 */
   remove: [id: string]
+  /** 画布被拖动(连续触发) */
+  pan: [dx: number, dy: number]
 }>()
 
 // 吸附阈值(单位:mm,4px / 3.78 ≈ 1mm,这里取 1mm 适中)
@@ -167,6 +180,33 @@ const frameStyle = computed(() => {
     heightPx: h,
   }
 })
+
+/** 带 pan 偏移的 frame style(用 CSS translate 整体平移画布+标尺) */
+const frameStyleWithPan = computed(() => ({
+  ...frameStyle.value,
+  transform: `translate(${props.panX ?? 0}px, ${props.panY ?? 0}px)`,
+}))
+
+/** 画布 wrap 上的 mousedown:panMode 时启动平移拖动 */
+function onWrapMouseDown(e: MouseEvent) {
+  if (!props.panMode) return
+  // 仅在 wrap 空白处启动(不响应冒泡自元素上的 mousedown)
+  if (e.target !== e.currentTarget) return
+  e.preventDefault()
+  const startX = e.clientX
+  const startY = e.clientY
+  const baseX = props.panX ?? 0
+  const baseY = props.panY ?? 0
+  function onMove(ev: MouseEvent) {
+    emit('pan', (baseX + (ev.clientX - startX)) - (props.panX ?? 0), (baseY + (ev.clientY - startY)) - (props.panY ?? 0))
+  }
+  function onUp() {
+    document.removeEventListener('mousemove', onMove)
+    document.removeEventListener('mouseup', onUp)
+  }
+  document.addEventListener('mousemove', onMove)
+  document.addEventListener('mouseup', onUp)
+}
 
 /**
  * 刻度数组:每 5mm 一个 minor,每 10mm 一个 major(带数字)。
@@ -296,6 +336,12 @@ function onElementMouseDown(e: MouseEvent, id: string) {
   display: flex;
   align-items: flex-start;
   justify-content: center;
+}
+.canvas-wrap.pan-mode {
+  cursor: grab;
+}
+.canvas-wrap.pan-mode:active {
+  cursor: grabbing;
 }
 .canvas-frame {
   position: relative;

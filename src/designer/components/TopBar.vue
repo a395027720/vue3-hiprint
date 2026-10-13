@@ -23,14 +23,38 @@
       </button>
     </nav>
     <div class="topbar-actions">
-      <button class="save-btn" :disabled="!dirty" @click="$emit('save')">
-        <save-outlined /> 保存
-      </button>
+      <div ref="saveMenuRef" class="save-group">
+        <button
+          class="save-btn"
+          :disabled="!dirty"
+          @click="$emit('save')"
+        >
+          <save-outlined /> 保存
+        </button>
+        <button
+          class="save-arrow"
+          :disabled="!dirty"
+          title="更多保存操作"
+          @click="saveMenuOpen = !saveMenuOpen"
+        ><down-outlined /></button>
+        <div v-if="saveMenuOpen" class="save-menu">
+          <button class="save-menu-item" @click="onPick('save')">
+            <save-outlined /> 保存
+          </button>
+          <button class="save-menu-item" @click="onPick('saveAs')">
+            <file-image-outlined /> 另存为
+          </button>
+          <button class="save-menu-item" @click="onPick('export')">
+            <download-outlined /> 导出 JSON
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import type { ElementType } from '../core/types'
 
 defineProps<{
@@ -38,10 +62,32 @@ defineProps<{
   dirty?: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   add: [type: ElementType]
   save: []
+  saveAs: []
+  exportJson: []
 }>()
+
+const saveMenuOpen = ref(false)
+const saveMenuRef = ref<HTMLElement | null>(null)
+
+function onPick(action: 'save' | 'saveAs' | 'export') {
+  saveMenuOpen.value = false
+  if (action === 'save') emit('save')
+  else if (action === 'saveAs') emit('saveAs')
+  else emit('exportJson')
+}
+
+function onDocumentMouseDown(e: MouseEvent) {
+  if (!saveMenuOpen.value) return
+  if (saveMenuRef.value && !saveMenuRef.value.contains(e.target as Node)) {
+    saveMenuOpen.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('mousedown', onDocumentMouseDown))
+onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentMouseDown))
 
 interface PaletteItem {
   type: ElementType
@@ -51,7 +97,6 @@ interface PaletteItem {
 
 const stroke = 'currentColor'
 const sw = 1.6
-// 内联 SVG heroicons-style 图标
 const items: PaletteItem[] = [
   {
     type: 'text',
@@ -143,14 +188,19 @@ const items: PaletteItem[] = [
   gap: 8px;
   flex: 0 0 auto;
 }
+.save-group {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
 .save-btn {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 16px;
+  padding: 6px 14px;
   background: #1677ff;
   border: 1px solid #1677ff;
-  border-radius: 4px;
+  border-radius: 4px 0 0 4px;
   color: #fff;
   font-size: 13px;
   cursor: pointer;
@@ -165,5 +215,64 @@ const items: PaletteItem[] = [
   border-color: #f0f0f0;
   color: #bfbfbf;
   cursor: not-allowed;
+}
+.save-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  padding: 0;
+  background: #1677ff;
+  border: 1px solid #1677ff;
+  border-left: 1px solid #69b1ff;
+  border-radius: 0 4px 4px 0;
+  color: #fff;
+  font-size: 10px;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.save-arrow:hover:not(:disabled) {
+  background: #4096ff;
+  border-color: #4096ff;
+}
+.save-arrow:disabled {
+  background: #f0f0f0;
+  border-color: #f0f0f0;
+  color: #bfbfbf;
+  cursor: not-allowed;
+  border-left-color: #f0f0f0;
+}
+.save-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 160px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.save-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #333;
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+.save-menu-item:hover {
+  background: #f5f5f5;
+  color: #1677ff;
 }
 </style>

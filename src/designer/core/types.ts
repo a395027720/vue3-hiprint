@@ -75,6 +75,8 @@ export interface TextElement extends BaseElement {
   verticalAlign?: VerticalAlign
   /** 文本换行(默认 normal) */
   textWrap?: TextWrap
+  /** 列表模式:none / ul / ol,为列表时 text 按 \n 拆成 <li> 渲染 */
+  listType?: 'none' | 'ul' | 'ol'
 }
 
 // ========== Image ==========

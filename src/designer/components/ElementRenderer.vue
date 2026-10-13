@@ -4,7 +4,15 @@
     v-if="element.type === 'text'"
     class="el-text"
     :style="textStyle"
-  >{{ element.text }}</div>
+  >
+    <template v-if="!element.listType || element.listType === 'none'">{{ element.text }}</template>
+    <ul v-else-if="element.listType === 'ul'" style="margin: 0; padding-left: 1.2em">
+      <li v-for="(line, i) in textLines" :key="i">{{ line }}</li>
+    </ul>
+    <ol v-else style="margin: 0; padding-left: 1.2em">
+      <li v-for="(line, i) in textLines" :key="i">{{ line }}</li>
+    </ol>
+  </div>
 
   <!-- image -->
   <div v-else-if="element.type === 'image'" class="el-image" :style="imageBoxStyle">
@@ -162,6 +170,11 @@ const previewRows = computed<Record<string, unknown>[]>(() => {
       { name: '示例 C', qty: 3, price: 300 },
     ]
   )
+})
+
+const textLines = computed<string[]>(() => {
+  if (props.element.type !== 'text') return []
+  return props.element.text.split('\n')
 })
 </script>
 
