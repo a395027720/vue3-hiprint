@@ -413,12 +413,13 @@ function onWrapMouseDown(e: MouseEvent) {
     const y1 = Math.min(startY, ev.clientY)
     const x2 = Math.max(startX, ev.clientX)
     const y2 = Math.max(startY, ev.clientY)
+    const ppm = pxPerMmScreen.value
     marquee.value = {
       x1, y1, x2, y2,
       w: x2 - x1,
       h: y2 - y1,
-      wMm: (x2 - x1) / pxPerMmScreen,
-      hMm: (y2 - y1) / pxPerMmScreen,
+      wMm: (x2 - x1) / ppm,
+      hMm: (y2 - y1) / ppm,
     }
   }
   function onUp(ev: MouseEvent) {
