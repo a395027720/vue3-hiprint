@@ -40,12 +40,11 @@
           text-anchor="start"
         >{{ t.mm }}</text>
         <!-- 选中元素位置三角(向下指,在画布内) -->
-        <polygon
-          v-for="m in selectedEdgeMarks.h"
-          :key="`ms-h-${m.id}-${m.edge}`"
-          :points="`${m.x - 3},0 ${m.x + 3},0 ${m.x},6`"
-          class="ruler-mark"
-        />
+        <g v-for="m in selectedEdgeMarks.h" :key="`ms-h-${m.id}-${m.edge}`">
+          <!-- 0.5px 红色细线:精确显示三角 viewBox x 位置,跟元素边比较 -->
+          <line :x1="m.x" :x2="m.x" y1="0" y2="24" class="ruler-mark-line" />
+          <polygon :points="`${m.x - 3},0 ${m.x + 3},0 ${m.x},6`" class="ruler-mark" />
+        </g>
         <!-- 鼠标游标线 + 坐标 chip -->
         <g v-if="mousePos && mousePos.inCanvas" class="ruler-cursor">
           <line :x1="mousePos.xPx" :x2="mousePos.xPx" y1="0" y2="24" />
@@ -91,12 +90,10 @@
           text-anchor="start"
         >{{ t.mm }}</text>
         <!-- 选中元素位置三角(向左指) -->
-        <polygon
-          v-for="m in selectedEdgeMarks.v"
-          :key="`ms-v-${m.id}-${m.edge}`"
-          :points="`0,${m.x - 3} 0,${m.x + 3} 6,${m.x}`"
-          class="ruler-mark"
-        />
+        <g v-for="m in selectedEdgeMarks.v" :key="`ms-v-${m.id}-${m.edge}`">
+          <line x1="0" :x2="24" :y1="m.x" :y2="m.x" class="ruler-mark-line" />
+          <polygon :points="`0,${m.x - 3} 0,${m.x + 3} 6,${m.x}`" class="ruler-mark" />
+        </g>
         <!-- 鼠标游标线 + 坐标 chip -->
         <g v-if="mousePos && mousePos.inCanvas" class="ruler-cursor">
           <line x1="0" :y1="mousePos.yPx" x2="24" :y2="mousePos.yPx" />
@@ -1290,6 +1287,13 @@ watch(() => props.template.elements, () => {
 .ruler-mark {
   fill: #1890ff;
   filter: drop-shadow(0 1px 1px rgba(24, 144, 255, 0.4));
+}
+/* 调试用:三角位置精确指示线,半透明红,方便跟元素 dashed 边对比 */
+.ruler-mark-line {
+  stroke: #ff4d4f;
+  stroke-width: 0.5;
+  opacity: 0.6;
+  shape-rendering: crispEdges;
 }
 
 /* 鼠标游标 */
