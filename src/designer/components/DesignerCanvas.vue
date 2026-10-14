@@ -10,15 +10,15 @@
       <svg
         class="ruler ruler-h"
         :width="frameStyle.widthPx"
-        height="24"
-        :viewBox="`0 0 ${frameStyle.widthPx} 24`"
+        :height="RULER_SIZE"
+        :viewBox="`0 0 ${frameStyle.widthPx} ${RULER_SIZE}`"
       >
         <!-- 画布内填底(浅,让画布对应区域标尺更"实") -->
         <rect
           x="0"
           y="0"
           :width="frameStyle.widthPx"
-          height="24"
+          :height="RULER_SIZE"
           fill="#fcfcfd"
         />
         <!-- 刻度线 -->
@@ -27,8 +27,8 @@
           :key="`h-${t.mm}`"
           :x1="t.x"
           :x2="t.x"
-          :y1="t.zero ? 0 : t.major ? 6 : 12"
-          y2="24"
+          :y1="t.zero ? 0 : t.major ? 8 : 14"
+          :y2="RULER_SIZE"
           :class="[
             'ruler-tick',
             { 'ruler-tick-major': t.major, 'ruler-tick-zero': t.zero },
@@ -40,7 +40,7 @@
           :key="`ht-${t.mm}`"
           v-show="t.major && t.inCanvas"
           :x="t.x + (t.mm === 0 ? 3 : t.mm > 0 ? 3 : -3)"
-          y="11"
+          y="15"
           :class="['ruler-text', { 'ruler-text-zero': t.zero }]"
           text-anchor="start"
         >
@@ -50,9 +50,9 @@
         <g v-for="m in selectedEdgeMarks.h" :key="`ms-h-${m.id}-${m.edge}`" />
         <!-- 鼠标游标线 + 坐标 chip -->
         <g v-if="mousePos && mousePos.inCanvas" class="ruler-cursor">
-          <line :x1="mousePos.xPx" :x2="mousePos.xPx" y1="0" y2="24" />
-          <rect :x="cursorChipX('h')" y="3" width="40" height="14" rx="2" />
-          <text :x="cursorChipX('h') + 20" y="13" text-anchor="middle">
+          <line :x1="mousePos.xPx" :x2="mousePos.xPx" y1="0" :y2="RULER_SIZE" />
+          <rect :x="cursorChipX('h')" y="9" width="40" height="14" rx="2" />
+          <text :x="cursorChipX('h') + 20" y="19" text-anchor="middle">
             {{ formatMm(mousePos.xMm) }}
           </text>
         </g>
@@ -61,22 +61,22 @@
       <!-- 垂直标尺(只覆盖 canvas 高度) -->
       <svg
         class="ruler ruler-v"
-        width="24"
+        :width="RULER_SIZE"
         :height="frameStyle.heightPx"
-        :viewBox="`0 0 24 ${frameStyle.heightPx}`"
+        :viewBox="`0 0 ${RULER_SIZE} ${frameStyle.heightPx}`"
       >
         <rect
           x="0"
           y="0"
-          width="24"
+          :width="RULER_SIZE"
           :height="frameStyle.heightPx"
           fill="#fcfcfd"
         />
         <line
           v-for="t in vTicks"
           :key="`v-${t.mm}`"
-          :x1="t.zero ? 0 : t.major ? 6 : 12"
-          :x2="24"
+          :x1="t.zero ? 0 : t.major ? 8 : 14"
+          :x2="RULER_SIZE"
           :y1="t.x"
           :y2="t.x"
           :class="[
@@ -89,7 +89,7 @@
           :key="`vt-${t.mm}`"
           v-show="t.major && t.inCanvas"
           x="2"
-          :y="t.x + (t.mm === 0 ? 12 : t.mm > 0 ? 11 : 6)"
+          :y="t.x + (t.mm === 0 ? 16 : t.mm > 0 ? 15 : 8)"
           :class="['ruler-text', { 'ruler-text-zero': t.zero }]"
           text-anchor="start"
         >
@@ -99,9 +99,9 @@
         <g v-for="m in selectedEdgeMarks.v" :key="`ms-v-${m.id}-${m.edge}`" />
         <!-- 鼠标游标线 + 坐标 chip -->
         <g v-if="mousePos && mousePos.inCanvas" class="ruler-cursor">
-          <line x1="0" :y1="mousePos.yPx" x2="24" :y2="mousePos.yPx" />
+          <line x1="0" :y1="mousePos.yPx" :x2="RULER_SIZE" :y2="mousePos.yPx" />
           <rect x="3" :y="cursorChipY('v')" width="40" height="14" rx="2" />
-          <text x="23" :y="cursorChipY('v') + 10" text-anchor="middle">
+          <text x="19" :y="cursorChipY('v') + 10" text-anchor="middle">
             {{ formatMm(mousePos.yMm) }}
           </text>
         </g>
@@ -110,32 +110,32 @@
       <!-- 左上角(0,0 标尺交点) -->
       <svg
         class="ruler ruler-corner"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
+        :width="RULER_SIZE"
+        :height="RULER_SIZE"
+        :viewBox="`0 0 ${RULER_SIZE} ${RULER_SIZE}`"
       >
-        <rect x="0" y="0" width="24" height="24" fill="#f5f5f7" />
+        <rect x="0" y="0" :width="RULER_SIZE" :height="RULER_SIZE" fill="#f5f5f7" />
         <line
           x1="0"
-          y1="24"
-          x2="24"
-          y2="24"
+          :y1="RULER_SIZE"
+          :x2="RULER_SIZE"
+          :y2="RULER_SIZE"
           stroke="#d0d0d4"
           stroke-width="1"
         />
         <line
-          x1="24"
+          :x1="RULER_SIZE"
           y1="0"
-          x2="24"
-          y2="24"
+          :x2="RULER_SIZE"
+          :y2="RULER_SIZE"
           stroke="#d0d0d4"
           stroke-width="1"
         />
         <!-- 选中时,原点高亮 -->
         <circle
           v-if="hasSelection"
-          cx="12"
-          cy="12"
+          cx="16"
+          cy="16"
           r="2.5"
           class="ruler-corner-dot"
         />
@@ -218,13 +218,13 @@
         v-for="m in selectedEdgeMarks.h"
         :key="`mark-h-${m.id}-${m.edge}`"
         class="mark-tri mark-h"
-        :style="{ left: (24 + m.x) + 'px' }"
+        :style="{ left: (RULER_SIZE + m.x) + 'px' }"
       />
       <div
         v-for="m in selectedEdgeMarks.v"
         :key="`mark-v-${m.id}-${m.edge}`"
         class="mark-tri mark-v"
-        :style="{ top: (24 + m.x) + 'px' }"
+        :style="{ top: (RULER_SIZE + m.x) + 'px' }"
       />
 
       <!-- 拖动中的"延长线":从元素/组 4 边出发,贯穿画布到 ruler(浅蓝虚线)
@@ -234,13 +234,13 @@
           v-for="x in selfLines.v"
           :key="`self-v-${x}`"
           class="self-line self-v"
-          :style="{ left: 24 + mmToPxScaled(x) + 'px' }"
+          :style="{ left: RULER_SIZE + mmToPxScaled(x) + 'px' }"
         />
         <div
           v-for="y in selfLines.h"
           :key="`self-h-${y}`"
           class="self-line self-h"
-          :style="{ top: 24 + mmToPxScaled(y) + 'px' }"
+          :style="{ top: RULER_SIZE + mmToPxScaled(y) + 'px' }"
         />
       </template>
 
@@ -249,13 +249,13 @@
         v-for="x in snapLines.vertical"
         :key="`v-${x}`"
         class="snap-line snap-v"
-        :style="{ left: 24 + mmToPxScaled(x) + 'px' }"
+        :style="{ left: RULER_SIZE + mmToPxScaled(x) + 'px' }"
       />
       <div
         v-for="y in snapLines.horizontal"
         :key="`h-${y}`"
         class="snap-line snap-h"
-        :style="{ top: 24 + mmToPxScaled(y) + 'px' }"
+        :style="{ top: RULER_SIZE + mmToPxScaled(y) + 'px' }"
       />
     </div>
 
@@ -368,6 +368,9 @@ const emit = defineEmits<{
 
 // 吸附阈值(单位:mm,4px / 3.78 ≈ 1mm,这里取 1mm 适中)
 const SNAP_THRESHOLD_MM = 1;
+
+/** 标尺宽度(px):同时给画布 left/top 让位、所有 frame 级辅助线偏移用 */
+const RULER_SIZE = 32;
 
 const zoomValue = computed(() => props.zoom ?? 1);
 
@@ -745,17 +748,17 @@ const selectedEdgeMarks = computed<{ h: EdgeMark[]; v: EdgeMark[] }>(() => {
 /** 鼠标游标 chip 位置(水平:在鼠标 x 处居中,但贴右边缘时不溢出) */
 function cursorChipX(axis: "h" | "v"): number {
   if (!mousePos.value) return 0;
-  const x = mousePos.value.xPx + 24 + 4; // +24 跳过 ruler 偏移
+  const x = mousePos.value.xPx + RULER_SIZE + 4; // +RULER_SIZE 跳过 ruler 偏移
   // 距右边界 < 40 时,改为显示在鼠标左侧
   const totalW = frameStyle.value.widthPx;
-  if (x + 40 > totalW) return Math.max(0, mousePos.value.xPx + 24 - 40);
+  if (x + 40 > totalW) return Math.max(0, mousePos.value.xPx + RULER_SIZE - 40);
   return x;
 }
 function cursorChipY(axis: "h" | "v"): number {
   if (!mousePos.value) return 0;
-  const y = mousePos.value.yPx + 24 + 4;
+  const y = mousePos.value.yPx + RULER_SIZE + 4;
   const totalH = frameStyle.value.heightPx;
-  if (y + 18 > totalH) return Math.max(0, mousePos.value.yPx + 24 - 18);
+  if (y + 18 > totalH) return Math.max(0, mousePos.value.yPx + RULER_SIZE - 18);
   return y;
 }
 
@@ -1176,7 +1179,7 @@ function onRotateStart(e: MouseEvent, id: string) {
   if (idx < 0) return;
   const el = tpl.elements[idx];
   if (el.locked) return; // 锁定后不允许旋转
-  // canvas-frame 在 .canvas-wrap 内,wrap padding 24 + canvas top:24 left:24
+  // canvas-frame 在 .canvas-wrap 内,wrap padding 24 + canvas top:RULER_SIZE left:RULER_SIZE
   const wrap = (e.currentTarget as HTMLElement).closest(
     ".canvas-wrap",
   ) as HTMLElement | null;
@@ -1186,9 +1189,9 @@ function onRotateStart(e: MouseEvent, id: string) {
   const frameEl = wrap.querySelector(".canvas-frame") as HTMLElement | null;
   if (!frameEl) return;
   const frameRect = frameEl.getBoundingClientRect();
-  // 元素未旋转中心(屏幕坐标) = frameRect.left + 24(canvas left 偏移) + (x + w/2) * pxPerMm
-  const cx = frameRect.left + 24 + mmToPxScaled(el.x + el.w / 2);
-  const cy = frameRect.top + 24 + mmToPxScaled(el.y + el.h / 2);
+  // 元素未旋转中心(屏幕坐标) = frameRect.left + RULER_SIZE(canvas left 偏移) + (x + w/2) * pxPerMm
+  const cx = frameRect.left + RULER_SIZE + mmToPxScaled(el.x + el.w / 2);
+  const cy = frameRect.top + RULER_SIZE + mmToPxScaled(el.y + el.h / 2);
   // wrapRect 暂未用到,留作 fallback
   void wrapRect;
 
@@ -1257,8 +1260,8 @@ function clientToCanvasMm(
   const frame = document.querySelector(".canvas-frame") as HTMLElement | null;
   if (!wrap || !frame) return null;
   const fr = frame.getBoundingClientRect();
-  const localX = clientX - fr.left - 24;
-  const localY = clientY - fr.top - 24;
+  const localX = clientX - fr.left - RULER_SIZE;
+  const localY = clientY - fr.top - RULER_SIZE;
   if (localX < 0 || localY < 0) return null;
   const z = zoomValue.value;
   return { x: localX / (mmToPx(1) * z), y: localY / (mmToPx(1) * z) };
@@ -1413,16 +1416,16 @@ watch(
 }
 .ruler-h {
   top: 0;
-  left: 24px;
-  height: 24px;
+  left: 32px;
+  height: 32px;
   border-bottom: 1px solid #d8d8de;
   border-left: 1px solid #d8d8de;
   box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.04);
 }
 .ruler-v {
-  top: 24px;
+  top: 32px;
   left: 0;
-  width: 24px;
+  width: 32px;
   border-right: 1px solid #d8d8de;
   border-top: 1px solid #d8d8de;
   box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.04);
@@ -1516,8 +1519,8 @@ watch(
 }
 .canvas {
   position: absolute;
-  top: 24px;
-  left: 24px;
+  top: 32px;
+  left: 32px;
   background: white;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
