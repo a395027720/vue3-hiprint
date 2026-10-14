@@ -80,7 +80,6 @@ function onDragStart(e: DragEvent, type: ElementType) {
             class="ep-item"
             :title="it.label"
             draggable="true"
-            @click="emit('add', it.type)"
             @dragstart="onDragStart($event, it.type)"
           >
             <span class="ep-icon" v-html="it.icon" />
@@ -98,7 +97,6 @@ function onDragStart(e: DragEvent, type: ElementType) {
             class="ep-item"
             :title="it.label"
             draggable="true"
-            @click="emit('add', it.type)"
             @dragstart="onDragStart($event, it.type)"
           >
             <span class="ep-icon" v-html="it.icon" />
@@ -116,7 +114,6 @@ function onDragStart(e: DragEvent, type: ElementType) {
             class="ep-item"
             :title="it.label"
             draggable="true"
-            @click="emit('add', it.type)"
             @dragstart="onDragStart($event, it.type)"
           >
             <span class="ep-icon" v-html="it.icon" />

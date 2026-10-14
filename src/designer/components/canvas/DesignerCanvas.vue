@@ -458,16 +458,18 @@ const offsetY = computed(() => 0);
  *  overlay 公式需要包含这个间距,才能跟画布 0mm 视觉对齐 */
 const CANVAS_TOP_GAP = 50;
 
-/** mm 位置 → overlay 屏幕 px(.canvas-wrap 局部,已含 scale,扣 pan)
- *  用于 guide / self-line / snap-line / selfFill 浮层(不经过 scale 父级) */
+/** mm 位置 → overlay 屏幕 px(.canvas-wrap 局部,已含 scale,加 pan)
+ *  用于 guide / self-line / snap-line / selfFill 浮层(不经过 scale 父级)
+ *  .canvas-pan 用 transform: translate(panX, panY) 推画布,overlay 浮在 wrap 内
+ *  绝对定位,要跟画布一起平移,所以 pan 是 + 不是 - */
 function overlayX(valMm: number): number {
-  return offsetX.value + mmToPx(valMm) * zoomValue.value - (props.panX ?? 0);
+  return offsetX.value + mmToPx(valMm) * zoomValue.value + (props.panX ?? 0);
 }
 function overlayY(valMm: number): number {
   return (
     CANVAS_TOP_GAP +
     offsetY.value +
-    mmToPx(valMm) * zoomValue.value -
+    mmToPx(valMm) * zoomValue.value +
     (props.panY ?? 0)
   );
 }
