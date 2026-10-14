@@ -379,120 +379,130 @@
       </button>
     </div>
 
-    <span class="vtb-group-sep" />
+    <div class="vtb-content">
+      <!-- paper 组 -->
+      <div class="vtb-pill">
+        <select
+          class="vtb-select"
+          :value="paperKey"
+          title="纸张"
+          @change="
+            $emit('setPaper', ($event.target as HTMLSelectElement).value)
+          "
+        >
+          <option v-for="p in PAPER_OPTIONS" :key="p.key" :value="p.key">
+            {{ p.label }}
+          </option>
+        </select>
+      </div>
 
-    <!-- paper 组 -->
-    <div class="vtb-pill">
-      <select
-        class="vtb-select"
-        :value="paperKey"
-        title="纸张"
-        @change="$emit('setPaper', ($event.target as HTMLSelectElement).value)"
-      >
-        <option v-for="p in PAPER_OPTIONS" :key="p.key" :value="p.key">
-          {{ p.label }}
-        </option>
-      </select>
-    </div>
+      <span class="vtb-group-sep" />
 
-    <span class="vtb-group-sep" />
+      <!-- zoom 组 -->
+      <div class="vtb-pill">
+        <button
+          class="vtb-tb"
+          title="缩小"
+          @click="$emit('setZoom', zoom - 0.1)"
+        >
+          <span v-html="zoomOutIcon" />
+        </button>
+        <button class="vtb-zoom-label" title="缩放" @click="$emit('resetZoom')">
+          {{ zoomPercent }}%
+        </button>
+        <button
+          class="vtb-tb"
+          title="放大"
+          @click="$emit('setZoom', zoom + 0.1)"
+        >
+          <span v-html="zoomInIcon" />
+        </button>
+      </div>
 
-    <!-- zoom 组 -->
-    <div class="vtb-pill">
-      <button class="vtb-tb" title="缩小" @click="$emit('setZoom', zoom - 0.1)">
-        <span v-html="zoomOutIcon" />
-      </button>
-      <button class="vtb-zoom-label" title="缩放" @click="$emit('resetZoom')">
-        {{ zoomPercent }}%
-      </button>
-      <button class="vtb-tb" title="放大" @click="$emit('setZoom', zoom + 0.1)">
-        <span v-html="zoomInIcon" />
-      </button>
-    </div>
+      <span class="vtb-group-sep" />
 
-    <span class="vtb-group-sep" />
+      <!-- hand 组 -->
+      <div class="vtb-pill">
+        <button
+          class="vtb-tb"
+          :class="{ active: panMode }"
+          title="手型拖动(空格临时)"
+          @click="$emit('togglePan')"
+        >
+          <drag-outlined />
+        </button>
+      </div>
 
-    <!-- hand 组 -->
-    <div class="vtb-pill">
-      <button
-        class="vtb-tb"
-        :class="{ active: panMode }"
-        title="手型拖动(空格临时)"
-        @click="$emit('togglePan')"
-      >
-        <drag-outlined />
-      </button>
-    </div>
+      <span class="vtb-group-sep" />
 
-    <span class="vtb-group-sep" />
+      <!-- panel 组:三个 toggle 按钮(浮层显隐) -->
+      <div class="vtb-pill">
+        <button
+          class="vtb-tb"
+          :class="{ active: leftPanelOpen }"
+          title="切换左侧元素面板"
+          @click="$emit('toggleLeftPanel')"
+        >
+          <appstore-outlined />
+        </button>
+        <button
+          class="vtb-tb"
+          :class="{ active: propertyPanelOpen }"
+          title="切换右侧属性面板"
+          @click="$emit('togglePropertyPanel')"
+        >
+          <setting-outlined />
+        </button>
+      </div>
 
-    <!-- panel 组:三个 toggle 按钮(浮层显隐) -->
-    <div class="vtb-pill">
-      <button
-        class="vtb-tb"
-        :class="{ active: leftPanelOpen }"
-        title="切换左侧元素面板"
-        @click="$emit('toggleLeftPanel')"
-      >
-        <appstore-outlined />
-      </button>
-      <button
-        class="vtb-tb"
-        :class="{ active: propertyPanelOpen }"
-        title="切换右侧属性面板"
-        @click="$emit('togglePropertyPanel')"
-      >
-        <setting-outlined />
-      </button>
-    </div>
+      <span class="vtb-group-sep" />
 
-    <span class="vtb-group-sep" />
+      <!-- quick 组:导出 + 预览 + 打印 -->
+      <div class="vtb-pill">
+        <button class="vtb-tb" title="导出 PDF" @click="$emit('exportPdf')">
+          <file-pdf-outlined />
+        </button>
+        <button class="vtb-tb" title="导出 HTML" @click="$emit('exportHtml')">
+          <file-text-outlined />
+        </button>
+        <button class="vtb-tb" title="导出图片" @click="$emit('exportImages')">
+          <picture-outlined />
+        </button>
+        <span class="vtb-pill-sep" />
+        <button class="vtb-tb" title="预览" @click="$emit('preview')">
+          <eye-outlined />
+        </button>
+        <button class="vtb-tb" title="打印" @click="$emit('print')">
+          <printer-outlined />
+        </button>
+      </div>
 
-    <!-- quick 组:导出 + 预览 + 打印 -->
-    <div class="vtb-pill">
-      <button class="vtb-tb" title="导出 PDF" @click="$emit('exportPdf')">
-        <file-pdf-outlined />
-      </button>
-      <button class="vtb-tb" title="导出 HTML" @click="$emit('exportHtml')">
-        <file-text-outlined />
-      </button>
-      <button class="vtb-tb" title="导出图片" @click="$emit('exportImages')">
-        <picture-outlined />
-      </button>
-      <span class="vtb-pill-sep" />
-      <button class="vtb-tb" title="预览" @click="$emit('preview')">
-        <eye-outlined />
-      </button>
-      <button class="vtb-tb" title="打印" @click="$emit('print')">
-        <printer-outlined />
-      </button>
-    </div>
+      <span class="vtb-group-sep" />
 
-    <span class="vtb-group-sep" />
-
-    <!-- system 组:网格 + 主题 + 帮助 + 设置 -->
-    <div class="vtb-pill">
-      <button
-        class="vtb-tb"
-        :class="{ active: showGrid }"
-        title="网格"
-        @click="$emit('toggleGrid')"
-      >
-        <span v-html="gridIcon" />
-      </button>
-      <button
-        class="vtb-tb"
-        :title="theme === 'dark' ? '切换到亮色' : '切换到暗色'"
-        @click="$emit('toggleTheme')"
-      >
-        <bulb-outlined v-if="theme === 'dark'" /><bulb-filled v-else />
-      </button>
-      <button class="vtb-tb" title="帮助" @click="$emit('help')">
-        <question-circle-outlined />
-      </button>
-      <button class="vtb-tb" title="设置" @click="$emit('settings')">
-        <setting-outlined />
-      </button>
+      <!-- system 组:网格 + 主题 + 帮助 + 设置 -->
+      <div class="vtb-pill">
+        <button
+          class="vtb-tb"
+          :class="{ active: showGrid }"
+          title="网格"
+          @click="$emit('toggleGrid')"
+        >
+          <span v-html="gridIcon" />
+        </button>
+        <button
+          class="vtb-tb"
+          :title="theme === 'dark' ? '切换到亮色' : '切换到暗色'"
+          @click="$emit('toggleTheme')"
+        >
+          <bulb-outlined v-if="theme === 'dark'" /><bulb-filled v-else />
+        </button>
+        <button class="vtb-tb" title="帮助" @click="$emit('help')">
+          <question-circle-outlined />
+        </button>
+        <button class="vtb-tb" title="设置" @click="$emit('settings')">
+          <setting-outlined />
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -721,8 +731,7 @@ const chevronRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" class=
   display: flex;
   align-items: center;
   flex: 0 0 auto;
-  height: 44px;
-  background: #fff;
+  background: #f5f5f5;
   border-bottom: 1px solid #f0f0f0;
   user-select: none;
   gap: 0;
@@ -768,15 +777,14 @@ const chevronRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" class=
   justify-content: center;
   width: 40px;
   padding: 0;
-  background: transparent;
-  border: 0;
+  background: white;
+  border: 1px solid #f9f9f9;
   color: #595959;
   transition:
     background 120ms,
     color 120ms;
 }
 .vtb-scroll:hover:not(:disabled) {
-  background: #f5f5f5;
   color: #1677ff;
 }
 .vtb-scroll:disabled {
@@ -790,7 +798,6 @@ const chevronRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" class=
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  background: #f5f5f5;
   border-radius: 6px;
   padding: 2px 6px;
 }
