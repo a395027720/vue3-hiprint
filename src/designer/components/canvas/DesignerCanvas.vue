@@ -1,247 +1,153 @@
 <template>
   <div
+    ref="wrapRef"
     class="canvas-wrap"
     :class="{ 'pan-mode': panMode }"
     @mousedown="onWrapMouseDown"
     @contextmenu.prevent="onWrapContextMenu"
+    @dragover.prevent="onWrapDragOver"
+    @drop="onDrop"
   >
     <div class="canvas-frame" :style="frameStyleWithPan">
       <div
-        class="canvas"
-        :style="canvasStyle"
-        @dragover.prevent
-        @drop="onDrop"
-        @mousemove="onCanvasMouseMove"
-        @mouseleave="onCanvasMouseLeave"
+        v-for="(page, pageIndex) in template.pages"
+        :key="page.id"
+        class="print-page"
+        :style="pageStyle(pageIndex)"
       >
         <div
-          v-for="el in template.elements"
-          :key="el.id"
-          class="canvas-element"
-          :class="{
-            selected: el.id === selectedId,
-            'is-image': el.type === 'image',
-            locked: el.locked,
-            'multi-selected': isMultiSelected(el.id) && el.id !== selectedId,
-            'marquee-hit': marqueeHits.has(el.id),
-          }"
-          :style="elBox(el)"
-          @mousedown="onElementMouseDown($event, el.id)"
-          @contextmenu.prevent.stop="onContextMenu($event, el.id)"
+          class="canvas"
+          :style="canvasStyle"
+          @dragover.prevent
+          @drop="onDrop"
+          @mousemove="onCanvasMouseMove"
+          @mouseleave="onCanvasMouseLeave"
         >
-          <ElementRenderer :element="el" />
-          <span v-if="el.locked" class="lock-badge" title="已锁定">🔒</span>
-          <!-- 选中元素的 handle 层(放在 .canvas-element 内,跟着 rotate 一起转) -->
-          <template v-if="el.id === selectedId && !el.locked">
-            <span
-              v-for="h in resizeHandles"
-              :key="h.dir"
-              class="resize-handle"
-              :class="`rh-${h.kind} rh-${h.dir}`"
-              :style="handleStyle(el, h.dir)"
-              @mousedown.stop="onResizeStart($event, el.id, h.dir)"
-            />
-            <span
-              class="rotate-line"
-              :style="rotateLineStyle"
-              @mousedown.stop="onRotateStart($event, el.id)"
-            />
-            <span
-              class="rotate-handle"
-              :style="rotateHandleStyleReversed(el)"
-              title="拖动旋转"
-              @mousedown.stop="onRotateStart($event, el.id)"
-            >
-              <svg
-                viewBox="0 0 16 16"
-                width="12"
-                height="12"
-                aria-hidden="true"
+          <div
+            v-for="el in page.elements"
+            :key="el.id"
+            class="canvas-element"
+            :class="{
+              selected: el.id === selectedId,
+              'is-image': el.type === 'image',
+              locked: el.locked,
+              'multi-selected': isMultiSelected(el.id) && el.id !== selectedId,
+              'marquee-hit': marqueeHits.has(el.id),
+            }"
+            :style="elBox(el)"
+            @mousedown="onElementMouseDown($event, el.id)"
+            @contextmenu.prevent.stop="onContextMenu($event, el.id)"
+          >
+            <ElementRenderer :element="el" />
+            <span v-if="el.locked" class="lock-badge" title="已锁定">🔒</span>
+            <!-- 选中元素的 handle 层(放在 .canvas-element 内,跟着 rotate 一起转) -->
+            <template v-if="el.id === selectedId && !el.locked">
+              <span
+                v-for="h in resizeHandles"
+                :key="h.dir"
+                class="resize-handle"
+                :class="`rh-${h.kind} rh-${h.dir}`"
+                :style="handleStyle(el, h.dir)"
+                @mousedown.stop="onResizeStart($event, el.id, h.dir)"
+              />
+              <span
+                class="rotate-line"
+                :style="rotateLineStyle"
+                @mousedown.stop="onRotateStart($event, el.id)"
+              />
+              <span
+                class="rotate-handle"
+                :style="rotateHandleStyleReversed(el)"
+                title="拖动旋转"
+                @mousedown.stop="onRotateStart($event, el.id)"
               >
-                <path
-                  fill="currentColor"
-                  d="M8 2.5a5.5 5.5 0 1 0 5.45 6.3.85.85 0 0 0-1.69-.18 3.8 3.8 0 1 1-1-3.7l-1.3 1.3a.6.6 0 0 0 .42 1.03h3.5a.6.6 0 0 0 .6-.6V3.15a.6.6 0 0 0-1.03-.42l-1.1 1.1A5.48 5.48 0 0 0 8 2.5Z"
-                />
-              </svg>
-            </span>
-            <span class="rotate-deg" :style="rotateDegStyle(el)"
-              >{{ el.rotate ?? 0 }}°</span
-            >
-          </template>
-        </div>
+                <svg
+                  viewBox="0 0 16 16"
+                  width="12"
+                  height="12"
+                  aria-hidden="true"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M8 2.5a5.5 5.5 0 1 0 5.45 6.3.85.85 0 0 0-1.69-.18 3.8 3.8 0 1 1-1-3.7l-1.3 1.3a.6.6 0 0 0 .42 1.03h3.5a.6.6 0 0 0 .6-.6V3.15a.6.6 0 0 0-1.03-.42l-1.1 1.1A5.48 5.48 0 0 0 8 2.5Z"
+                  />
+                </svg>
+              </span>
+              <span class="rotate-deg" :style="rotateDegStyle(el)"
+                >{{ el.rotate ?? 0 }}°</span
+              >
+            </template>
+          </div>
 
-        <!-- 框选矩形(屏幕坐标,覆盖在 .canvas 上) -->
-        <div v-if="marquee" class="marquee-rect" :style="marqueeStyle">
-          <span v-if="marquee.w >= 4 && marquee.h >= 4" class="marquee-size">
-            {{ formatMm(marquee.wMm) }} × {{ formatMm(marquee.hMm) }} mm
-          </span>
+          <!-- 框选矩形(屏幕坐标,覆盖在 .canvas 上) -->
+          <div v-if="marquee" class="marquee-rect" :style="marqueeStyle">
+            <span v-if="marquee.w >= 4 && marquee.h >= 4" class="marquee-size">
+              {{ formatMm(marquee.wMm) }} × {{ formatMm(marquee.hMm) }} mm
+            </span>
+          </div>
         </div>
       </div>
-
-      <!-- 拖动中的"延长线 + 选区填充":从元素/组 4 边出发,虚线 + 围成的范围浅蓝填充
-           只在拖动时显示(mousedown 起,mouseup 清) -->
-      <template v-if="selfLines">
-        <!-- 4 边延长线围成的范围,浅蓝半透明填充(z-index 最低,被虚线盖住) -->
-        <div
-          class="self-fill"
-          :style="selfFillStyle"
-        />
-        <div
-          v-for="x in selfLines.v"
-          :key="`self-v-${x}`"
-          class="self-line self-v"
-          :style="{ left: RULER_SIZE + mmToPxScaled(x) + 'px' }"
-        />
-        <div
-          v-for="y in selfLines.h"
-          :key="`self-h-${y}`"
-          class="self-line self-h"
-          :style="{ top: RULER_SIZE + mmToPxScaled(y) + 'px' }"
-        />
-      </template>
-
-      <!-- 吸附命中:候选线跟元素/组 4 边重合时,该条线变红实线高亮(z-index 高于 self-line) -->
-      <div
-        v-for="x in snapLines.vertical"
-        :key="`v-${x}`"
-        class="snap-line snap-v"
-        :style="{ left: RULER_SIZE + mmToPxScaled(x) + 'px' }"
-      />
-      <div
-        v-for="y in snapLines.horizontal"
-        :key="`h-${y}`"
-        class="snap-line snap-h"
-        :style="{ top: RULER_SIZE + mmToPxScaled(y) + 'px' }"
-      />
     </div>
 
-    <!-- 标尺 overlay:覆盖整个 .main viewport(画布外也画刻度),
-         位置用 absolute 相对 .main(viewBox 0 = .main 左 0,画布 0mm 位置由 canvasLeftOffset 算) -->
-    <div class="ruler-overlay" ref="rulerOverlayRef">
-      <svg
-        class="ruler ruler-h"
-        :width="overlaySize.w"
-        :height="RULER_SIZE"
-        :viewBox="`0 0 ${overlaySize.w} ${RULER_SIZE}`"
-      >
-        <rect
-          x="0"
-          y="0"
-          :width="overlaySize.w"
-          :height="RULER_SIZE"
-          fill="url(#ruler-h-grad)"
-        />
-        <defs>
-          <linearGradient id="ruler-h-grad" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0" stop-color="#fbfbfd" />
-            <stop offset="1" stop-color="#f3f3f6" />
-          </linearGradient>
-        </defs>
-        <!-- 刻度线(viewBox x = canvasLeftOffset + mmToPxScaled(mm)) -->
-        <line
-          v-for="t in hTicks"
-          :key="`h-${t.mm}`"
-          :x1="t.x + canvasOffsetX"
-          :x2="t.x + canvasOffsetX"
-          :y1="t.zero ? 0 : t.major ? 8 : 14"
-          :y2="RULER_SIZE"
-          :class="[
-            'ruler-tick',
-            { 'ruler-tick-major': t.major, 'ruler-tick-zero': t.zero },
-          ]"
-        />
-        <text
-          v-for="t in hTicks"
-          :key="`ht-${t.mm}`"
-          v-show="t.major"
-          :x="t.x + canvasOffsetX + (t.mm === 0 ? 3 : t.mm > 0 ? 3 : -3)"
-          y="15"
-          :class="['ruler-text', { 'ruler-text-zero': t.zero }]"
-          text-anchor="start"
-        >
-          {{ t.mm }}
-        </text>
-        <!-- 鼠标游标线 + 坐标 chip -->
-        <g v-if="mousePos && mousePos.inCanvas" class="ruler-cursor">
-          <line :x1="mousePos.xPx + canvasOffsetX" :x2="mousePos.xPx + canvasOffsetX" y1="0" :y2="RULER_SIZE" />
-          <rect :x="cursorChipX('h')" y="9" width="40" height="14" rx="2" />
-          <text :x="cursorChipX('h') + 20" y="19" text-anchor="middle">
-            {{ formatMm(mousePos.xMm) }}
-          </text>
-        </g>
-      </svg>
+    <!-- 用户自定义参考线(guides):跨整个 wrap,从 ruler 区域穿过 -->
+    <div v-for="g in props.guides" v-show="false" :key="`g-hidden-${g.id}`" />
+    <template v-for="g in props.guides ?? []" :key="g.id">
+      <div
+        v-if="g.axis === 'horizontal'"
+        class="guide-line guide-h"
+        :class="{ highlighted: props.highlightedGuideId === g.id }"
+        :style="{ top: guideYStyle(g.position) }"
+        @mouseenter="emit('guideHover', g.id)"
+        @mouseleave="emit('guideHover', null)"
+        @dblclick.stop="emit('guideRemove', g.id)"
+      />
+      <div
+        v-else
+        class="guide-line guide-v"
+        :class="{ highlighted: props.highlightedGuideId === g.id }"
+        :style="{ left: guideXStyle(g.position) }"
+        @mouseenter="emit('guideHover', g.id)"
+        @mouseleave="emit('guideHover', null)"
+        @dblclick.stop="emit('guideRemove', g.id)"
+      />
+    </template>
 
-      <svg
-        class="ruler ruler-v"
-        :width="RULER_SIZE"
-        :height="overlaySize.h"
-        :viewBox="`0 0 ${RULER_SIZE} ${overlaySize.h}`"
-      >
-        <rect x="0" y="0" :width="RULER_SIZE" :height="overlaySize.h" fill="#fcfcfd" />
-        <line
-          v-for="t in vTicks"
-          :key="`v-${t.mm}`"
-          :x1="t.zero ? 0 : t.major ? 8 : 14"
-          :x2="RULER_SIZE"
-          :y1="t.x + canvasOffsetY"
-          :y2="t.x + canvasOffsetY"
-          :class="[
-            'ruler-tick',
-            { 'ruler-tick-major': t.major, 'ruler-tick-zero': t.zero },
-          ]"
-        />
-        <text
-          v-for="t in vTicks"
-          :key="`vt-${t.mm}`"
-          v-show="t.major"
-          x="2"
-          :y="t.x + canvasOffsetY + (t.mm === 0 ? 16 : t.mm > 0 ? 15 : 8)"
-          :class="['ruler-text', { 'ruler-text-zero': t.zero }]"
-          text-anchor="start"
-        >
-          {{ t.mm }}
-        </text>
-        <g v-if="mousePos && mousePos.inCanvas" class="ruler-cursor">
-          <line x1="0" :y1="mousePos.yPx + canvasOffsetY" :x2="RULER_SIZE" :y2="mousePos.yPx + canvasOffsetY" />
-          <rect x="3" :y="cursorChipY('v')" width="40" height="14" rx="2" />
-          <text x="19" :y="cursorChipY('v') + 10" text-anchor="middle">
-            {{ formatMm(mousePos.yMm) }}
-          </text>
-        </g>
-      </svg>
+    <!-- 拖动中的"延长线 + 选区填充":跨整个 .canvas-wrap(viewport 高度),
+         在 ruler 区域(顶部 0~32 / 左侧 0~32)也能看到浅蓝短截(z-index > ruler)。
+         坐标公式 = offsetX/Y(wrap 内画布 0mm 位置) + mmToPxScaled -->
+    <template v-if="selfLines">
+      <div class="self-fill" :style="selfFillStyle" />
+      <div
+        v-for="x in selfLines.v"
+        :key="`self-v-${x}`"
+        class="self-line self-v"
+        :style="{ left: offsetX + mmToPxScaled(x) + 'px' }"
+      />
+      <div
+        v-for="y in selfLines.h"
+        :key="`self-h-${y}`"
+        class="self-line self-h"
+        :style="{ top: offsetY + mmToPxScaled(y) + 'px' }"
+      />
+    </template>
 
-      <svg
-        class="ruler ruler-corner"
-        :width="RULER_SIZE"
-        :height="RULER_SIZE"
-        :viewBox="`0 0 ${RULER_SIZE} ${RULER_SIZE}`"
-      >
-        <rect x="0" y="0" :width="RULER_SIZE" :height="RULER_SIZE" fill="#ececef" />
-        <line
-          x1="0"
-          :y1="RULER_SIZE"
-          :x2="RULER_SIZE"
-          :y2="RULER_SIZE"
-          stroke="#d0d0d4"
-          stroke-width="1"
-        />
-        <line
-          :x1="RULER_SIZE"
-          y1="0"
-          :x2="RULER_SIZE"
-          :y2="RULER_SIZE"
-          stroke="#d0d0d4"
-          stroke-width="1"
-        />
-        <circle
-          v-if="hasSelection"
-          cx="16"
-          cy="16"
-          r="2.5"
-          class="ruler-corner-dot"
-        />
-      </svg>
-    </div>
+    <!-- 吸附命中红线:跨整个 .canvas-wrap -->
+    <div
+      v-for="x in snapLines.vertical"
+      :key="`v-${x}`"
+      class="snap-line snap-v"
+      :style="{ left: offsetX + mmToPxScaled(x) + 'px' }"
+    />
+    <div
+      v-for="y in snapLines.horizontal"
+      :key="`h-${y}`"
+      class="snap-line snap-h"
+      :style="{ top: offsetY + mmToPxScaled(y) + 'px' }"
+    />
+
+    <!-- 标尺已搬到 PrintDesigner 顶部/左侧浮层(Ruler.vue,Canvas 2D) -->
+
+    <!-- 标尺已搬到 PrintDesigner 顶部/左侧浮层(Ruler.vue,Canvas 2D) -->
 
     <!-- 右键菜单 -->
     <ContextMenu
@@ -282,11 +188,15 @@ import {
   ref,
   watch,
 } from "vue";
-import type { Element, ElementType, Template } from "../core/types";
-import { mmToPx } from "../core/render";
-import { snapValue } from "../utils/snap";
-import ElementRenderer from "./ElementRenderer.vue";
-import ContextMenu from "./ContextMenu.vue";
+import type { Element, ElementType, Template } from "../../core/types";
+import { mmToPx } from "../../core/render";
+import { allElements, findElementGlobal } from "../../core/schema";
+import { snapValue } from "../../utils/snap";
+import ElementRenderer from "../elements/ElementRenderer.vue";
+import ContextMenu from "../floating/ContextMenu.vue";
+
+/** 多页之间的纵向间距(mm)。S2 暂用 0(单页行为不变),S3 接 pageSpacingX/Y。 */
+const PAGE_SPACING_MM = 20;
 
 const props = defineProps<{
   template: Template;
@@ -309,11 +219,22 @@ const props = defineProps<{
   canRedo?: boolean;
   /** 多选 id 列表(单选时也含 1 个) */
   multiSelectedIds?: string[];
+  /** dark mode 配色 */
+  darkMode?: boolean;
+  /** 用户自定义参考线 */
+  guides?: Array<{
+    id: string;
+    axis: "horizontal" | "vertical";
+    position: number;
+    color?: string;
+  }>;
+  /** 当前 hover 的 guide id */
+  highlightedGuideId?: string | null;
 }>();
 
 const emit = defineEmits<{
-  /** palette 拖入或点击 add */
-  add: [type: ElementType];
+  /** palette 拖入或点击 add。拖入时携带鼠标 mm 坐标(松开位置) */
+  add: [type: ElementType, position?: { x: number; y: number }];
   /** 选中元素 id(传 null 取消选中) */
   select: [id: string | null];
   /** 框选结束:批量选中 */
@@ -349,6 +270,10 @@ const emit = defineEmits<{
       | "redo",
     payload?: { id?: string; x?: number; y?: number },
   ];
+  /** guide hover(传 id 或 null) */
+  guideHover: [id: string | null];
+  /** guide 双击删除 */
+  guideRemove: [id: string];
 }>();
 
 // 吸附阈值(单位:mm,4px / 3.78 ≈ 1mm,这里取 1mm 适中)
@@ -441,7 +366,7 @@ watch(marquee, (m) => {
     return;
   }
   const hits = new Set<string>();
-  for (const el of props.template.elements) {
+  for (const el of allElements(props.template)) {
     if (el.locked) continue;
     const r = elScreenRect(el);
     if (!r) continue;
@@ -477,19 +402,58 @@ const canvasStyle = computed(() => ({
   backgroundSize: gridStyle.value.size || undefined,
 }));
 
-/** 标尺 + 画布整体框的尺寸(画布尺寸 + 左右上下 24 标尺留白) */
-const frameStyle = computed(() => {
+/** 单个 page 的尺寸 + 错开位移(pages 间用 transform: translate Y 错开) */
+function pageStyle(pageIndex: number) {
   const w = mmToPxScaled(props.template.paper.width);
   const h = mmToPxScaled(props.template.paper.height);
+  const yOffset = pageIndex * (h + mmToPxScaled(PAGE_SPACING_MM));
+  return {
+    width: w + "px",
+    height: h + "px",
+    transform: `translate(0, ${yOffset}px)`,
+  };
+}
+
+/** 画布在 .canvas-wrap 内的 0mm 偏移(wrap 内居中布局,wrap 高度 = viewport 高度) */
+const wrapRef = ref<HTMLElement | null>(null);
+const wrapSize = ref({ w: 0, h: 0 });
+function measureWrap() {
+  const w = wrapRef.value;
+  if (!w) return;
+  wrapSize.value = { w: w.clientWidth, h: w.clientHeight };
+}
+onMounted(() => {
+  measureWrap();
+  if (wrapRef.value && "ResizeObserver" in window) {
+    new ResizeObserver(measureWrap).observe(wrapRef.value);
+  }
+});
+// wrap 用 flex 布局:水平居中(justify-content: center)+ 垂直顶对齐(align-items: flex-start)
+// offsetX = (wrapW - paperWpx) / 2;offsetY = 0(顶对齐)
+const offsetX = computed(() => {
+  return Math.max(
+    0,
+    (wrapSize.value.w - mmToPxScaled(props.template.paper.width)) / 2,
+  );
+});
+const offsetY = computed(() => 0);
+
+/** 画布整体框(标尺已搬到 PrintDesigner 顶部浮层,这里 frame 只装画布 + 自线) */
+const frameStyle = computed(() => {
+  const w = mmToPxScaled(props.template.paper.width);
+  const pages = props.template.pages.length;
+  const singleH = mmToPxScaled(props.template.paper.height);
+  const spacing = mmToPxScaled(PAGE_SPACING_MM);
+  const h = Math.max(singleH, pages * singleH + (pages - 1) * spacing);
   return {
     width: w + "px",
     height: h + "px",
     widthPx: w,
-    heightPx: h,
+    heightPx: singleH, // cursor chip / 延长线仍按单页纸算
   };
 });
 
-/** 带 pan 偏移的 frame style(用 CSS translate 整体平移画布+标尺) */
+/** 带 pan 偏移的 frame style(用 CSS translate 整体平移画布) */
 const frameStyleWithPan = computed(() => ({
   ...frameStyle.value,
   transform: `translate(${props.panX ?? 0}px, ${props.panY ?? 0}px)`,
@@ -580,7 +544,7 @@ function onWrapMouseDown(e: MouseEvent) {
     }
     // 收集命中的元素 id(屏幕坐标相交,锁定元素除外)
     const hits: string[] = [];
-    for (const el of props.template.elements) {
+    for (const el of allElements(props.template)) {
       if (el.locked) continue;
       const r = elScreenRect(el);
       if (!r) continue;
@@ -606,9 +570,7 @@ function onWrapMouseDown(e: MouseEvent) {
  * 刻度数组:根据 zoom 自适应密度(越大越密)。
  *  mm === 0 是 zero tick(加粗深色),mm % major === 0 是 major(长 + 数字),
  *  其余是 minor(短)。
- *  inCanvas 标记是否落在画布内 0~axisLen,只对画布内的 tick 显示文字。
  */
-const RULER_PAD = 30; // mm(画布外的延伸刻度范围,让 ruler 显示负数坐标)
 
 /** 根据 zoom 选 major / minor 间距
  *  - zoom ≥ 0.6: major 10mm,minor 1mm(每 1mm 一条细线,10mm 带数字;默认 zoom=1)
@@ -636,23 +598,33 @@ function buildTicks(
     zero: boolean;
     inCanvas: boolean;
   }> = [];
-  const start = -RULER_PAD;
-  const end = axisLen + RULER_PAD;
-  // 从 -RULER_PAD 起步到 +axisLen+RULER_PAD,每 minorStep 一个
-  const firstTick = Math.ceil(start / minorStep) * minorStep;
-  for (let mm = firstTick; mm <= end; mm += minorStep) {
+  // ruler 跟画布走,刻度范围 0 ~ axisLen,每 minorStep 一个
+  const firstTick = Math.ceil(0 / minorStep) * minorStep;
+  const endMm = axisLen;
+  for (let mm = firstTick; mm <= endMm; mm += minorStep) {
     const x = mmToPxScaled(mm);
     const zero = mm === 0;
     const major = mm % majorStep === 0;
     const inCanvas = mm >= 0 && mm <= axisLen;
-    // zero 永远画;major 永远画(但只画一次,避免 0 = major 被 zero 替代)
     if (zero || major || mm % minorStep === 0) {
       ticks.push({ mm, x, major, zero, inCanvas });
     }
   }
+  // 末尾强制 tick:保证 ruler 视觉末端有刻度,即使 axisLen 不是 minorStep 倍数
+  const lastInLoop = ticks[ticks.length - 1];
+  if (!lastInLoop || Math.abs(axisLen - lastInLoop.mm) > minorStep / 2) {
+    ticks.push({
+      mm: axisLen,
+      x: mmToPxScaled(axisLen),
+      major: false,
+      zero: false,
+      inCanvas: true,
+    });
+  }
   return ticks;
 }
 
+/** ruler 跟 .canvas-frame 一起走,刻度范围 = 画布 0 ~ paper.w/h */
 const hTicks = computed(() => buildTicks(props.template.paper.width, "x"));
 const vTicks = computed(() => buildTicks(props.template.paper.height, "y"));
 
@@ -662,61 +634,16 @@ const snapLines = reactive<{ vertical: number[]; horizontal: number[] }>({
 });
 
 /** 当前选中元素(handle 层需要) */
-const selectedEl = computed<Element | null>(() =>
-  props.selectedId
-    ? (props.template.elements.find((e) => e.id === props.selectedId) ?? null)
-    : null,
-);
+const selectedEl = computed<Element | null>(() => {
+  if (!props.selectedId) return null;
+  return findElementGlobal(props.template, props.selectedId)?.el ?? null;
+});
 
 /** 拖动中"延长线":从元素/组的 4 边出发画虚线(贯穿画布到 ruler)。
  *  null = 不在拖动。跟 snapLines(吸附命中红线)叠加:吸附时红线盖在虚线上表示"已对齐"。 */
-const selfLines = ref<{ v: number[]; h: number[] } | null>(null)
+const selfLines = ref<{ v: number[]; h: number[] } | null>(null);
 
-// ========== 标尺 overlay 状态(覆盖整个 .main viewport) ==========
-
-/** .main viewport 尺寸 = ruler overlay 尺寸 */
-const overlaySize = ref({ w: 0, h: 0 })
-
-/** canvas 在 .main 内的 px 偏移(viewBox 内画布 0mm 位置) */
-const canvasOffsetX = ref(0)
-const canvasOffsetY = ref(0)
-
-const rulerOverlayRef = ref<HTMLElement | null>(null)
-
-/** 重新计算 overlay 尺寸 + canvas 偏移 */
-function measureRulerOverlay() {
-  const main = document.querySelector(".main") as HTMLElement | null
-  const canvas = document.querySelector(".canvas") as HTMLElement | null
-  if (!main) return
-  overlaySize.value = { w: main.clientWidth, h: main.clientHeight }
-  if (canvas) {
-    const cr = canvas.getBoundingClientRect()
-    const mr = main.getBoundingClientRect()
-    canvasOffsetX.value = cr.left - mr.left
-    canvasOffsetY.value = cr.top - mr.top
-  }
-}
-
-onMounted(() => {
-  // ruler overlay 测量
-  measureRulerOverlay()
-  // 监听 .main resize(window 缩放 / 浏览器拖动边框)
-  const main = document.querySelector(".main")
-  if (main && "ResizeObserver" in window) {
-    const ro = new ResizeObserver(() => measureRulerOverlay())
-    ro.observe(main)
-  }
-  window.addEventListener("resize", measureRulerOverlay)
-})
-onBeforeUnmount(() => {
-  window.removeEventListener("resize", measureRulerOverlay)
-})
-
-// paper / zoom 改变时 canvas 尺寸变,重测偏移
-watch(
-  () => [props.template.paper.width, props.template.paper.height, props.zoom],
-  () => nextTick(measureRulerOverlay),
-);
+// ========== 标尺:已搬到 .canvas-frame 内(跟画布走),不再用 viewport overlay ==========
 
 // ========== 标尺:鼠标游标 + 选中元素位置标记 ==========
 
@@ -748,28 +675,37 @@ const selfFillStyle = computed(() => {
   const y1 = Math.min(...sl.h);
   const y2 = Math.max(...sl.h);
   return {
-    left: RULER_SIZE + mmToPxScaled(x1) + "px",
-    top: RULER_SIZE + mmToPxScaled(y1) + "px",
+    left: offsetX.value + mmToPxScaled(x1) + "px",
+    top: offsetY.value + mmToPxScaled(y1) + "px",
     width: mmToPxScaled(x2 - x1) + "px",
     height: mmToPxScaled(y2 - y1) + "px",
   };
 });
 
-/** 鼠标游标 chip 位置(水平:在鼠标 x 处居中,但贴右边缘时不溢出) */
-function cursorChipX(axis: "h" | "v"): number {
+/** 鼠标游标 chip 位置(ruler 跟 canvas 走,viewBox 0 = canvas 0mm,直接用 mousePos.xPx) */
+function cursorChipX(): number {
   if (!mousePos.value) return 0;
-  const x = mousePos.value.xPx + RULER_SIZE + 4; // +RULER_SIZE 跳过 ruler 偏移
+  const x = mousePos.value.xPx + 4;
   // 距右边界 < 40 时,改为显示在鼠标左侧
   const totalW = frameStyle.value.widthPx;
-  if (x + 40 > totalW) return Math.max(0, mousePos.value.xPx + RULER_SIZE - 40);
+  if (x + 40 > totalW) return Math.max(0, mousePos.value.xPx - 40);
   return x;
 }
-function cursorChipY(axis: "h" | "v"): number {
+function cursorChipY(): number {
   if (!mousePos.value) return 0;
-  const y = mousePos.value.yPx + RULER_SIZE + 4;
+  const y = mousePos.value.yPx + 4;
   const totalH = frameStyle.value.heightPx;
-  if (y + 18 > totalH) return Math.max(0, mousePos.value.yPx + RULER_SIZE - 18);
+  if (y + 18 > totalH) return Math.max(0, mousePos.value.yPx - 18);
   return y;
+}
+
+/** guide mm 位置 → wrap 内 px(水平线) */
+function guideYStyle(positionMm: number): string {
+  return offsetY.value + mmToPxScaled(positionMm) + "px";
+}
+/** guide mm 位置 → wrap 内 px(垂直线) */
+function guideXStyle(positionMm: number): string {
+  return offsetX.value + mmToPxScaled(positionMm) + "px";
 }
 
 function elBox(el: Element) {
@@ -785,7 +721,30 @@ function elBox(el: Element) {
 
 function onDrop(e: DragEvent) {
   const type = e.dataTransfer?.getData("text/plain") as ElementType;
-  if (type) emit("add", type);
+  if (!type) return;
+  // 拖入时按松开位置放置(转 mm,跟 clientToCanvasMm 算法一致)
+  const wrap = e.currentTarget as HTMLElement;
+  const frame = wrap.querySelector(".canvas-frame") as HTMLElement | null;
+  if (!frame) {
+    emit("add", type);
+    return;
+  }
+  const fr = frame.getBoundingClientRect();
+  const localX = e.clientX - fr.left;
+  const localY = e.clientY - fr.top;
+  if (localX < 0 || localY < 0) {
+    emit("add", type);
+    return;
+  }
+  const z = zoomValue.value;
+  const x = localX / (mmToPx(1) * z);
+  const y = localY / (mmToPx(1) * z);
+  emit("add", type, { x, y });
+}
+
+function onWrapDragOver(e: DragEvent) {
+  // 仅占位,模板上 .prevent 已让 drop 生效
+  void e;
 }
 
 /** 鼠标在画布上:更新标尺游标位置(同时给水平/垂直标尺) */
@@ -815,7 +774,7 @@ function collectCandidates(axis: "x" | "y", excludeId: string): number[] {
   const tpl = props.template;
   const list: number[] =
     axis === "x" ? [0, tpl.paper.width] : [0, tpl.paper.height];
-  for (const e of tpl.elements) {
+  for (const e of allElements(tpl)) {
     if (e.id === excludeId) continue;
     if (axis === "x") {
       list.push(e.x, e.x + e.w);
@@ -827,7 +786,7 @@ function collectCandidates(axis: "x" | "y", excludeId: string): number[] {
 }
 
 function onElementMouseDown(e: MouseEvent, id: string) {
-  const el = props.template.elements.find((x) => x.id === id);
+  const el = findElementGlobal(props.template, id)?.el;
   if (!el) return;
   // Shift+点击:在多选里 toggle,不发 selectMany(只是 toggle 1 个)
   if (e.shiftKey) {
@@ -852,7 +811,7 @@ function onElementMouseDown(e: MouseEvent, id: string) {
 
 /** 单元素拖动(原 onElementMouseDown 主体) */
 function startElementDrag(e: MouseEvent, id: string) {
-  const el = props.template.elements.find((x) => x.id === id);
+  const el = findElementGlobal(props.template, id)?.el;
   if (!el) return;
   const startX = e.clientX;
   const startY = e.clientY;
@@ -921,7 +880,7 @@ function startGroupDrag(e: MouseEvent, primaryId: string) {
   // 收集每个元素的起始位置
   const origs = ids
     .map((id) => {
-      const el = props.template.elements.find((x) => x.id === id);
+      const el = findElementGlobal(props.template, id)?.el;
       return el ? { id, x: el.x, y: el.y, locked: !!el.locked } : null;
     })
     .filter(
@@ -937,16 +896,15 @@ function startGroupDrag(e: MouseEvent, primaryId: string) {
   // 组内元素互不吸附(组已经是一个整体)
   const groupX = origs.reduce((acc, o) => Math.min(acc, o.x), Infinity);
   const groupY = origs.reduce((acc, o) => Math.min(acc, o.y), Infinity);
+  const primaryEl = draggables[0]
+    ? findElementGlobal(props.template, draggables[0].id)?.el
+    : null;
   const groupRight =
     origs.reduce((acc, o) => Math.max(acc, o.x), -Infinity) +
-    (draggables[0]
-      ? (props.template.elements.find((e) => e.id === draggables[0].id)?.w ?? 0)
-      : 0);
+    (primaryEl?.w ?? 0);
   const groupBottom =
     origs.reduce((acc, o) => Math.max(acc, o.y), -Infinity) +
-    (draggables[0]
-      ? (props.template.elements.find((e) => e.id === draggables[0].id)?.h ?? 0)
-      : 0);
+    (primaryEl?.h ?? 0);
   // 用组原始 w/h(拖动过程中变化),这里 groupRight - groupX = 组原始宽
   const groupW = groupRight - groupX;
   const groupH = groupBottom - groupY;
@@ -1025,7 +983,7 @@ function collectCandidatesForGroup(
   const tpl = props.template;
   const list: number[] =
     axis === "x" ? [0, tpl.paper.width] : [0, tpl.paper.height];
-  for (const e of tpl.elements) {
+  for (const e of allElements(tpl)) {
     if (excludeIds.has(e.id)) continue;
     if (axis === "x") list.push(e.x, e.x + e.w);
     else list.push(e.y, e.y + e.h);
@@ -1119,10 +1077,9 @@ function rotateDegStyle(el: Element) {
  */
 function onResizeStart(e: MouseEvent, id: string, dir: ResizeDir) {
   e.preventDefault();
-  const tpl = props.template;
-  const idx = tpl.elements.findIndex((x) => x.id === id);
-  if (idx < 0) return;
-  const el = tpl.elements[idx];
+  const found = findElementGlobal(props.template, id);
+  if (!found) return;
+  const el = found.el;
   if (el.locked) return; // 锁定后不允许 resize
   const startMouseX = e.clientX;
   const startMouseY = e.clientY;
@@ -1184,10 +1141,9 @@ function onResizeStart(e: MouseEvent, id: string, dir: ResizeDir) {
  */
 function onRotateStart(e: MouseEvent, id: string) {
   e.preventDefault();
-  const tpl = props.template;
-  const idx = tpl.elements.findIndex((x) => x.id === id);
-  if (idx < 0) return;
-  const el = tpl.elements[idx];
+  const found = findElementGlobal(props.template, id);
+  if (!found) return;
+  const el = found.el;
   if (el.locked) return; // 锁定后不允许旋转
   // canvas-frame 在 .canvas-wrap 内,wrap padding 24 + canvas top:RULER_SIZE left:RULER_SIZE
   const wrap = (e.currentTarget as HTMLElement).closest(
@@ -1234,7 +1190,7 @@ const ctxMenu = reactive<{
 const computedMenuEl = computed<Element | null>(() => {
   if (!ctxMenu.open || !ctxMenu.onElement) return null;
   const id = props.selectedId;
-  return id ? (props.template.elements.find((x) => x.id === id) ?? null) : null;
+  return id ? (findElementGlobal(props.template, id)?.el ?? null) : null;
 });
 
 /** 右键点击元素时记录鼠标屏幕坐标(用于 paste 定位:把元素粘到鼠标处) */
@@ -1277,18 +1233,21 @@ function clientToCanvasMm(
   return { x: localX / (mmToPx(1) * z), y: localY / (mmToPx(1) * z) };
 }
 
-/** 计算置顶/置底/上移/下移按钮是否可用(已在最顶/底则禁) */
+/** 计算置顶/置底/上移/下移按钮是否可用(已在最顶/底则禁,S2:在元素所在 page 内判断) */
 const canBringToFront = computed(() => {
   const e = computedMenuEl.value;
   if (!e) return false;
-  return (
-    props.template.elements[props.template.elements.length - 1]?.id !== e.id
-  );
+  const found = findElementGlobal(props.template, e.id);
+  if (!found) return false;
+  const page = props.template.pages[found.pageIndex];
+  return page.elements[page.elements.length - 1]?.id !== e.id;
 });
 const canSendToBack = computed(() => {
   const e = computedMenuEl.value;
   if (!e) return false;
-  return props.template.elements[0]?.id !== e.id;
+  const found = findElementGlobal(props.template, e.id);
+  if (!found) return false;
+  return props.template.pages[found.pageIndex].elements[0]?.id !== e.id;
 });
 const canMoveUp = canBringToFront;
 const canMoveDown = canSendToBack;
@@ -1365,7 +1324,7 @@ function onDocMouseDown(e: MouseEvent) {
   if (target.closest(".ctx-menu")) return;
   // 命中框选矩形 → 不动(矩形自身 pointer-events: none,但兜底)
   if (target.closest(".marquee-rect")) return;
-  // 命中画布外部(如 TopBar / FormatToolbar / PropertyPanel)→ 不动
+  // 命中画布外部(如 TopBar / HeaderToolbar / PropertyPanel)→ 不动
   if (!target.closest(".canvas-wrap")) return;
   // 命中画布空白(canvas / ruler / frame 等都算空白)→ 取消选中
   if (
@@ -1383,9 +1342,9 @@ onBeforeUnmount(() =>
 
 /** template 变化时实时同步 multi 集合(template 引用本身不变,但 elements 数组会换) */
 watch(
-  () => props.template.elements,
+  () => allElements(props.template).map((e) => e.id),
   () => {
-    const ids = new Set(props.template.elements.map((e) => e.id));
+    const ids = new Set(allElements(props.template).map((e) => e.id));
     if (props.multiSelectedIds) {
       const valid = props.multiSelectedIds.filter((id) => ids.has(id));
       if (valid.length !== props.multiSelectedIds.length) {
@@ -1400,13 +1359,14 @@ watch(
 .canvas-wrap {
   flex: 1;
   background: #ececec;
-  padding: 32px;
-  overflow: visible; /* 滚动上移到 .main */
+  overflow-x: auto; /* 画布横向超出时,wrap 内部滚 */
+  overflow-y: visible; /* 纵滚交给 .main */
   display: flex;
-  align-items: center; /* canvas 居中 */
+  align-items: flex-start; /* canvas 顶部 0 跟 wrap 顶部 0 对齐,滚到最顶部时 canvas 0mm = ruler 0mm */
   justify-content: center;
-  min-width: max-content;
-  min-height: max-content;
+  min-width: 0; /* 配合 .main overflow-x: hidden,wrap 不要按 max-content 撑开超出 .main */
+  min-height: 0;
+  position: relative; /* 自线 / 吸附线 absolute 相对 wrap 定位 */
 }
 .canvas-wrap.pan-mode {
   cursor: grab;
@@ -1418,6 +1378,13 @@ watch(
   position: relative;
   flex-shrink: 0;
 }
+/* 多页:每个 page 独立 absolute,内部 .canvas 相对 page 0,0 */
+.print-page {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* width / height / transform 由 :style 注入 */
+}
 .ruler {
   position: absolute;
   background: linear-gradient(to bottom, #fbfbfd, #f3f3f6);
@@ -1426,17 +1393,7 @@ watch(
   z-index: 5; /* 在 snap-line 之上,让辅助线延伸到 ruler 位置时 ruler 仍然可见 */
   user-select: none;
 }
-/* 标尺 overlay 覆盖整个 .main viewport,内部 3 个 ruler absolute 相对 overlay */
-.ruler-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 10;
-  display: block; /* 让子 svg 绝对定位 */
-}
+/* 标尺已搬到 .canvas-frame 内(跟画布走),不再用 viewport 覆盖式 .ruler-overlay */
 .ruler-h {
   position: absolute;
   top: 0;
@@ -1498,6 +1455,32 @@ watch(
   stroke: rgba(252, 252, 253, 0.9);
 }
 
+/* 用户自定义参考线(guide),跨整个 wrap,延伸进 ruler 区域;双击删除 */
+.guide-line {
+  position: absolute;
+  pointer-events: auto;
+  z-index: 6;
+  cursor: pointer;
+}
+.guide-h {
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #1677ff;
+  transform: translateY(-0.5px);
+}
+.guide-v {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: #1677ff;
+  transform: translateX(-0.5px);
+}
+.guide-line.highlighted {
+  background: #4096ff;
+  box-shadow: 0 0 0 1px rgba(64, 150, 255, 0.3);
+}
+
 /* 拖动中延长线围成的范围浅蓝半透明填充(z-index 1,被 self-line 虚线盖住) */
 .self-fill {
   position: absolute;
@@ -1525,8 +1508,8 @@ watch(
 }
 .canvas {
   position: absolute;
-  top: 32px;
-  left: 32px;
+  top: 0;
+  left: 0;
   background: white;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
@@ -1593,11 +1576,12 @@ watch(
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
-/* 拖动中的延长线(从元素/组 4 边出发,贯穿画布到 ruler):浅蓝虚线 */
+/* 拖动中的延长线(从元素/组 4 边出发,跨整个 .main viewport,延伸到 ruler 区域):浅蓝虚线
+   提到 .ruler-overlay 内是为了在 ruler 区域内也能看到浅蓝短截,坐标公式用 canvasOffsetX/Y */
 .self-line {
   position: absolute;
   pointer-events: none;
-  z-index: 2;
+  z-index: 6; /* > ruler(5),在 ruler 区域自线可见 */
   transition: opacity 80ms;
 }
 .self-v {
@@ -1617,12 +1601,12 @@ watch(
   transform: translateY(-0.5px);
 }
 
-/* 吸附辅助线:放在 .canvas-frame 内,top:0 / bottom:0 跨越 ruler 区域(被 ruler 盖住) */
+/* 吸附辅助线:跨整个 .main viewport,在 ruler 区域内也能看到红色短截(表示对齐) */
 .snap-line {
   position: absolute;
   background: #ff4d4f;
   pointer-events: none;
-  z-index: 4;
+  z-index: 7; /* > ruler(5) 和 self-line(6) */
   /* 拖动时显示/隐藏,平滑过渡 */
   transition: opacity 100ms;
 }
@@ -1640,7 +1624,7 @@ watch(
 }
 
 /* ========== Resize / Rotate handles ==========
-   角 handle(corner):18x18 框 + 内部 L 形(10x3 横 + 3x10 竖)圆角条,参考 Vue-Print-Designer
+   角 handle(corner):18x18 框 + 内部 L 形(10x3 横 + 3x10 竖)圆角条
    边 handle(edge):12x3 短条,方向决定横/竖
    旋转 handle:圆点 + 连线
 */

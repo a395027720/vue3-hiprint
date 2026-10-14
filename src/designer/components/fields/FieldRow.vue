@@ -50,8 +50,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Element } from '../core/types'
-import type { FieldDef } from '../core/fieldSchema'
+import type { Element } from '../../core/types'
+import type { FieldDef } from '../../core/fieldSchema'
 
 const props = defineProps<{
   field: FieldDef

@@ -63,7 +63,7 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import type { Element } from '../core/types'
+import type { Element } from '../../core/types'
 
 const props = defineProps<{
   open: boolean

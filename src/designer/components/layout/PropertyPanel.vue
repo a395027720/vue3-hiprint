@@ -142,15 +142,15 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import type { Element, TableColumn, TableElement } from '../core/types'
+import type { Element, TableColumn, TableElement } from '../../core/types'
 import {
   getSections,
   groupByCategory,
   normalizePatchValue,
   type Category,
   type FieldDef,
-} from '../core/fieldSchema'
-import FieldRow from './FieldRow.vue'
+} from '../../core/fieldSchema'
+import FieldRow from '../fields/FieldRow.vue'
 
 const props = defineProps<{
   element: Element | null
@@ -233,8 +233,15 @@ function addColumn() {
 
 <style scoped>
 .prop-col {
+  position: absolute;
+  right: 0;
+  top: 32px; /* 给顶部 ruler(32px)让位,避免被盖 */
+  height: calc(100% - 32px);
+  z-index: 50;
   display: flex;
-  flex: 0 0 auto;
+  background: #fafafa;
+  border-left: 1px solid #f0f0f0;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.04);
 }
 .prop-side {
   display: flex;
@@ -249,8 +256,8 @@ function addColumn() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   background: transparent;
   border: 1px solid transparent;
@@ -270,7 +277,8 @@ function addColumn() {
   cursor: not-allowed;
 }
 .prop-panel {
-  width: 280px;
+  width: 300px;
+  height: 100%;
   background: #fafafa;
   padding: 16px;
   overflow: auto;
@@ -293,15 +301,20 @@ function addColumn() {
   font-size: 13px;
 }
 .section-title {
-  font-weight: 600;
-  margin: 8px 0 6px;
+  font-weight: 500;
+  margin: 10px 0 8px;
   color: #555;
   font-size: 12px;
+}
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .fields.cols-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0 8px;
+  gap: 8px;
 }
 .col-row {
   display: grid;

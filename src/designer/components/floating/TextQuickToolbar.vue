@@ -137,7 +137,7 @@
 
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
-import type { TextElement } from '../core/types'
+import type { TextElement } from '../../core/types'
 
 interface FontOption { value: string; label: string }
 interface FontGroup { label: string; options: FontOption[] }
