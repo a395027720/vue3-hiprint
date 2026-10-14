@@ -429,14 +429,15 @@ onMounted(() => {
   }
 });
 // wrap 用 flex 布局:水平居中(justify-content: center)+ 垂直顶对齐(align-items: flex-start)
-// offsetX = (wrapW - paperWpx) / 2;offsetY = 0(顶对齐)
+// offsetX = (wrapW - paperWpx) / 2;offsetY = WRAP_PAD_TOP(顶对齐,但 wrap 留了 padding-top 跟 ruler 隔开)
+const WRAP_PAD_TOP_PX = 16
 const offsetX = computed(() => {
   return Math.max(
     0,
     (wrapSize.value.w - mmToPxScaled(props.template.paper.width)) / 2,
   );
 });
-const offsetY = computed(() => 0);
+const offsetY = computed(() => WRAP_PAD_TOP_PX);
 
 /** 画布整体框(标尺已搬到 PrintDesigner 顶部浮层,这里 frame 只装画布 + 自线) */
 const frameStyle = computed(() => {
@@ -1375,6 +1376,7 @@ watch(
   min-width: 0; /* 配合 .main overflow-x: hidden,wrap 不要按 max-content 撑开超出 .main */
   min-height: 0;
   position: relative; /* 自线 / 吸附线 absolute 相对 wrap 定位 */
+  padding-top: 16px; /* 画布顶部跟 ruler 区域留点呼吸 */
 }
 .canvas-wrap.pan-mode {
   cursor: grab;
