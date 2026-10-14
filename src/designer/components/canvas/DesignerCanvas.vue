@@ -468,7 +468,9 @@ function onWrapMouseDown(e: MouseEvent) {
   const target = e.target as HTMLElement | null;
   if (!target) return;
   if (e.shiftKey) return;
-  // 画布任意 mousedown:右键菜单开着就先关掉
+  // 落在 ctx 菜单内:交给菜单自己处理(它的 onDocMouseDown 监听会兜底关)
+  if (target.closest(".ctx-menu")) return;
+  // 画布任意 mousedown:右键菜单开着就先关掉(避免 stopPropagation 阻断 document 监听)
   if (ctxMenu.open) {
     ctxMenu.open = false;
     ctxMenu.onElement = false;
@@ -496,9 +498,8 @@ function onWrapMouseDown(e: MouseEvent) {
     document.addEventListener("mouseup", onUp);
     return;
   }
-  // 元素 / handle / 菜单 / ruler 上不启动框选
+  // 元素 / handle 上不启动框选
   if (target.closest(".canvas-element")) return;
-  if (target.closest(".ctx-menu")) return;
   // 框选必须落在画布纸上(.canvas),ruler / frame 留白处不启动(避免误框)
   if (!target.closest(".canvas") && !target.classList.contains("canvas"))
     return;
