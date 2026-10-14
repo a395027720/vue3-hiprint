@@ -6,137 +6,6 @@
     @contextmenu.prevent="onWrapContextMenu"
   >
     <div class="canvas-frame" :style="frameStyleWithPan">
-      <!-- 水平标尺(只覆盖 canvas 宽度,跟 canvas 同宽,viewBox 1:1 对齐画布 1px) -->
-      <svg
-        class="ruler ruler-h"
-        :width="frameStyle.widthPx"
-        :height="RULER_SIZE"
-        :viewBox="`0 0 ${frameStyle.widthPx} ${RULER_SIZE}`"
-      >
-        <!-- 画布内填底(浅,让画布对应区域标尺更"实") -->
-        <rect
-          x="0"
-          y="0"
-          :width="frameStyle.widthPx"
-          :height="RULER_SIZE"
-          fill="#fcfcfd"
-        />
-        <!-- 刻度线 -->
-        <line
-          v-for="t in hTicks"
-          :key="`h-${t.mm}`"
-          :x1="t.x"
-          :x2="t.x"
-          :y1="t.zero ? 0 : t.major ? 8 : 14"
-          :y2="RULER_SIZE"
-          :class="[
-            'ruler-tick',
-            { 'ruler-tick-major': t.major, 'ruler-tick-zero': t.zero },
-          ]"
-        />
-        <!-- 文字(画布内 0~width 才显示) -->
-        <text
-          v-for="t in hTicks"
-          :key="`ht-${t.mm}`"
-          v-show="t.major && t.inCanvas"
-          :x="t.x + (t.mm === 0 ? 3 : t.mm > 0 ? 3 : -3)"
-          y="15"
-          :class="['ruler-text', { 'ruler-text-zero': t.zero }]"
-          text-anchor="start"
-        >
-          {{ t.mm }}
-        </text>
-        <!-- 鼠标游标线 + 坐标 chip -->
-        <g v-if="mousePos && mousePos.inCanvas" class="ruler-cursor">
-          <line :x1="mousePos.xPx" :x2="mousePos.xPx" y1="0" :y2="RULER_SIZE" />
-          <rect :x="cursorChipX('h')" y="9" width="40" height="14" rx="2" />
-          <text :x="cursorChipX('h') + 20" y="19" text-anchor="middle">
-            {{ formatMm(mousePos.xMm) }}
-          </text>
-        </g>
-      </svg>
-
-      <!-- 垂直标尺(只覆盖 canvas 高度) -->
-      <svg
-        class="ruler ruler-v"
-        :width="RULER_SIZE"
-        :height="frameStyle.heightPx"
-        :viewBox="`0 0 ${RULER_SIZE} ${frameStyle.heightPx}`"
-      >
-        <rect
-          x="0"
-          y="0"
-          :width="RULER_SIZE"
-          :height="frameStyle.heightPx"
-          fill="#fcfcfd"
-        />
-        <line
-          v-for="t in vTicks"
-          :key="`v-${t.mm}`"
-          :x1="t.zero ? 0 : t.major ? 8 : 14"
-          :x2="RULER_SIZE"
-          :y1="t.x"
-          :y2="t.x"
-          :class="[
-            'ruler-tick',
-            { 'ruler-tick-major': t.major, 'ruler-tick-zero': t.zero },
-          ]"
-        />
-        <text
-          v-for="t in vTicks"
-          :key="`vt-${t.mm}`"
-          v-show="t.major && t.inCanvas"
-          x="2"
-          :y="t.x + (t.mm === 0 ? 16 : t.mm > 0 ? 15 : 8)"
-          :class="['ruler-text', { 'ruler-text-zero': t.zero }]"
-          text-anchor="start"
-        >
-          {{ t.mm }}
-        </text>
-        <!-- 鼠标游标线 + 坐标 chip -->
-        <g v-if="mousePos && mousePos.inCanvas" class="ruler-cursor">
-          <line x1="0" :y1="mousePos.yPx" :x2="RULER_SIZE" :y2="mousePos.yPx" />
-          <rect x="3" :y="cursorChipY('v')" width="40" height="14" rx="2" />
-          <text x="19" :y="cursorChipY('v') + 10" text-anchor="middle">
-            {{ formatMm(mousePos.yMm) }}
-          </text>
-        </g>
-      </svg>
-
-      <!-- 左上角(0,0 标尺交点) -->
-      <svg
-        class="ruler ruler-corner"
-        :width="RULER_SIZE"
-        :height="RULER_SIZE"
-        :viewBox="`0 0 ${RULER_SIZE} ${RULER_SIZE}`"
-      >
-        <rect x="0" y="0" :width="RULER_SIZE" :height="RULER_SIZE" fill="#f5f5f7" />
-        <line
-          x1="0"
-          :y1="RULER_SIZE"
-          :x2="RULER_SIZE"
-          :y2="RULER_SIZE"
-          stroke="#d0d0d4"
-          stroke-width="1"
-        />
-        <line
-          :x1="RULER_SIZE"
-          y1="0"
-          :x2="RULER_SIZE"
-          :y2="RULER_SIZE"
-          stroke="#d0d0d4"
-          stroke-width="1"
-        />
-        <!-- 选中时,原点高亮 -->
-        <circle
-          v-if="hasSelection"
-          cx="16"
-          cy="16"
-          r="2.5"
-          class="ruler-corner-dot"
-        />
-      </svg>
-
       <div
         class="canvas"
         :style="canvasStyle"
@@ -246,6 +115,134 @@
       />
     </div>
 
+    <!-- 标尺 overlay:覆盖整个 .main viewport(画布外也画刻度),
+         位置用 absolute 相对 .main(viewBox 0 = .main 左 0,画布 0mm 位置由 canvasLeftOffset 算) -->
+    <div class="ruler-overlay" ref="rulerOverlayRef">
+      <svg
+        class="ruler ruler-h"
+        :width="overlaySize.w"
+        :height="RULER_SIZE"
+        :viewBox="`0 0 ${overlaySize.w} ${RULER_SIZE}`"
+      >
+        <rect
+          x="0"
+          y="0"
+          :width="overlaySize.w"
+          :height="RULER_SIZE"
+          fill="url(#ruler-h-grad)"
+        />
+        <defs>
+          <linearGradient id="ruler-h-grad" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stop-color="#fbfbfd" />
+            <stop offset="1" stop-color="#f3f3f6" />
+          </linearGradient>
+        </defs>
+        <!-- 刻度线(viewBox x = canvasLeftOffset + mmToPxScaled(mm)) -->
+        <line
+          v-for="t in hTicks"
+          :key="`h-${t.mm}`"
+          :x1="t.x + canvasOffsetX"
+          :x2="t.x + canvasOffsetX"
+          :y1="t.zero ? 0 : t.major ? 8 : 14"
+          :y2="RULER_SIZE"
+          :class="[
+            'ruler-tick',
+            { 'ruler-tick-major': t.major, 'ruler-tick-zero': t.zero },
+          ]"
+        />
+        <text
+          v-for="t in hTicks"
+          :key="`ht-${t.mm}`"
+          v-show="t.major && t.inCanvas"
+          :x="t.x + canvasOffsetX + (t.mm === 0 ? 3 : t.mm > 0 ? 3 : -3)"
+          y="15"
+          :class="['ruler-text', { 'ruler-text-zero': t.zero }]"
+          text-anchor="start"
+        >
+          {{ t.mm }}
+        </text>
+        <!-- 鼠标游标线 + 坐标 chip -->
+        <g v-if="mousePos && mousePos.inCanvas" class="ruler-cursor">
+          <line :x1="mousePos.xPx + canvasOffsetX" :x2="mousePos.xPx + canvasOffsetX" y1="0" :y2="RULER_SIZE" />
+          <rect :x="cursorChipX('h')" y="9" width="40" height="14" rx="2" />
+          <text :x="cursorChipX('h') + 20" y="19" text-anchor="middle">
+            {{ formatMm(mousePos.xMm) }}
+          </text>
+        </g>
+      </svg>
+
+      <svg
+        class="ruler ruler-v"
+        :width="RULER_SIZE"
+        :height="overlaySize.h"
+        :viewBox="`0 0 ${RULER_SIZE} ${overlaySize.h}`"
+      >
+        <rect x="0" y="0" :width="RULER_SIZE" :height="overlaySize.h" fill="#fcfcfd" />
+        <line
+          v-for="t in vTicks"
+          :key="`v-${t.mm}`"
+          :x1="t.zero ? 0 : t.major ? 8 : 14"
+          :x2="RULER_SIZE"
+          :y1="t.x + canvasOffsetY"
+          :y2="t.x + canvasOffsetY"
+          :class="[
+            'ruler-tick',
+            { 'ruler-tick-major': t.major, 'ruler-tick-zero': t.zero },
+          ]"
+        />
+        <text
+          v-for="t in vTicks"
+          :key="`vt-${t.mm}`"
+          v-show="t.major && t.inCanvas"
+          x="2"
+          :y="t.x + canvasOffsetY + (t.mm === 0 ? 16 : t.mm > 0 ? 15 : 8)"
+          :class="['ruler-text', { 'ruler-text-zero': t.zero }]"
+          text-anchor="start"
+        >
+          {{ t.mm }}
+        </text>
+        <g v-if="mousePos && mousePos.inCanvas" class="ruler-cursor">
+          <line x1="0" :y1="mousePos.yPx + canvasOffsetY" :x2="RULER_SIZE" :y2="mousePos.yPx + canvasOffsetY" />
+          <rect x="3" :y="cursorChipY('v')" width="40" height="14" rx="2" />
+          <text x="19" :y="cursorChipY('v') + 10" text-anchor="middle">
+            {{ formatMm(mousePos.yMm) }}
+          </text>
+        </g>
+      </svg>
+
+      <svg
+        class="ruler ruler-corner"
+        :width="RULER_SIZE"
+        :height="RULER_SIZE"
+        :viewBox="`0 0 ${RULER_SIZE} ${RULER_SIZE}`"
+      >
+        <rect x="0" y="0" :width="RULER_SIZE" :height="RULER_SIZE" fill="#ececef" />
+        <line
+          x1="0"
+          :y1="RULER_SIZE"
+          :x2="RULER_SIZE"
+          :y2="RULER_SIZE"
+          stroke="#d0d0d4"
+          stroke-width="1"
+        />
+        <line
+          :x1="RULER_SIZE"
+          y1="0"
+          :x2="RULER_SIZE"
+          :y2="RULER_SIZE"
+          stroke="#d0d0d4"
+          stroke-width="1"
+        />
+        <circle
+          v-if="hasSelection"
+          cx="16"
+          cy="16"
+          r="2.5"
+          class="ruler-corner-dot"
+        />
+      </svg>
+    </div>
+
     <!-- 右键菜单 -->
     <ContextMenu
       :open="ctxMenu.open"
@@ -278,6 +275,7 @@
 <script setup lang="ts">
 import {
   computed,
+  nextTick,
   onBeforeUnmount,
   onMounted,
   reactive,
@@ -672,7 +670,53 @@ const selectedEl = computed<Element | null>(() =>
 
 /** 拖动中"延长线":从元素/组的 4 边出发画虚线(贯穿画布到 ruler)。
  *  null = 不在拖动。跟 snapLines(吸附命中红线)叠加:吸附时红线盖在虚线上表示"已对齐"。 */
-const selfLines = ref<{ v: number[]; h: number[] } | null>(null);
+const selfLines = ref<{ v: number[]; h: number[] } | null>(null)
+
+// ========== 标尺 overlay 状态(覆盖整个 .main viewport) ==========
+
+/** .main viewport 尺寸 = ruler overlay 尺寸 */
+const overlaySize = ref({ w: 0, h: 0 })
+
+/** canvas 在 .main 内的 px 偏移(viewBox 内画布 0mm 位置) */
+const canvasOffsetX = ref(0)
+const canvasOffsetY = ref(0)
+
+const rulerOverlayRef = ref<HTMLElement | null>(null)
+
+/** 重新计算 overlay 尺寸 + canvas 偏移 */
+function measureRulerOverlay() {
+  const main = document.querySelector(".main") as HTMLElement | null
+  const canvas = document.querySelector(".canvas") as HTMLElement | null
+  if (!main) return
+  overlaySize.value = { w: main.clientWidth, h: main.clientHeight }
+  if (canvas) {
+    const cr = canvas.getBoundingClientRect()
+    const mr = main.getBoundingClientRect()
+    canvasOffsetX.value = cr.left - mr.left
+    canvasOffsetY.value = cr.top - mr.top
+  }
+}
+
+onMounted(() => {
+  // ruler overlay 测量
+  measureRulerOverlay()
+  // 监听 .main resize(window 缩放 / 浏览器拖动边框)
+  const main = document.querySelector(".main")
+  if (main && "ResizeObserver" in window) {
+    const ro = new ResizeObserver(() => measureRulerOverlay())
+    ro.observe(main)
+  }
+  window.addEventListener("resize", measureRulerOverlay)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", measureRulerOverlay)
+})
+
+// paper / zoom 改变时 canvas 尺寸变,重测偏移
+watch(
+  () => [props.template.paper.width, props.template.paper.height, props.zoom],
+  () => nextTick(measureRulerOverlay),
+);
 
 // ========== 标尺:鼠标游标 + 选中元素位置标记 ==========
 
@@ -1356,11 +1400,13 @@ watch(
 .canvas-wrap {
   flex: 1;
   background: #ececec;
-  padding: 24px;
-  overflow: auto;
+  padding: 32px;
+  overflow: visible; /* 滚动上移到 .main */
   display: flex;
-  align-items: flex-start;
+  align-items: center; /* canvas 居中 */
   justify-content: center;
+  min-width: max-content;
+  min-height: max-content;
 }
 .canvas-wrap.pan-mode {
   cursor: grab;
@@ -1380,34 +1426,38 @@ watch(
   z-index: 5; /* 在 snap-line 之上,让辅助线延伸到 ruler 位置时 ruler 仍然可见 */
   user-select: none;
 }
-.ruler-h {
+/* 标尺 overlay 覆盖整个 .main viewport,内部 3 个 ruler absolute 相对 overlay */
+.ruler-overlay {
+  position: absolute;
   top: 0;
-  left: 32px;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  display: block; /* 让子 svg 绝对定位 */
+}
+.ruler-h {
+  position: absolute;
+  top: 0;
+  left: 0;
   height: 32px;
   border-bottom: 1px solid #d8d8de;
-  border-left: 1px solid #d8d8de;
   box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.04);
-  position: sticky;
-  top: 0;
-  z-index: 10; /* 工具条底部,画布滚动时固定在 wrap viewport 顶 */
 }
 .ruler-v {
-  top: 32px;
+  position: absolute;
+  top: 0;
   left: 0;
   width: 32px;
   border-right: 1px solid #d8d8de;
-  border-top: 1px solid #d8d8de;
   box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.04);
-  position: sticky;
-  left: 0;
-  z-index: 10; /* 画布滚动时固定在 wrap viewport 左 */
 }
 .ruler-corner {
-  position: sticky;
+  position: absolute;
   top: 0;
   left: 0;
-  z-index: 11; /* 双向粘:固定在 viewport 左上角 */
-  background: #ececef;
+  z-index: 11;
   border-right: 1px solid #d8d8de;
   border-bottom: 1px solid #d8d8de;
 }

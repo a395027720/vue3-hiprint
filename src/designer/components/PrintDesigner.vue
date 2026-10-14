@@ -515,7 +515,8 @@ defineExpose({
   flex: 1;
   display: flex;
   min-height: 0;
-  overflow: hidden;
+  position: relative; /* sticky ruler 找这个做滚动容器 */
+  overflow: auto; /* 滚动在 .main(让 ruler sticky 粘到 .main viewport 边缘) */
 }
 
 /* JSON 弹窗 */
