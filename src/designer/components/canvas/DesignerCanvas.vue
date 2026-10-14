@@ -728,16 +728,18 @@ function elBox(el: Element) {
 function onDrop(e: DragEvent) {
   const type = e.dataTransfer?.getData("text/plain") as ElementType;
   if (!type) return;
-  // 拖入时按松开位置放置(转 mm,跟 clientToCanvasMm 算法一致)
-  const wrap = e.currentTarget as HTMLElement;
-  const frame = wrap.querySelector(".canvas-frame") as HTMLElement | null;
-  if (!frame) {
+  // 拖入时按松开位置放置:用 .canvas 自身的 rect 算局部 px
+  // (frame 包含 page 错开 + padding,直接用 frame 会把元素推到中间)
+  const canvas = (e.currentTarget as HTMLElement).classList.contains("canvas")
+    ? (e.currentTarget as HTMLElement)
+    : ((e.currentTarget as HTMLElement).querySelector(".canvas") as HTMLElement | null);
+  if (!canvas) {
     emit("add", type);
     return;
   }
-  const fr = frame.getBoundingClientRect();
-  const localX = e.clientX - fr.left;
-  const localY = e.clientY - fr.top;
+  const cr = canvas.getBoundingClientRect();
+  const localX = e.clientX - cr.left;
+  const localY = e.clientY - cr.top;
   if (localX < 0 || localY < 0) {
     emit("add", type);
     return;
