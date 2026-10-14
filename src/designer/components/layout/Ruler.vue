@@ -140,6 +140,32 @@ function draw() {
   for (let valUnit = firstMarkUnit; valUnit <= endUnitRaw; valUnit += stepUnit) {
     const pos = offset + valUnit * unitPx - scroll
     const label = formatUnitLabel(valUnit, unit)
+    // 0 度主刻度:加粗 + 红线,跟画布 0mm 线对应
+    const isOrigin = Math.abs(valUnit) < 1e-9
+
+    if (isOrigin) {
+      ctx.save()
+      ctx.strokeStyle = darkMode ? '#f87171' : '#dc2626'
+      ctx.fillStyle = darkMode ? '#f87171' : '#dc2626'
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      if (type === 'horizontal') {
+        ctx.moveTo(pos, 0)
+        ctx.lineTo(pos, THICKNESS)
+        ctx.fillText('0', pos + 3, 11)
+      } else {
+        ctx.moveTo(0, pos)
+        ctx.lineTo(THICKNESS, pos)
+        ctx.save()
+        ctx.translate(11, pos + 3)
+        ctx.rotate(-Math.PI / 2)
+        ctx.fillText('0', 0, 0)
+        ctx.restore()
+      }
+      ctx.stroke()
+      ctx.restore()
+      continue
+    }
 
     if (type === 'horizontal') {
       ctx.moveTo(pos, 0)
