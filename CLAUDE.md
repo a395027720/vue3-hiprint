@@ -72,7 +72,67 @@ src/
 │
 ├── utils/index.js                 # decodeVer() 解析版本号字符串
 └── i18n/                          # 9 种语言：cn、cn_tw、en、de、es、fr、it、ja、ru
+
+## 新设计器（实验）`src/designer/`
+
+Vue 3 + TypeScript 重写的可视化设计器，**实验性**，与 `src/hiprint/` 旧版并存。入口 `#/designer`（hash 路由切换），主要文件在 `src/demo/new-designer/`。
+
 ```
+src/designer/
+├── index.ts                       # 模块入口（导出 PrintDesigner / useDesigner / types）
+├── api/useDesigner.ts             # ★ 单一 Composition API 入口（模板/选中/增删改/历史/缩放/网格/多选）
+├── core/
+│   ├── types.ts                   # Paper / Element 联合类型（含 rotate / locked）
+│   ├── schema.ts                  # 不可变 helper（createElement / addElement / updateElement / removeElement）
+│   ├── id.ts                      # nextId()
+│   ├── history.ts                 # 简单 undo/redo（past/future 栈）
+│   ├── render.ts                  # mmToPx（96/25.4）、renderTemplate
+│   └── align.ts                   # alignHorizontal / alignVertical
+├── components/
+│   ├── PrintDesigner.vue          # ★ 顶层壳：TopBar + FormatToolbar + DesignerCanvas + PropertyPanel
+│   ├── DesignerCanvas.vue         # ★ 画布：ruler / 元素 / 框选 / 延长线 / 旋转 / 锁定 / 右键菜单
+│   ├── ElementRenderer.vue        # 单元素渲染（按 type 分发）
+│   ├── PropertyPanel.vue          # 右侧属性面板
+│   ├── ContextMenu.vue            # 右键菜单
+│   ├── TopBar.vue / FormatToolbar.vue
+├── utils/
+│   ├── print.ts                   # printTemplate / previewTemplate
+│   ├── pdf.ts                     # exportPdf
+│   └── snap.ts                    # snapValue() 吸附候选匹配
+└── StandaloneDesigner.vue         # hash=#/designer 时的独立壳（无 demo 顶栏）
+```
+
+### 核心交互
+
+| 能力 | 行为 |
+| --- | --- |
+| **框选** | 画布空白 mousedown 启动,虚线选区带 W×H mm 尺寸标签,实时高亮命中元素(锁定元素除外),mouseup 选中所有与选区相交的元素 |
+| **多选** | `multiSelectedIds: string[]`(主选 `selectedId` 单独存),Shift+点 toggle,组拖动时一起平移(主选做吸附,其它跟随) |
+| **组拖动** | 点中元素在 multi 集合里时,所有选中元素按主选位移(保持相对位置);吸附候选只对组外元素 + 画布边界 |
+| **拖动延长线** | 拖动时从元素/组 4 边各画 1 条贯穿画布到 ruler 的浅蓝虚线,选中状态不显示 |
+| **吸附辅助线** | 拖动时元素/组 4 边跟其它元素/画布边界重合,红实线高亮指示对齐 |
+| **标尺** | 高端 SVG 标尺,刻度密度随 zoom 自适应,0 位加粗,鼠标在画布上时有红游标 + mm 数 chip,选中元素 4 边在标尺上有蓝色三角标记 |
+| **旋转** | 选中元素顶边中点上方有旋转手柄,反向旋转保持图标正向,实时显示度数 |
+| **锁定** | 锁定元素不参与框选、不允许拖动/resize/旋转,边框金黄 + 🔒 徽标,右键菜单可解锁 |
+| **吸附** | 4 条边(left/right/top/bottom)+ 4 个画布边界(0/paper.w/h),阈值 1mm,Shift 角 handle 等比 |
+| **键盘** | Space 临时 pan,Delete 删多选,Esc 清多选,方向键在 FormatToolbar 实现 |
+| **撤销/重做** | `add/remove/moveUp/moveDown/bringToFront/sendToBack/copy/cut/paste/setLocked/clearElements/setPaper/load` 入 history;`update` 不入(拖动连续触发,粒度太细) |
+
+### 关键坐标体系
+
+- **所有坐标/尺寸都是 mm**,打印纸张一致(避免 px/pt 转换)
+- `mmToPx(mm) = mm * 96/25.4 ≈ 3.78px`(96 DPI 屏幕换算)
+- **画布 + 标尺的 frame 绝对像素坐标系**:`canvas left:24, top:24` 在 `.canvas-frame` 内(给 24px ruler 让位);ruler svg 用 viewBox 1:1 对齐 canvas 1px
+- **元素** `.canvas-element` 在 `.canvas` 内,`left: mmToPxScaled(e.x)px`
+- **延长线 / 吸附线 / 三角标记** 都在 `.canvas-frame` 级,`left: 24 + mmToPxScaled(m)px`,跟元素 left 算法完全一致(像素级对齐,不依赖 viewBox 缩放系数)
+- **标尺内 svg 元素**(刻度/文字/鼠标游标)用 viewBox 坐标 = `mmToPxScaled(m)`,**禁止** 加 +24(viewBox 0 = svg 0 = frame 24 = canvas 0mm,1:1 缩放)
+
+### 关键 z-index
+
+- `self-line`(延长虚线)`: 2`
+- `snap-line`(吸附红线)`: 4`
+- `.ruler`(标尺)`: 5`
+- `.mark-tri`(选中元素位置三角)`: 6`
 
 ### 关键全局对象
 
