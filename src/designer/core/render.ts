@@ -350,7 +350,10 @@ export function paginate(tpl: Template): Element[][] {
   const pages: Element[][] = [[]]
   const paperH = tpl.paper.height
 
-  for (const el of tpl.elements) {
+  // 跨所有 pages 收集元素(打印时按 paper 边界二次分页,跟编辑器 pages 是两个概念)
+  const all: Element[] = tpl.pages.flatMap((p) => p.elements)
+
+  for (const el of all) {
     let target = pages[pages.length - 1]
 
     const forceBreak = el.type === 'table' && (el as TableElement).pageBreakBefore
@@ -368,12 +371,31 @@ export function paginate(tpl: Template): Element[][] {
 // ========== Template + data → 完整 HTML 文档 ==========
 
 export function renderTemplate(tpl: Template, data: unknown): string {
+  const inner = renderInner(tpl, data)
+  return `<!doctype html>
+<html><head><meta charset="utf-8"/><style>
+  @page { size: ${tpl.paper.width}mm ${tpl.paper.height}mm; margin: 0; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  /* 表格分页策略 */
+  .el-table-repeat-header thead { display: table-header-group; }
+  .el-table-rowbreak-row tr { page-break-inside: avoid; }
+  .el-table-rowbreak-auto tr { page-break-inside: auto; }
+  ${paperCss(tpl)}
+</style></head><body>${inner}</body></html>`
+}
+
+/**
+ * 只输出 <section class="paper">…</section> 列表,不含 doctype / html / body / style。
+ * 用于 PreviewModal 这种 v-html 渲染场景(被嵌入父文档,父 style 已经生效,
+ * 不需要再写一遍 @page / html,body 等)。
+ */
+export function renderInner(tpl: Template, data: unknown): string {
   const paperW = mmToPx(tpl.paper.width)
   const paperH = mmToPx(tpl.paper.height)
   const pages = paginate(tpl)
   const lastIdx = pages.length - 1
-
-  const paperHtml = pages
+  return pages
     .map((elements, i) => {
       const isLast = i === lastIdx
       const breakAfter = isLast ? 'auto' : 'always'
@@ -385,15 +407,18 @@ export function renderTemplate(tpl: Template, data: unknown): string {
       ">${elements.map((el) => renderElement(el, data)).join('\n')}</section>`
     })
     .join('\n')
+}
 
-  return `<!doctype html>
-<html><head><meta charset="utf-8"/><style>
-  @page { size: ${tpl.paper.width}mm ${tpl.paper.height}mm; margin: 0; }
-  html, body { margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-  /* 表格分页策略 */
-  .el-table-repeat-header thead { display: table-header-group; }
-  .el-table-rowbreak-row tr { page-break-inside: avoid; }
-  .el-table-rowbreak-auto tr { page-break-inside: auto; }
-</style></head><body>${paperHtml}</body></html>`
+/** PreviewModal 在父文档中需要补的 paper 样式(非 iframe 环境没有 @page / html,body 等)。 */
+function paperCss(tpl: Template): string {
+  return `
+  .paper { position:relative; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.08); margin-bottom:16px; }
+  .el-table { font-size:11px; }
+  .el-table table { width:100%; border-collapse:collapse; table-layout:fixed; }
+  .el-table th, .el-table td { border:1px solid #d0d0d0; padding:2px 4px; }
+  .el-table th { background:#f5f5f5; font-weight:bold; }
+  .el-image img { width:100%; height:100%; display:block; }
+  /* 不需要打印分页宽度变量,但保留 paper 尺寸参考 */
+  /* paper: ${tpl.paper.width}mm x ${tpl.paper.height}mm */
+  `
 }

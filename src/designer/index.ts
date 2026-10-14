@@ -44,13 +44,14 @@ export {
   findElement,
 } from './core/schema'
 
-export { renderTemplate, renderElement, mmToPx, resolveDataPath, paginate } from './core/render'
+export { renderTemplate, renderInner, renderElement, mmToPx, resolveDataPath, paginate } from './core/render'
 export { alignHorizontal, alignVertical } from './core/align'
 export type { HorizontalAlign, VerticalAlign } from './core/align'
 
 // 组件
 import PrintDesigner from './components/PrintDesigner.vue'
 export { PrintDesigner }
-export { default as DesignerCanvas } from './components/DesignerCanvas.vue'
-export { default as PropertyPanel } from './components/PropertyPanel.vue'
-export { default as ElementRenderer } from './components/ElementRenderer.vue'
+export { default as DesignerCanvas } from './components/canvas/DesignerCanvas.vue'
+export { default as PropertyPanel } from './components/layout/PropertyPanel.vue'
+export { default as ElementRenderer } from './components/elements/ElementRenderer.vue'
+export { default as HeaderToolbar } from './components/layout/HeaderToolbar.vue'

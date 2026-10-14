@@ -23,15 +23,33 @@ designer/
 ├── api/
 │   └── useDesigner.ts                   ← 单一 Composition API 入口(模板/选中/多选/历史/缩放/网格)
 ├── components/
-│   ├── PrintDesigner.vue                ← 顶层壳:TopBar + HeaderToolbar + DesignerCanvas + PropertyPanel
-│   ├── DesignerCanvas.vue               ← 画布:ruler / 元素 / 框选 / 延长线 / 旋转 / 锁定 / 右键菜单
-│   ├── ElementRenderer.vue              ← 单元素渲染(按 type 分发)
-│   ├── PropertyPanel.vue                ← 右侧属性面板
-│   ├── ElementsPanel.vue                ← 左侧元素面板(浮层,可折叠)
-│   ├── HeaderToolbar.vue                 ← 7 组工具条(editor / paper / zoom / hand / panel / quick / system)
-│   ├── TextQuickToolbar.vue             ← 选中文本元素时悬浮的字体/字号/对齐工具
-│   ├── ContextMenu.vue                  ← 右键菜单
-│   ├── TopBar.vue
+│   ├── PrintDesigner.vue                ← 顶层壳
+│   ├── canvas/
+│   │   └── DesignerCanvas.vue           ← 画布:元素 / 框选 / 延长线 / 旋转 / 锁定
+│   ├── elements/                        ← 10 种元素独立组件
+│   │   ├── ElementRenderer.vue          ← 路由壳,按 type 派发
+│   │   ├── TextElement.vue
+│   │   ├── ImageElement.vue
+│   │   ├── TableElement.vue
+│   │   ├── LineElement.vue
+│   │   ├── PageNumElement.vue
+│   │   ├── BarcodeElement.vue
+│   │   ├── QrcodeElement.vue
+│   │   ├── MultiLabelElement.vue
+│   │   ├── RectElement.vue
+│   │   └── CircleElement.vue
+│   ├── layout/                          ← 顶栏 / 工具条 / 浮层面板 / 标尺
+│   │   ├── TopBar.vue
+│   │   ├── HeaderToolbar.vue               ← 7 组工具条
+│   │   ├── ElementsPanel.vue             ← 左侧元素面板
+│   │   ├── PropertyPanel.vue             ← 右侧属性面板
+│   │   └── Ruler.vue                     ← 标尺
+│   ├── floating/                        ← 浮层组件
+│   │   ├── TextQuickToolbar.vue          ← 选中文本时悬浮工具
+│   │   ├── PreviewModal.vue              ← 打印预览弹窗
+│   │   └── ContextMenu.vue               ← 右键菜单
+│   └── fields/                          ← 属性面板字段子组件
+│       └── FieldRow.vue
 ├── utils/
 │   ├── print.ts                         ← iframe 打印 + 预览
 │   ├── pdf.ts                           ← jsPDF + html2canvas 导出 PDF
@@ -119,7 +137,7 @@ designer/
 ## 打印输出
 
 - `printTemplate(tpl, data)`:嵌入隐藏 iframe,`iframe.contentWindow.print()` 触发系统打印对话框
-- `previewTemplate(tpl, data)`:新窗口预览
+- `PreviewModal.vue`:打印预览弹窗(基于 v-html,接收 `renderInner(tpl, data)` 产出的 `<section class="paper">…` 列表,父文档样式接管排版)
 - `exportPdf(tpl, data)`:动态 import jspdf + html2canvas,异步生成下载
 - CSS:`@page { size: paper; margin: 0 }` + `.paper { page-break-after: always }` + table 分页策略类
 

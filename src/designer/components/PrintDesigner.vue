@@ -158,6 +158,17 @@
       @patch="onTextPatch"
     />
 
+    <!-- 打印预览弹窗 -->
+    <PreviewModal
+      v-model:visible="previewVisible"
+      :html-content="previewHtml"
+      :width="previewWidth"
+      @print="onPrint"
+      @export-pdf="onExportPdf"
+      @export-images="onExportImages"
+      @export-html="onExportHtml"
+    />
+
     <!-- 查看 JSON 弹窗 -->
     <div v-if="jsonModalOpen" class="json-modal-mask" @click.self="jsonModalOpen = false">
       <div class="json-modal">
@@ -188,7 +199,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, watch } f
 import type { Element, ElementType, Template, TextElement } from '../core/types'
 import { useDesigner } from '../api/useDesigner'
 import { createTemplate } from '../core/schema'
-import { printTemplate, previewTemplate } from '../utils/print'
+import { printTemplate } from '../utils/print'
+import { renderInner } from '../core/render'
 import { exportPdf } from '../utils/pdf'
 import TopBar from './layout/TopBar.vue'
 import HeaderToolbar from './layout/HeaderToolbar.vue'
@@ -197,6 +209,7 @@ import PropertyPanel from './layout/PropertyPanel.vue'
 import Ruler from './layout/Ruler.vue'
 import ElementsPanel from './layout/ElementsPanel.vue'
 import TextQuickToolbar from './floating/TextQuickToolbar.vue'
+import PreviewModal from './floating/PreviewModal.vue'
 
 const props = defineProps<{
   initialTemplate?: Template
@@ -243,6 +256,15 @@ const propertyPanelOpen = ref(true)
 function onTogglePropertyPanel() {
   propertyPanelOpen.value = !propertyPanelOpen.value
 }
+
+/** 打印预览弹窗 */
+const previewVisible = ref(false)
+const previewHtml = ref('')
+/** 预览内容区宽度(px,paper 宽度 mm * 96/25.4 * 当前 zoom) */
+const previewWidth = computed(() => {
+  const tpl = designer.template.value
+  return Math.round((96 / 25.4) * tpl.paper.width * designer.zoom.value)
+})
 
 /** 显示单位 + dark mode(S3 接入) */
 const unit = ref<'mm' | 'px' | 'pt' | 'in' | 'cm'>('mm')
@@ -622,7 +644,9 @@ async function onPrint() {
 }
 
 async function onPreview() {
-  await previewTemplate(designer.template.value, props.printData)
+  // 渲染 inner HTML(.paper 区块)给 v-html,避免内嵌 doctype
+  previewHtml.value = renderInner(designer.template.value, props.printData)
+  previewVisible.value = true
 }
 
 function onSave() {
