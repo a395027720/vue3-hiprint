@@ -1107,12 +1107,11 @@ const rotateLineStyle = computed(() => {
 
 /** 旋转手柄圆点(handle 现在在 .canvas-element 内,坐标用相对位置;
  *  反向旋转 -el.rotate 让旋转图标始终保持正向)。
- *  元素盒 (x, y, w, h) 中:手柄放在顶边右上角上方 30px 处,
- *  避开文本框悬浮工具条(TextQuickToolbar 在元素顶边中点上方)。 */
+ *  元素盒 (x, y, w, h) 中:手柄放在元素右侧外,垂直居中(8px 距右边缘)。 */
 function rotateHandleStyleReversed(el: Element) {
   return {
-    left: mmToPxScaled(el.w) - 9 + "px",
-    top: -30 + "px",
+    left: mmToPxScaled(el.w) + 8 + "px",
+    top: mmToPxScaled(el.h) / 2 - 9 + "px",
     transform: `rotate(${-(el.rotate ?? 0)}deg)`,
   };
 }
@@ -1211,13 +1210,24 @@ function onRotateStart(e: MouseEvent, id: string) {
   // 元素未旋转中心(屏幕坐标) = canvas left + (x + w/2) * pxPerMm * zoom
   const cx = cr.left + mmToPx(el.x + el.w / 2) * z;
   const cy = cr.top + mmToPx(el.y + el.h / 2) * z;
+  // 用"相对角度"避免一碰就跳:mousedown 时记下起始鼠标角度和元素当前旋转,
+  // mousemove 时元素旋转 = 起始旋转 + (当前鼠标角度 - 起始鼠标角度),
+  // 元素只跟鼠标"环绕中心"的相对位移走,不会因 mousedown 位置不同而跳到绝对角度
+  const startRot = el.rotate ?? 0;
+  const startAngle =
+    Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI) + 90;
 
   function onMove(ev: MouseEvent) {
     const dx = ev.clientX - cx;
     const dy = ev.clientY - cy;
-    // atan2(dy, dx) 是从 x 轴正方向逆时针的角度;CSS rotate 顺时针为正
-    const deg = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
-    emit("rotate", id, Math.round(deg));
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+    const rawDeg = startRot + (angle - startAngle);
+    // 旋转接近 0 度(±3 度阈值)时吸附到 0,提供"贴回水平"的吸附感
+    const rounded = Math.round(rawDeg);
+    const normalized = ((rounded % 360) + 360) % 360;
+    const distToZero = Math.min(normalized, 360 - normalized);
+    const finalDeg = distToZero < 3 ? 0 : rounded;
+    emit("rotate", id, finalDeg);
   }
   function onUp() {
     document.removeEventListener("mousemove", onMove);
@@ -1803,7 +1813,7 @@ watch(
   border-radius: 50%;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   pointer-events: auto;
-  cursor: crosshair;
+  cursor: grab;
   z-index: 101;
   color: #fff;
   display: flex;
@@ -1812,6 +1822,9 @@ watch(
   transition:
     transform 120ms,
     box-shadow 120ms;
+}
+.rotate-handle:active {
+  cursor: grabbing;
 }
 .rotate-handle:hover {
   transform: scale(1.15);
