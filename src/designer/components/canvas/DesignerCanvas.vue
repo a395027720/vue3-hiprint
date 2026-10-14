@@ -19,7 +19,7 @@
           class="canvas"
           :style="canvasStyle"
           @dragover.prevent
-          @drop="onDrop"
+          @drop.stop="onDrop"
           @mousemove="onCanvasMouseMove"
           @mouseleave="onCanvasMouseLeave"
         >
