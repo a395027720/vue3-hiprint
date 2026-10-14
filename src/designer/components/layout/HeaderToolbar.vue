@@ -791,6 +791,7 @@ const chevronRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" class=
   opacity: 0.4;
   cursor: not-allowed;
 }
+/* <span v-html> 注入的 svg 默认 baseline 偏底,改成 block 让父级 flex 居中生效 */
 .vtb-scroll :deep(svg) {
   display: block;
 }
@@ -840,6 +841,10 @@ const chevronRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" class=
   font-size: 16px;
   line-height: 1;
   display: inline-flex;
+}
+/* <span v-html> 注入的 svg 默认 baseline 偏底,改成 block 让父级 flex 居中生效 */
+.vtb-tb :deep(svg) {
+  display: block;
 }
 .vtb-step {
   width: 22px;
