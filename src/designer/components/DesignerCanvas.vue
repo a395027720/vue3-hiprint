@@ -46,8 +46,6 @@
         >
           {{ t.mm }}
         </text>
-        <!-- 选中元素位置三角(改在 frame 级 div,svg 内不再画) -->
-        <g v-for="m in selectedEdgeMarks.h" :key="`ms-h-${m.id}-${m.edge}`" />
         <!-- 鼠标游标线 + 坐标 chip -->
         <g v-if="mousePos && mousePos.inCanvas" class="ruler-cursor">
           <line :x1="mousePos.xPx" :x2="mousePos.xPx" y1="0" :y2="RULER_SIZE" />
@@ -95,8 +93,6 @@
         >
           {{ t.mm }}
         </text>
-        <!-- 选中元素位置三角(改在 frame 级 div) -->
-        <g v-for="m in selectedEdgeMarks.v" :key="`ms-v-${m.id}-${m.edge}`" />
         <!-- 鼠标游标线 + 坐标 chip -->
         <g v-if="mousePos && mousePos.inCanvas" class="ruler-cursor">
           <line x1="0" :y1="mousePos.yPx" :x2="RULER_SIZE" :y2="mousePos.yPx" />
@@ -213,23 +209,14 @@
         </div>
       </div>
 
-      <!-- 选中元素位置三角(画在 frame 级 div,跟 self-line 同一坐标系:frame 绝对像素) -->
-      <div
-        v-for="m in selectedEdgeMarks.h"
-        :key="`mark-h-${m.id}-${m.edge}`"
-        class="mark-tri mark-h"
-        :style="{ left: (RULER_SIZE + m.x) + 'px' }"
-      />
-      <div
-        v-for="m in selectedEdgeMarks.v"
-        :key="`mark-v-${m.id}-${m.edge}`"
-        class="mark-tri mark-v"
-        :style="{ top: (RULER_SIZE + m.x) + 'px' }"
-      />
-
-      <!-- 拖动中的"延长线":从元素/组 4 边出发,贯穿画布到 ruler(浅蓝虚线)
+      <!-- 拖动中的"延长线 + 选区填充":从元素/组 4 边出发,虚线 + 围成的范围浅蓝填充
            只在拖动时显示(mousedown 起,mouseup 清) -->
       <template v-if="selfLines">
+        <!-- 4 边延长线围成的范围,浅蓝半透明填充(z-index 最低,被虚线盖住) -->
+        <div
+          class="self-fill"
+          :style="selfFillStyle"
+        />
         <div
           v-for="x in selfLines.v"
           :key="`self-v-${x}`"
@@ -708,41 +695,20 @@ const hasSelection = computed(
     (props.multiSelectedIds && props.multiSelectedIds.length > 0),
 );
 
-/** 选中元素 / 组的 4 边在水平/垂直标尺上的位置(去重后,用于画小三角) */
-type EdgeMark = { id: string; edge: "l" | "r" | "t" | "b"; x: number };
-const selectedEdgeMarks = computed<{ h: EdgeMark[]; v: EdgeMark[] }>(() => {
-  const ids =
-    props.multiSelectedIds && props.multiSelectedIds.length > 0
-      ? props.multiSelectedIds
-      : props.selectedId
-        ? [props.selectedId]
-        : [];
-  if (ids.length === 0) return { h: [], v: [] };
-  const idSet = new Set(ids);
-  const h: EdgeMark[] = [];
-  const v: EdgeMark[] = [];
-  const seenH = new Set<number>();
-  const seenV = new Set<number>();
-  for (const e of props.template.elements) {
-    if (!idSet.has(e.id)) continue;
-    // left / right (画在水平标尺上)
-    for (const m of [e.x, e.x + e.w]) {
-      if (m < 0 || m > props.template.paper.width) continue;
-      const k = Math.round(m * 100); // 去重 mm
-      if (seenH.has(k)) continue;
-      seenH.add(k);
-      // svg viewBox 坐标 = mmToPxScaled(m)(ruler 元素本身 left:24 已经对齐 canvas 的 0mm)
-      h.push({ id: e.id, edge: m === e.x ? "l" : "r", x: mmToPxScaled(m) });
-    }
-    for (const m of [e.y, e.y + e.h]) {
-      if (m < 0 || m > props.template.paper.height) continue;
-      const k = Math.round(m * 100);
-      if (seenV.has(k)) continue;
-      seenV.add(k);
-      v.push({ id: e.id, edge: m === e.y ? "t" : "b", x: mmToPxScaled(m) });
-    }
-  }
-  return { h, v };
+/** 拖动中延长线围成的矩形(选区浅蓝填充),从 selfLines 算出 */
+const selfFillStyle = computed(() => {
+  const sl = selfLines.value;
+  if (!sl) return {};
+  const x1 = Math.min(...sl.v);
+  const x2 = Math.max(...sl.v);
+  const y1 = Math.min(...sl.h);
+  const y2 = Math.max(...sl.h);
+  return {
+    left: RULER_SIZE + mmToPxScaled(x1) + "px",
+    top: RULER_SIZE + mmToPxScaled(y1) + "px",
+    width: mmToPxScaled(x2 - x1) + "px",
+    height: mmToPxScaled(y2 - y1) + "px",
+  };
 });
 
 /** 鼠标游标 chip 位置(水平:在鼠标 x 处居中,但贴右边缘时不溢出) */
@@ -1421,6 +1387,9 @@ watch(
   border-bottom: 1px solid #d8d8de;
   border-left: 1px solid #d8d8de;
   box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.04);
+  position: sticky;
+  top: 0;
+  z-index: 10; /* 工具条底部,画布滚动时固定在 wrap viewport 顶 */
 }
 .ruler-v {
   top: 32px;
@@ -1429,11 +1398,15 @@ watch(
   border-right: 1px solid #d8d8de;
   border-top: 1px solid #d8d8de;
   box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.04);
+  position: sticky;
+  left: 0;
+  z-index: 10; /* 画布滚动时固定在 wrap viewport 左 */
 }
 .ruler-corner {
-  position: absolute;
+  position: sticky;
   top: 0;
   left: 0;
+  z-index: 11; /* 双向粘:固定在 viewport 左上角 */
   background: #ececef;
   border-right: 1px solid #d8d8de;
   border-bottom: 1px solid #d8d8de;
@@ -1475,30 +1448,13 @@ watch(
   stroke: rgba(252, 252, 253, 0.9);
 }
 
-/* 选中元素在标尺上的位置三角:frame 级 div,跟 self-line 同一坐标系
-   三角形用 border 技巧:0 宽 + border 透明/实色,跟 svg polygon 顶点像素级一致 */
-.mark-tri {
+/* 拖动中延长线围成的范围浅蓝半透明填充(z-index 1,被 self-line 虚线盖住) */
+.self-fill {
   position: absolute;
-  width: 0;
-  height: 0;
   pointer-events: none;
-  z-index: 6; /* 在 ruler(5) 之上 */
-  filter: drop-shadow(0 1px 1px rgba(24, 144, 255, 0.4));
-}
-.mark-h {
-  top: 0;
-  border-left: 3px solid transparent;
-  border-right: 3px solid transparent;
-  border-top: 6px solid #1890ff;
-  /* 顶点居中:3px 边 + 6px 顶点向下,跟 svg polygon 一致 */
-  transform: translateX(-3px);
-}
-.mark-v {
-  left: 0;
-  border-top: 3px solid transparent;
-  border-bottom: 3px solid transparent;
-  border-left: 6px solid #1890ff;
-  transform: translateY(-3px);
+  z-index: 1;
+  background: rgba(24, 144, 255, 0.08);
+  transition: opacity 80ms;
 }
 
 /* 鼠标游标 */
