@@ -23,12 +23,15 @@ designer/
 ├── api/
 │   └── useDesigner.ts                   ← 单一 Composition API 入口(模板/选中/多选/历史/缩放/网格)
 ├── components/
-│   ├── PrintDesigner.vue                ← 顶层壳:TopBar + FormatToolbar + DesignerCanvas + PropertyPanel
+│   ├── PrintDesigner.vue                ← 顶层壳:TopBar + HeaderToolbar + DesignerCanvas + PropertyPanel
 │   ├── DesignerCanvas.vue               ← 画布:ruler / 元素 / 框选 / 延长线 / 旋转 / 锁定 / 右键菜单
 │   ├── ElementRenderer.vue              ← 单元素渲染(按 type 分发)
 │   ├── PropertyPanel.vue                ← 右侧属性面板
+│   ├── ElementsPanel.vue                ← 左侧元素面板(浮层,可折叠)
+│   ├── HeaderToolbar.vue                 ← 7 组工具条(editor / paper / zoom / hand / panel / quick / system)
+│   ├── TextQuickToolbar.vue             ← 选中文本元素时悬浮的字体/字号/对齐工具
 │   ├── ContextMenu.vue                  ← 右键菜单
-│   ├── TopBar.vue / FormatToolbar.vue
+│   ├── TopBar.vue
 ├── utils/
 │   ├── print.ts                         ← iframe 打印 + 预览
 │   ├── pdf.ts                           ← jsPDF + html2canvas 导出 PDF
@@ -109,7 +112,7 @@ designer/
 
 ## 对齐 + 吸附
 
-- **6 个工具按钮**(FormatToolbar):左/水平居中/右 + 顶/垂直居中/底,基于 `alignHorizontal` / `alignVertical` 工具函数
+- **6 个工具按钮**(HeaderToolbar 对齐组):左/水平居中/右 + 顶/垂直居中/底,基于 `alignHorizontal` / `alignVertical` 工具函数
 - **4 边吸附**:`DesignerCanvas` 拖动时收集候选(画布 4 边界 + 其它元素 4 边),阈值 1mm,命中时画红色辅助线
 - **`utils/snap.ts`** 是手写吸附函数,后续可考虑 `interact.js` 的 snap 插件
 
