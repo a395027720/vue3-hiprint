@@ -786,22 +786,22 @@ defineExpose({
   position: relative; /* Ruler / PropertyPanel 浮层锚定 */
   overflow: hidden;
 }
-/* Ruler 浮在 .body 顶部/左侧(避开 ElementsPanel) */
+/* Ruler 浮在 .body 顶部/左侧(避开 ElementsPanel),浮层下移 16px 让画布顶部有呼吸 */
 .ruler-slot {
   position: absolute;
   z-index: 5;
   pointer-events: none; /* 让下层 canvas 接收事件;Ruler 自己内部 pointer-events: auto */
 }
 .ruler-slot-h {
-  top: 0;
+  top: 16px;
   left: 240px; /* 避开 ElementsPanel(S4 面板宽度);折叠时 .body 通过 JS 调整 */
   right: 0;
   height: 32px;
   transition: left 200ms;
 }
 .ruler-slot-v {
-  top: 32px;
-  left: 240px;
+  top: 48px; /* 16 (h 浮层) + 32 (h 浮层自身高) */
+  left: 256px; /* 16 (v 浮层 left 偏移) + 240 (避开 ElementsPanel) */
   bottom: 0;
   width: 32px;
   transition: left 200ms;
@@ -809,7 +809,10 @@ defineExpose({
 /* 折叠状态:ruler 缩到 0 */
 .body.left-closed .ruler-slot-h,
 .body.left-closed .ruler-slot-v {
-  left: 0;
+  left: 16px;
+}
+.body.left-closed .ruler-slot-v {
+  top: 48px;
 }
 .main {
   flex: 1;
