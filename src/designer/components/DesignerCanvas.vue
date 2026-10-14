@@ -153,7 +153,7 @@
         <text
           v-for="t in hTicks"
           :key="`ht-${t.mm}`"
-          v-show="t.major && t.inCanvas"
+          v-show="t.major"
           :x="t.x + canvasOffsetX + (t.mm === 0 ? 3 : t.mm > 0 ? 3 : -3)"
           y="15"
           :class="['ruler-text', { 'ruler-text-zero': t.zero }]"
@@ -193,7 +193,7 @@
         <text
           v-for="t in vTicks"
           :key="`vt-${t.mm}`"
-          v-show="t.major && t.inCanvas"
+          v-show="t.major"
           x="2"
           :y="t.x + canvasOffsetY + (t.mm === 0 ? 16 : t.mm > 0 ? 15 : 8)"
           :class="['ruler-text', { 'ruler-text-zero': t.zero }]"
@@ -608,7 +608,7 @@ function onWrapMouseDown(e: MouseEvent) {
  *  其余是 minor(短)。
  *  inCanvas 标记是否落在画布内 0~axisLen,只对画布内的 tick 显示文字。
  */
-const RULER_PAD = 12; // mm(画布外的延伸刻度,用于"画布外也有刻度感")
+const RULER_PAD = 30; // mm(画布外的延伸刻度范围,让 ruler 显示负数坐标)
 
 /** 根据 zoom 选 major / minor 间距
  *  - zoom ≥ 0.6: major 10mm,minor 1mm(每 1mm 一条细线,10mm 带数字;默认 zoom=1)
