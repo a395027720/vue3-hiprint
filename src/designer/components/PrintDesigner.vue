@@ -84,7 +84,7 @@
         <Ruler
           type="horizontal"
           :zoom="designer.zoom.value"
-          :scroll="rulerScrollX"
+          :scroll="rulerScrollForX"
           :offset="rulerOffsetX"
           :indicators="rulerIndicatorsH"
           :range="rulerRangeH"
@@ -98,7 +98,7 @@
         <Ruler
           type="vertical"
           :zoom="designer.zoom.value"
-          :scroll="rulerScrollY"
+          :scroll="rulerScrollForY"
           :offset="rulerOffsetY"
           :indicators="rulerIndicatorsV"
           :range="rulerRangeV"
@@ -296,6 +296,9 @@ const rulerScrollX = ref(0) // .canvas-wrap.scrollLeft(横滚)
 const rulerScrollY = ref(0) // .main.scrollTop(纵滚)
 const rulerOffsetX = ref(0) // canvas 0mm 位置在 .main 内的 px(未滚时)
 const rulerOffsetY = ref(0) // canvas 0mm 位置在 .main 内的 px(未滚时)
+// Ruler 实际显示的 scroll:真实滚动 + pan 偏移(panMode 下用 transform 平移画布,需要把 pan 当作 scroll 喂给 ruler)
+const rulerScrollForX = computed(() => rulerScrollX.value + panOffset.value.x)
+const rulerScrollForY = computed(() => rulerScrollY.value + panOffset.value.y)
 
 function onMainScroll() {
   const main = mainRef.value
