@@ -1091,12 +1091,12 @@ function handleStyle(el: Element, dir: ResizeDir) {
   };
 }
 
-/** 旋转连杆线(元素顶边中点 → 旋转手柄,相对元素盒的 0~w / 0~h 坐标)
+/** 旋转连杆线(元素顶边右侧 → 旋转手柄,相对元素盒的 0~w / 0~h 坐标)
  *  handle 现在在 .canvas-element 内,坐标以元素盒左上角为原点。 */
 const rotateLineStyle = computed(() => {
   const e = selectedEl.value;
   if (!e) return {};
-  const cx = mmToPxScaled(e.w) / 2;
+  const cx = mmToPxScaled(e.w);
   return {
     left: cx - 0.5 + "px",
     top: "0px",
@@ -1107,10 +1107,11 @@ const rotateLineStyle = computed(() => {
 
 /** 旋转手柄圆点(handle 现在在 .canvas-element 内,坐标用相对位置;
  *  反向旋转 -el.rotate 让旋转图标始终保持正向)。
- *  元素盒 (x, y, w, h) 中:手柄放在顶边中点上方 30px 处。 */
+ *  元素盒 (x, y, w, h) 中:手柄放在顶边右上角上方 30px 处,
+ *  避开文本框悬浮工具条(TextQuickToolbar 在元素顶边中点上方)。 */
 function rotateHandleStyleReversed(el: Element) {
   return {
-    left: mmToPxScaled(el.w) / 2 - 9 + "px",
+    left: mmToPxScaled(el.w) - 9 + "px",
     top: -30 + "px",
     transform: `rotate(${-(el.rotate ?? 0)}deg)`,
   };
