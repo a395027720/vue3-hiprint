@@ -1429,6 +1429,7 @@ watch(
   min-width: 0;
   min-height: 0;
   position: relative; /* 自线 / 吸附线 / guide 浮层 absolute 相对 wrap 定位 */
+  padding: 50px 0;
 }
 .canvas-wrap.pan-mode {
   cursor: grab;
@@ -1581,7 +1582,7 @@ watch(
 }
 .canvas {
   position: absolute;
-  top: 50px; /* 画布 0mm 距 .print-page 顶 50px,留呼吸 */
+  top: 0;
   left: 0;
   background: white;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);

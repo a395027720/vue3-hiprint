@@ -55,7 +55,6 @@
             </button>
             <input
               class="vtb-num"
-              type="number"
               :value="fontSize ?? ''"
               :disabled="!isText"
               min="1"
@@ -419,8 +418,6 @@
         </button>
       </div>
 
-      <span class="vtb-group-sep" />
-
       <!-- hand 组 -->
       <div class="vtb-pill">
         <button
@@ -432,8 +429,6 @@
           <span v-html="handIcon" />
         </button>
       </div>
-
-      <span class="vtb-group-sep" />
 
       <!-- panel 组:三个 toggle 按钮(浮层显隐) -->
       <div class="vtb-pill">
@@ -454,8 +449,6 @@
           <setting-outlined />
         </button>
       </div>
-
-      <span class="vtb-group-sep" />
 
       <!-- quick 组:导出 + 预览 + 打印 -->
       <div class="vtb-pill">

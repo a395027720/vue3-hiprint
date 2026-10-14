@@ -154,6 +154,13 @@
       />
     </div>
 
+    <!-- 底部状态栏 -->
+    <StatusBar
+      :selected="designer.selected.value"
+      :multi-count="designer.multiSelectedIds.value.length"
+      :zoom="designer.zoom.value"
+    />
+
     <!-- 选中文本元素时浮在元素上方的快捷工具条 -->
     <TextQuickToolbar
       :element="selectedText"
@@ -211,6 +218,7 @@ import DesignerCanvas from './canvas/DesignerCanvas.vue'
 import PropertyPanel from './layout/PropertyPanel.vue'
 import Ruler from './layout/Ruler.vue'
 import ElementsPanel from './layout/ElementsPanel.vue'
+import StatusBar from './layout/StatusBar.vue'
 import TextQuickToolbar from './floating/TextQuickToolbar.vue'
 import PreviewModal from './floating/PreviewModal.vue'
 
