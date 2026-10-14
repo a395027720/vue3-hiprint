@@ -626,11 +626,11 @@ function onWrapMouseDown(e: MouseEvent) {
 const RULER_PAD = 12; // mm(画布外的延伸刻度,用于"画布外也有刻度感")
 
 /** 根据 zoom 选 major / minor 间距
- *  - zoom ≥ 0.6: major 5mm,minor 1mm(每 1mm 一条细线,5mm 带数字;默认 zoom=1 命中此档)
- *  - zoom < 0.6: major 10mm,minor 5mm(缩小后避免刻度过密) */
+ *  - zoom ≥ 0.6: major 10mm,minor 1mm(每 1mm 一条细线,10mm 带数字;默认 zoom=1)
+ *  - zoom < 0.6: major 20mm,minor 5mm(缩小后避免刻度过密) */
 function chooseStep(zoom: number): { major: number; minor: number } {
-  if (zoom >= 0.6) return { major: 5, minor: 1 };
-  return { major: 10, minor: 5 };
+  if (zoom >= 0.6) return { major: 10, minor: 1 };
+  return { major: 20, minor: 5 };
 }
 
 function buildTicks(
