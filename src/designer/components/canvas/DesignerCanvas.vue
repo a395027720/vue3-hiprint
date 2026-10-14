@@ -468,6 +468,11 @@ function onWrapMouseDown(e: MouseEvent) {
   const target = e.target as HTMLElement | null;
   if (!target) return;
   if (e.shiftKey) return;
+  // 画布任意 mousedown:右键菜单开着就先关掉
+  if (ctxMenu.open) {
+    ctxMenu.open = false;
+    ctxMenu.onElement = false;
+  }
   // panMode:启动平移
   if (props.panMode) {
     if (target.closest(".canvas-element")) return;
