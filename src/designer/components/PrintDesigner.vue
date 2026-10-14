@@ -109,6 +109,8 @@
             @guide-drag-start="(e) => onGuideDragStart(e, 'vertical')"
           />
         </div>
+        <!-- 角落 32x32 干净小方块,盖住 ruler-h/ruler-v 交汇处的双重刻度,保持 L 形边框连续 -->
+        <div class="ruler-corner" :class="{ dark: darkMode }" />
         <DesignerCanvas
           :template="designer.template.value"
           :selected-id="designer.selectedId.value"
@@ -802,6 +804,23 @@ defineExpose({
   left: 0;
   bottom: 0;
   width: 32px;
+}
+/* ruler-h / ruler-v 交汇处 32x32 干净方块,盖住双重刻度,边框跟两条 ruler 的 border 视觉对齐 */
+.ruler-corner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  z-index: 6; /* 高于 ruler-slot(5),把角落的双重内容遮住 */
+  background: #f9fafb;
+  border-right: 1px solid #d8d8de;
+  border-bottom: 1px solid #d8d8de;
+  pointer-events: auto; /* 角落不开 guide 拖动,避免误触 */
+  cursor: default;
+}
+.ruler-corner.dark {
+  background: #1f2937;
 }
 .main {
   flex: 1;
