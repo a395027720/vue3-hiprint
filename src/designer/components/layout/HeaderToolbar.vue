@@ -530,12 +530,10 @@ const chevronRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" class=
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
+  width: 20px;
   padding: 0;
-  background: #fff;
+  background: transparent;
   border: 0;
-  border-left: 1px solid #f0f0f0;
-  border-right: 1px solid #f0f0f0;
   color: #595959;
   transition: background 120ms, color 120ms;
 }
