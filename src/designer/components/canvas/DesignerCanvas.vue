@@ -8,82 +8,88 @@
     @dragover.prevent="onWrapDragOver"
     @drop="onDrop"
   >
-    <div class="canvas-frame" :style="frameStyleWithPan">
-      <div
-        v-for="(page, pageIndex) in template.pages"
-        :key="page.id"
-        class="print-page"
-        :style="pageStyle(pageIndex)"
-      >
+    <div class="canvas-pan" :style="panStyle">
+      <div class="canvas-scale" :style="scaleStyle">
         <div
-          class="canvas"
-          :style="canvasStyle"
-          @dragover.prevent
-          @drop.stop="onDrop"
-          @mousemove="onCanvasMouseMove"
-          @mouseleave="onCanvasMouseLeave"
+          v-for="(page, pageIndex) in template.pages"
+          :key="page.id"
+          class="print-page"
+          :style="pageStyle(pageIndex)"
         >
           <div
-            v-for="el in page.elements"
-            :key="el.id"
-            class="canvas-element"
-            :class="{
-              selected: el.id === selectedId,
-              'is-image': el.type === 'image',
-              locked: el.locked,
-              'multi-selected': isMultiSelected(el.id) && el.id !== selectedId,
-              'marquee-hit': marqueeHits.has(el.id),
-            }"
-            :style="elBox(el)"
-            @mousedown="onElementMouseDown($event, el.id)"
-            @contextmenu.prevent.stop="onContextMenu($event, el.id)"
+            class="canvas"
+            :style="canvasStyle"
+            @dragover.prevent
+            @drop.stop="onDrop"
+            @mousemove="onCanvasMouseMove"
+            @mouseleave="onCanvasMouseLeave"
           >
-            <ElementRenderer :element="el" />
-            <span v-if="el.locked" class="lock-badge" title="已锁定">🔒</span>
-            <!-- 选中元素的 handle 层(放在 .canvas-element 内,跟着 rotate 一起转) -->
-            <template v-if="el.id === selectedId && !el.locked">
-              <span
-                v-for="h in resizeHandles"
-                :key="h.dir"
-                class="resize-handle"
-                :class="`rh-${h.kind} rh-${h.dir}`"
-                :style="handleStyle(el, h.dir)"
-                @mousedown.stop="onResizeStart($event, el.id, h.dir)"
-              />
-              <span
-                class="rotate-line"
-                :style="rotateLineStyle"
-                @mousedown.stop="onRotateStart($event, el.id)"
-              />
-              <span
-                class="rotate-handle"
-                :style="rotateHandleStyleReversed(el)"
-                title="拖动旋转"
-                @mousedown.stop="onRotateStart($event, el.id)"
-              >
-                <svg
-                  viewBox="0 0 16 16"
-                  width="12"
-                  height="12"
-                  aria-hidden="true"
+            <div
+              v-for="el in page.elements"
+              :key="el.id"
+              class="canvas-element"
+              :class="{
+                selected: el.id === selectedId,
+                'is-image': el.type === 'image',
+                locked: el.locked,
+                'multi-selected':
+                  isMultiSelected(el.id) && el.id !== selectedId,
+                'marquee-hit': marqueeHits.has(el.id),
+              }"
+              :style="elBox(el)"
+              @mousedown="onElementMouseDown($event, el.id)"
+              @contextmenu.prevent.stop="onContextMenu($event, el.id)"
+            >
+              <ElementRenderer :element="el" />
+              <span v-if="el.locked" class="lock-badge" title="已锁定">🔒</span>
+              <!-- 选中元素的 handle 层(放在 .canvas-element 内,跟着 rotate 一起转) -->
+              <template v-if="el.id === selectedId && !el.locked">
+                <span
+                  v-for="h in resizeHandles"
+                  :key="h.dir"
+                  class="resize-handle"
+                  :class="`rh-${h.kind} rh-${h.dir}`"
+                  :style="handleStyle(el, h.dir)"
+                  @mousedown.stop="onResizeStart($event, el.id, h.dir)"
+                />
+                <span
+                  class="rotate-line"
+                  :style="rotateLineStyle"
+                  @mousedown.stop="onRotateStart($event, el.id)"
+                />
+                <span
+                  class="rotate-handle"
+                  :style="rotateHandleStyleReversed(el)"
+                  title="拖动旋转"
+                  @mousedown.stop="onRotateStart($event, el.id)"
                 >
-                  <path
-                    fill="currentColor"
-                    d="M8 2.5a5.5 5.5 0 1 0 5.45 6.3.85.85 0 0 0-1.69-.18 3.8 3.8 0 1 1-1-3.7l-1.3 1.3a.6.6 0 0 0 .42 1.03h3.5a.6.6 0 0 0 .6-.6V3.15a.6.6 0 0 0-1.03-.42l-1.1 1.1A5.48 5.48 0 0 0 8 2.5Z"
-                  />
-                </svg>
-              </span>
-              <span class="rotate-deg" :style="rotateDegStyle(el)"
-                >{{ el.rotate ?? 0 }}°</span
-              >
-            </template>
-          </div>
+                  <svg
+                    viewBox="0 0 16 16"
+                    width="12"
+                    height="12"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fill="currentColor"
+                      d="M8 2.5a5.5 5.5 0 1 0 5.45 6.3.85.85 0 0 0-1.69-.18 3.8 3.8 0 1 1-1-3.7l-1.3 1.3a.6.6 0 0 0 .42 1.03h3.5a.6.6 0 0 0 .6-.6V3.15a.6.6 0 0 0-1.03-.42l-1.1 1.1A5.48 5.48 0 0 0 8 2.5Z"
+                    />
+                  </svg>
+                </span>
+                <span class="rotate-deg" :style="rotateDegStyle(el)"
+                  >{{ el.rotate ?? 0 }}°</span
+                >
+              </template>
+            </div>
 
-          <!-- 框选矩形(屏幕坐标,覆盖在 .canvas 上) -->
-          <div v-if="marquee" class="marquee-rect" :style="marqueeStyle">
-            <span v-if="marquee.w >= 4 && marquee.h >= 4" class="marquee-size">
-              {{ formatMm(marquee.wMm) }} × {{ formatMm(marquee.hMm) }} mm
-            </span>
+            <!-- 框选矩形(屏幕坐标,覆盖在 .canvas 上) -->
+            <div v-if="marquee" class="marquee-rect" :style="marqueeStyle">
+              <span
+                v-if="marquee.w >= 4 && marquee.h >= 4"
+                class="marquee-size"
+              >
+                {{ formatMm(marquee.wMm) }} × {{ formatMm(marquee.hMm) }} mm
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -114,20 +120,20 @@
 
     <!-- 拖动中的"延长线 + 选区填充":跨整个 .canvas-wrap(viewport 高度),
          在 ruler 区域(顶部 0~32 / 左侧 0~32)也能看到浅蓝短截(z-index > ruler)。
-         坐标公式 = offsetX/Y(wrap 内画布 0mm 位置) + mmToPxScaled -->
+         坐标公式 = overlayX/Y(wrap 内画布 mm 位置,已含 scale,扣 pan) -->
     <template v-if="selfLines">
       <div class="self-fill" :style="selfFillStyle" />
       <div
         v-for="x in selfLines.v"
         :key="`self-v-${x}`"
         class="self-line self-v"
-        :style="{ left: offsetX + mmToPxScaled(x) + 'px' }"
+        :style="{ left: overlayX(x) + 'px' }"
       />
       <div
         v-for="y in selfLines.h"
         :key="`self-h-${y}`"
         class="self-line self-h"
-        :style="{ top: offsetY + mmToPxScaled(y) + 'px' }"
+        :style="{ top: overlayY(y) + 'px' }"
       />
     </template>
 
@@ -136,13 +142,13 @@
       v-for="x in snapLines.vertical"
       :key="`v-${x}`"
       class="snap-line snap-v"
-      :style="{ left: offsetX + mmToPxScaled(x) + 'px' }"
+      :style="{ left: overlayX(x) + 'px' }"
     />
     <div
       v-for="y in snapLines.horizontal"
       :key="`h-${y}`"
       class="snap-line snap-h"
-      :style="{ top: offsetY + mmToPxScaled(y) + 'px' }"
+      :style="{ top: overlayY(y) + 'px' }"
     />
 
     <!-- 标尺已搬到 PrintDesigner 顶部/左侧浮层(Ruler.vue,Canvas 2D) -->
@@ -274,6 +280,8 @@ const emit = defineEmits<{
   guideHover: [id: string | null];
   /** guide 双击删除 */
   guideRemove: [id: string];
+  /** 画布 wrap 滚动/wrap size 变化,通知父级重算 ruler offset */
+  viewportChange: [];
 }>();
 
 // 吸附阈值(单位:mm,4px / 3.78 ≈ 1mm,这里取 1mm 适中)
@@ -385,7 +393,7 @@ watch(marquee, (m) => {
 /** 5mm 网格背景:横竖各画一道浅灰 1px 线,间距 5mm。showGrid=false 时透明 */
 const gridStyle = computed(() => {
   if (!props.showGrid) return { image: "none", size: "" };
-  const step = mmToPxScaled(5);
+  const step = mmToPx(5);
   return {
     image: [
       `linear-gradient(to right, #e0e0e0 1px, transparent 1px)`,
@@ -396,21 +404,18 @@ const gridStyle = computed(() => {
 });
 
 const canvasStyle = computed(() => ({
-  width: mmToPxScaled(props.template.paper.width) + "px",
-  height: mmToPxScaled(props.template.paper.height) + "px",
+  // 父级 .canvas-scale 的 transform: scale(zoom) 视觉缩放,这里用 raw mm→px
+  width: mmToPx(props.template.paper.width) + "px",
+  height: mmToPx(props.template.paper.height) + "px",
   backgroundImage: gridStyle.value.image,
   backgroundSize: gridStyle.value.size || undefined,
 }));
 
-/** 单个 page 的尺寸 + 错开位移(pages 间用 transform: translate Y 错开) */
-function pageStyle(pageIndex: number) {
-  const w = mmToPxScaled(props.template.paper.width);
-  const h = mmToPxScaled(props.template.paper.height);
-  const yOffset = pageIndex * (h + mmToPxScaled(PAGE_SPACING_MM));
+/** 单个 page 的尺寸(S2:多页用 .canvas-scale 的 flex-col + rowGap 自动堆叠,不再 transform) */
+function pageStyle(_pageIndex: number) {
   return {
-    width: w + "px",
-    height: h + "px",
-    transform: `translate(0, ${yOffset}px)`,
+    width: mmToPx(props.template.paper.width) + "px",
+    height: mmToPx(props.template.paper.height) + "px",
   };
 }
 
@@ -421,29 +426,49 @@ function measureWrap() {
   const w = wrapRef.value;
   if (!w) return;
   wrapSize.value = { w: w.clientWidth, h: w.clientHeight };
+  // 通知父级重算 ruler offset(wrap size 变化,canvas 居中位置变)
+  emit("viewportChange");
+}
+function onWrapScroll() {
+  // wrap 滚动改变 canvas 视觉位置,触发 ruler 重算
+  emit("viewportChange");
 }
 onMounted(() => {
   measureWrap();
   if (wrapRef.value && "ResizeObserver" in window) {
     new ResizeObserver(measureWrap).observe(wrapRef.value);
   }
+  if (wrapRef.value) {
+    wrapRef.value.addEventListener("scroll", onWrapScroll, { passive: true });
+  }
 });
 // wrap 用 flex 布局:水平居中(justify-content: center)+ 垂直顶对齐(align-items: flex-start)
-// offsetX = (wrapW - paperWpx) / 2;offsetY = 0(顶对齐,画布 0mm 跟 ruler 0 刻度重合)
+// offsetX = (wrapW - paperW*zoom) / 2;offsetY = 0(顶对齐,画布 0mm 跟 ruler 0 刻度重合)
+// 注:pan 在 .canvas-pan 上用 transform translate,不参与 wrap 居中计算
 const offsetX = computed(() => {
   return Math.max(
     0,
-    (wrapSize.value.w - mmToPxScaled(props.template.paper.width)) / 2,
+    (wrapSize.value.w - mmToPx(props.template.paper.width) * zoomValue.value) /
+      2,
   );
 });
 const offsetY = computed(() => 0);
 
+/** mm 位置 → overlay 屏幕 px(.canvas-wrap 局部,已含 scale,扣 pan)
+ *  用于 guide / self-line / snap-line / selfFill 浮层(不经过 scale 父级) */
+function overlayX(valMm: number): number {
+  return offsetX.value + mmToPx(valMm) * zoomValue.value - (props.panX ?? 0);
+}
+function overlayY(valMm: number): number {
+  return offsetY.value + mmToPx(valMm) * zoomValue.value - (props.panY ?? 0);
+}
+
 /** 画布整体框(标尺已搬到 PrintDesigner 顶部浮层,这里 frame 只装画布 + 自线) */
 const frameStyle = computed(() => {
-  const w = mmToPxScaled(props.template.paper.width);
+  const w = mmToPx(props.template.paper.width);
   const pages = props.template.pages.length;
-  const singleH = mmToPxScaled(props.template.paper.height);
-  const spacing = mmToPxScaled(PAGE_SPACING_MM);
+  const singleH = mmToPx(props.template.paper.height);
+  const spacing = mmToPx(PAGE_SPACING_MM);
   const h = Math.max(singleH, pages * singleH + (pages - 1) * spacing);
   return {
     width: w + "px",
@@ -453,10 +478,17 @@ const frameStyle = computed(() => {
   };
 });
 
-/** 带 pan 偏移的 frame style(用 CSS translate 整体平移画布) */
-const frameStyleWithPan = computed(() => ({
-  ...frameStyle.value,
+/** .canvas-pan 单独承接 pan(在 .canvas-scale 之外,不被 scale 二次缩放) */
+const panStyle = computed(() => ({
   transform: `translate(${props.panX ?? 0}px, ${props.panY ?? 0}px)`,
+}));
+
+/** .canvas-scale 根:transform: scale(zoom) + transformOrigin: top left,
+ *  跟 Vue-Print-Designer Canvas.vue 根 div 一致;子节点(mm 数值)由 scale 视觉缩放 */
+const scaleStyle = computed(() => ({
+  transform: `scale(${zoomValue.value})`,
+  transformOrigin: "top left",
+  width: "fit-content",
 }));
 
 /** 画布 wrap 上的 mousedown:
@@ -681,10 +713,10 @@ const selfFillStyle = computed(() => {
   const y1 = Math.min(...sl.h);
   const y2 = Math.max(...sl.h);
   return {
-    left: offsetX.value + mmToPxScaled(x1) + "px",
-    top: offsetY.value + mmToPxScaled(y1) + "px",
-    width: mmToPxScaled(x2 - x1) + "px",
-    height: mmToPxScaled(y2 - y1) + "px",
+    left: overlayX(x1) + "px",
+    top: overlayY(y1) + "px",
+    width: mmToPx(x2 - x1) * zoomValue.value + "px",
+    height: mmToPx(y2 - y1) * zoomValue.value + "px",
   };
 });
 
@@ -707,19 +739,21 @@ function cursorChipY(): number {
 
 /** guide mm 位置 → wrap 内 px(水平线) */
 function guideYStyle(positionMm: number): string {
-  return offsetY.value + mmToPxScaled(positionMm) + "px";
+  return overlayY(positionMm) + "px";
 }
 /** guide mm 位置 → wrap 内 px(垂直线) */
 function guideXStyle(positionMm: number): string {
-  return offsetX.value + mmToPxScaled(positionMm) + "px";
+  return overlayX(positionMm) + "px";
 }
 
 function elBox(el: Element) {
+  // 元素用 raw mm→px 数值,父级 .canvas-scale 的 transform: scale(zoom) 视觉缩放
+  // 这样跟 Vue-Print-Designer 的 Canvas.vue 一致:子节点不感知 zoom
   return {
-    left: mmToPxScaled(el.x) + "px",
-    top: mmToPxScaled(el.y) + "px",
-    width: mmToPxScaled(el.w) + "px",
-    height: mmToPxScaled(el.h) + "px",
+    left: mmToPx(el.x) + "px",
+    top: mmToPx(el.y) + "px",
+    width: mmToPx(el.w) + "px",
+    height: mmToPx(el.h) + "px",
     transform: el.rotate ? `rotate(${el.rotate}deg)` : undefined,
     transformOrigin: "center",
   };
@@ -732,7 +766,9 @@ function onDrop(e: DragEvent) {
   // (frame 包含 page 错开 + padding,直接用 frame 会把元素推到中间)
   const canvas = (e.currentTarget as HTMLElement).classList.contains("canvas")
     ? (e.currentTarget as HTMLElement)
-    : ((e.currentTarget as HTMLElement).querySelector(".canvas") as HTMLElement | null);
+    : ((e.currentTarget as HTMLElement).querySelector(
+        ".canvas",
+      ) as HTMLElement | null);
   if (!canvas) {
     emit("add", type);
     return;
@@ -1153,21 +1189,16 @@ function onRotateStart(e: MouseEvent, id: string) {
   if (!found) return;
   const el = found.el;
   if (el.locked) return; // 锁定后不允许旋转
-  // canvas-frame 在 .canvas-wrap 内,wrap padding 24 + canvas top:RULER_SIZE left:RULER_SIZE
-  const wrap = (e.currentTarget as HTMLElement).closest(
-    ".canvas-wrap",
+  // 用 .canvas 的实际 bounding rect(已含 scale + pan)算元素中心屏幕坐标
+  const canvas = (e.currentTarget as HTMLElement).closest(
+    ".canvas",
   ) as HTMLElement | null;
-  if (!wrap) return;
-  const wrapRect = wrap.getBoundingClientRect();
-  // canvas-frame 用了 transform(pan),所以 rect 已经反映了 pan
-  const frameEl = wrap.querySelector(".canvas-frame") as HTMLElement | null;
-  if (!frameEl) return;
-  const frameRect = frameEl.getBoundingClientRect();
-  // 元素未旋转中心(屏幕坐标) = frameRect.left + RULER_SIZE(canvas left 偏移) + (x + w/2) * pxPerMm
-  const cx = frameRect.left + RULER_SIZE + mmToPxScaled(el.x + el.w / 2);
-  const cy = frameRect.top + RULER_SIZE + mmToPxScaled(el.y + el.h / 2);
-  // wrapRect 暂未用到,留作 fallback
-  void wrapRect;
+  if (!canvas) return;
+  const cr = canvas.getBoundingClientRect();
+  const z = zoomValue.value;
+  // 元素未旋转中心(屏幕坐标) = canvas left + (x + w/2) * pxPerMm * zoom
+  const cx = cr.left + mmToPx(el.x + el.w / 2) * z;
+  const cy = cr.top + mmToPx(el.y + el.h / 2) * z;
 
   function onMove(ev: MouseEvent) {
     const dx = ev.clientX - cx;
@@ -1230,12 +1261,12 @@ function clientToCanvasMm(
   clientX: number,
   clientY: number,
 ): { x: number; y: number } | null {
-  const wrap = document.querySelector(".canvas-wrap") as HTMLElement | null;
-  const frame = document.querySelector(".canvas-frame") as HTMLElement | null;
-  if (!wrap || !frame) return null;
-  const fr = frame.getBoundingClientRect();
-  const localX = clientX - fr.left - RULER_SIZE;
-  const localY = clientY - fr.top - RULER_SIZE;
+  // 用 .canvas 自身 rect(已含 scale + pan)算局部 px
+  const canvas = document.querySelector(".canvas") as HTMLElement | null;
+  if (!canvas) return null;
+  const cr = canvas.getBoundingClientRect();
+  const localX = clientX - cr.left;
+  const localY = clientY - cr.top;
   if (localX < 0 || localY < 0) return null;
   const z = zoomValue.value;
   return { x: localX / (mmToPx(1) * z), y: localY / (mmToPx(1) * z) };
@@ -1344,9 +1375,10 @@ function onDocMouseDown(e: MouseEvent) {
 }
 
 onMounted(() => document.addEventListener("mousedown", onDocMouseDown));
-onBeforeUnmount(() =>
-  document.removeEventListener("mousedown", onDocMouseDown),
-);
+onBeforeUnmount(() => {
+  document.removeEventListener("mousedown", onDocMouseDown);
+  if (wrapRef.value) wrapRef.value.removeEventListener("scroll", onWrapScroll);
+});
 
 /** template 变化时实时同步 multi 集合(template 引用本身不变,但 elements 数组会换) */
 watch(
@@ -1367,15 +1399,14 @@ watch(
 .canvas-wrap {
   flex: 1;
   background: #ececec;
-  overflow-x: auto; /* 画布横向超出时,wrap 内部滚 */
-  overflow-y: visible; /* 纵滚交给 .main */
+  /* 新模型:wrap 接管横纵滚动;.main 不再 overflow */
+  overflow: auto;
   display: flex;
-  align-items: flex-start; /* canvas 顶部 0 跟 wrap 顶部 0 对齐,滚到最顶部时 canvas 0mm = ruler 0mm */
+  align-items: flex-start; /* canvas 顶部 0 跟 wrap 顶部 0 对齐,canvas 0mm 跟 ruler 0 刻度对齐 */
   justify-content: center;
-  min-width: 0; /* 配合 .main overflow-x: hidden,wrap 不要按 max-content 撑开超出 .main */
+  min-width: 0;
   min-height: 0;
-  position: relative; /* 自线 / 吸附线 absolute 相对 wrap 定位 */
-  padding: 16px; /* 画布四周跟 ruler / 滚动条留呼吸(ruler 浮层也下移 16,保持 0 刻度对齐) */
+  position: relative; /* 自线 / 吸附线 / guide 浮层 absolute 相对 wrap 定位 */
 }
 .canvas-wrap.pan-mode {
   cursor: grab;
@@ -1383,16 +1414,27 @@ watch(
 .canvas-wrap.pan-mode:active {
   cursor: grabbing;
 }
-.canvas-frame {
+/* .canvas-pan 单独承接 pan(在 .canvas-scale 之外,不被 scale 二次缩放) */
+.canvas-pan {
   position: relative;
   flex-shrink: 0;
+  width: fit-content;
 }
-/* 多页:每个 page 独立 absolute,内部 .canvas 相对 page 0,0 */
+/* .canvas-scale 根:transform: scale(zoom) 视觉缩放画布,
+ * 子节点 (.print-page / .canvas / .canvas-element) 全部用 raw mm→px 数值,
+ * 父级 scale 让它们视觉上正确;
+ * 多页靠 flex-col + row-gap 自动垂直堆叠(row-gap 用 raw mm→px,父级 scale 视觉一致) */
+.canvas-scale {
+  display: flex;
+  flex-direction: column;
+  row-gap: 75.6px; /* = mmToPx(PAGE_SPACING_MM) = mmToPx(20) */
+  transform-origin: top left;
+}
+/* 多页:每个 page 是 .canvas-scale 的 flex 子元素,内部 .canvas 相对 page 0,0 */
 .print-page {
-  position: absolute;
-  top: 0;
-  left: 0;
-  /* width / height / transform 由 :style 注入 */
+  position: relative;
+  flex-shrink: 0;
+  /* width / height 由 :style 注入 */
 }
 .ruler {
   position: absolute;

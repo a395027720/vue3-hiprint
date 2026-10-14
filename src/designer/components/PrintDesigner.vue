@@ -79,36 +79,36 @@
         @add="onAdd"
         @toggle-panel="onToggleLeftPanel"
       />
-      <!-- 顶部水平 Ruler(浮在 .body 顶部,跨整个宽度) -->
-      <div class="ruler-slot ruler-slot-h">
-        <Ruler
-          type="horizontal"
-          :zoom="designer.zoom.value"
-          :scroll="rulerScrollForX"
-          :offset="rulerOffsetX"
-          :indicators="rulerIndicatorsH"
-          :range="rulerRangeH"
-          :unit="unit"
-          :dark-mode="darkMode"
-          @guide-drag-start="(e) => onGuideDragStart(e, 'horizontal')"
-        />
-      </div>
-      <!-- 左侧垂直 Ruler(浮在 .body 左侧,ruler-h 之下) -->
-      <div class="ruler-slot ruler-slot-v">
-        <Ruler
-          type="vertical"
-          :zoom="designer.zoom.value"
-          :scroll="rulerScrollForY"
-          :offset="rulerOffsetY"
-          :indicators="rulerIndicatorsV"
-          :range="rulerRangeV"
-          :unit="unit"
-          :dark-mode="darkMode"
-          @guide-drag-start="(e) => onGuideDragStart(e, 'vertical')"
-        />
-      </div>
 
-      <div class="main" ref="mainRef" @scroll.passive="onMainScroll">
+      <div class="main" ref="mainRef">
+        <!-- 顶部水平 Ruler(浮在 .main 顶 50,匹配 .canvas-pan padding-top,让 ruler 0 = 画布 0mm 屏幕) -->
+        <div class="ruler-slot ruler-slot-h">
+          <Ruler
+            type="horizontal"
+            :zoom="designer.zoom.value"
+            :scroll="0"
+            :offset="rulerOffsetX"
+            :indicators="rulerIndicatorsH"
+            :range="rulerRangeH"
+            :unit="unit"
+            :dark-mode="darkMode"
+            @guide-drag-start="(e) => onGuideDragStart(e, 'horizontal')"
+          />
+        </div>
+        <!-- 左侧垂直 Ruler(浮在 .main 左 0,跟 ruler-h 同 0 屏幕位置) -->
+        <div class="ruler-slot ruler-slot-v">
+          <Ruler
+            type="vertical"
+            :zoom="designer.zoom.value"
+            :scroll="0"
+            :offset="rulerOffsetY"
+            :indicators="rulerIndicatorsV"
+            :range="rulerRangeV"
+            :unit="unit"
+            :dark-mode="darkMode"
+            @guide-drag-start="(e) => onGuideDragStart(e, 'vertical')"
+          />
+        </div>
         <DesignerCanvas
           :template="designer.template.value"
           :selected-id="designer.selectedId.value"
@@ -138,6 +138,7 @@
           @ctx-action="onCtxAction"
           @guide-hover="designer.setHighlightedGuide"
           @guide-remove="designer.removeGuide"
+          @viewport-change="measureRulerOffsets"
         />
       </div>
       <PropertyPanel
@@ -272,41 +273,27 @@ const darkMode = ref(false)
 
 /** 从 ruler 区域按下:转 mm 坐标 + 调 store.addGuide */
 function onGuideDragStart(e: MouseEvent, axis: 'horizontal' | 'vertical') {
-  const main = mainRef.value
-  if (!main) return
-  const rect = main.getBoundingClientRect()
+  // 从 ruler 自身 rect 算鼠标相对 ruler 0 位置(px),再除以视觉 pxPerMm → mm
+  const ruler = e.currentTarget as HTMLElement | null
+  if (!ruler) return
+  const rect = ruler.getBoundingClientRect()
   const pxPerMm = (96 / 25.4) * designer.zoom.value
-  // ruler 厚 32px 在 main 顶部/左侧
   let positionMm: number
   if (axis === 'horizontal') {
-    const yPx = e.clientY - rect.top + main.scrollTop - 32
-    positionMm = yPx / pxPerMm
+    positionMm = (e.clientY - rect.top) / pxPerMm
   } else {
-    const xPx = e.clientX - rect.left - 32
-    positionMm = xPx / pxPerMm
+    positionMm = (e.clientX - rect.left) / pxPerMm
   }
   designer.addGuide(axis, Math.max(0, positionMm))
 }
 
-// ========== Ruler 用的 scroll / offset / indicators / range ==========
+// ========== Ruler 用的 offset / indicators / range ==========
+// 新模型:.canvas 视觉位置(已含 scale + pan + 滚)→ rulerOffsetX 动态重算,ruler 公式简化为 pos = offset + valUnit*unitPx
 const mainRef = ref<HTMLElement | null>(null)
 const bodyRef = ref<HTMLElement | null>(null)
 
-const rulerScrollX = ref(0) // .canvas-wrap.scrollLeft(横滚)
-const rulerScrollY = ref(0) // .main.scrollTop(纵滚)
-const rulerOffsetX = ref(0) // canvas 0mm 位置在 .main 内的 px(未滚时)
-const rulerOffsetY = ref(0) // canvas 0mm 位置在 .main 内的 px(未滚时)
-// Ruler 实际显示的 scroll:真实滚动 + pan 偏移(panMode 下用 transform 平移画布,需要把 pan 当作 scroll 喂给 ruler)
-const rulerScrollForX = computed(() => rulerScrollX.value + panOffset.value.x)
-const rulerScrollForY = computed(() => rulerScrollY.value + panOffset.value.y)
-
-function onMainScroll() {
-  const main = mainRef.value
-  if (!main) return
-  rulerScrollY.value = main.scrollTop
-  const wrap = main.querySelector('.canvas-wrap') as HTMLElement | null
-  if (wrap) rulerScrollX.value = wrap.scrollLeft
-}
+const rulerOffsetX = ref(0) // canvas 0mm 在 ruler 局部(屏幕)px
+const rulerOffsetY = ref(0)
 
 function measureRulerOffsets() {
   const main = mainRef.value
@@ -315,14 +302,15 @@ function measureRulerOffsets() {
   if (!canvas) return
   const cr = canvas.getBoundingClientRect()
   const mr = main.getBoundingClientRect()
-  // canvas 0mm 真实位置(未滚 main 时) - 滚出 main viewport 时会被 ruler 用 scroll 校正
+  // ruler 浮层在 .main 内 top:0, left:0(紧贴 .main 顶 0 左 0)
+  // ruler 0 屏幕 = mr.left(h) / mr.top(v);画布 0mm 屏幕 = cr.left / cr.top
   rulerOffsetX.value = cr.left - mr.left
   rulerOffsetY.value = cr.top - mr.top
 }
 
 let rulerResizeObserver: ResizeObserver | null = null
 onMounted(() => {
-  // 监听 .main / .canvas 大小变化,重算 ruler offset
+  // 监听 .main / .canvas / .canvas-wrap 大小变化,重算 ruler offset
   if (mainRef.value && 'ResizeObserver' in window) {
     rulerResizeObserver = new ResizeObserver(() => measureRulerOffsets())
     rulerResizeObserver.observe(mainRef.value)
@@ -331,14 +319,20 @@ onMounted(() => {
     const wrap = mainRef.value.querySelector('.canvas-wrap')
     if (wrap) rulerResizeObserver.observe(wrap)
   }
+  // 子组件 DesignerCanvas onMounted 时 mainRef 可能尚未绑定,这里补一次
+  // 下一帧重测,确保 ruler 0 刻度在第一帧就与画布 0mm 对齐
+  nextTick(() => {
+    measureRulerOffsets()
+    requestAnimationFrame(() => measureRulerOffsets())
+  })
 })
 onBeforeUnmount(() => {
   rulerResizeObserver?.disconnect()
 })
 
-// paper / zoom 变化时 canvas 尺寸变,需要重测
+// paper / zoom / pan 变化时 canvas 视觉位置变,需要重测
 watch(
-  () => [designer.template.value.paper.width, designer.template.value.paper.height, designer.zoom.value],
+  () => [designer.template.value.paper.width, designer.template.value.paper.height, designer.zoom.value, panOffset.value.x, panOffset.value.y],
   () => nextTick(measureRulerOffsets),
 )
 
@@ -786,43 +780,34 @@ defineExpose({
   position: relative; /* Ruler / PropertyPanel 浮层锚定 */
   overflow: hidden;
 }
-/* Ruler 浮在 .body 顶部/左侧(避开 ElementsPanel),浮层下移 16px 让画布顶部有呼吸 */
+/* Ruler 浮在 .main 内部,top:0 left:0 紧贴 .main 顶 0 左 0;
+ * panel 由 .main 自身 left 偏移避(panel 在 .body 内 .main 之前) */
 .ruler-slot {
   position: absolute;
   z-index: 5;
   pointer-events: none; /* 让下层 canvas 接收事件;Ruler 自己内部 pointer-events: auto */
 }
 .ruler-slot-h {
-  top: 16px;
-  left: 240px; /* 避开 ElementsPanel(S4 面板宽度);折叠时 .body 通过 JS 调整 */
+  top: 0;
+  left: 0;
   right: 0;
   height: 32px;
-  transition: left 200ms;
 }
+/* ruler-v 跟 ruler-h 浮层同位置(都 top:0, left:0),0 屏幕位置重合;
+ * 角落 32x32 ruler-h/ruler-v 双重画(简单方案,不裁剪) */
 .ruler-slot-v {
-  top: 48px; /* 16 (h 浮层) + 32 (h 浮层自身高) */
-  left: 256px; /* 16 (v 浮层 left 偏移) + 240 (避开 ElementsPanel) */
+  top: 0;
+  left: 0;
   bottom: 0;
   width: 32px;
-  transition: left 200ms;
-}
-/* 折叠状态:ruler 缩到 0 */
-.body.left-closed .ruler-slot-h,
-.body.left-closed .ruler-slot-v {
-  left: 16px;
-}
-.body.left-closed .ruler-slot-v {
-  top: 48px;
 }
 .main {
   flex: 1;
   display: flex;
   min-height: 0;
   position: relative;
-  /* 不给 ruler 让位:ruler 浮在 .body 顶部/左侧(pointer-events: none),
-     自线 / 吸附线在 .canvas-wrap 内跨整个 wrap 高度,自然延伸到 ruler 区域 */
-  overflow-x: hidden;
-  overflow-y: auto;
+  /* 横纵滚都交给 .canvas-wrap,这里不 overflow */
+  overflow: hidden;
 }
 
 /* JSON 弹窗 */
