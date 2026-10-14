@@ -5,7 +5,7 @@
  * 包装后的隐藏副作用,也让 history(undo/redo)更简单(只存引用)。
  */
 
-import type { Element, ElementType, ElementOfType, ElementPatch, Template } from './types'
+import type { Element, ElementType, ElementOfType, ElementPatch, Page, Template } from './types'
 import { DEFAULT_FONT_SIZE } from './types'
 import { nextId } from './id'
 
@@ -180,11 +180,21 @@ export function createElement(type: ElementType, overrides: Partial<Element> = {
 
 // ========== Factory: 创建 Template ==========
 
+/** 创建一页空 Page(id 唯一,elements 为空) */
+export function createPage(overrides: Partial<Page> = {}): Page {
+  return {
+    id: nextId(),
+    elements: [],
+    ...overrides,
+  }
+}
+
+/** 创建默认模板(1 页 A4) */
 export function createTemplate(overrides: Partial<Template> = {}): Template {
   return {
     version: '1.0',
     paper: { width: 210, height: 297 }, // A4
-    elements: [],
+    pages: [createPage()],
     ...overrides,
   }
 }
@@ -192,34 +202,55 @@ export function createTemplate(overrides: Partial<Template> = {}): Template {
 // ========== Immutable update ==========
 
 /**
- * 不可变地更新指定 id 的元素。找不到 id 时返回原 Template(不抛错)。
+ * 不可变地更新指定 page 的指定 id 元素。找不到时返回原 Template(不抛错)。
  */
 export function updateElement<T extends Element>(
   tpl: Template,
+  pageIndex: number,
   id: string,
   patch: ElementPatch<T>,
 ): Template {
+  const page = tpl.pages[pageIndex]
+  if (!page) return tpl
   let changed = false
-  const next = tpl.elements.map((el) => {
+  const nextElements = page.elements.map((el) => {
     if (el.id !== id) return el
     changed = true
     return { ...el, ...patch } as Element
   })
-  return changed ? { ...tpl, elements: next } : tpl
+  if (!changed) return tpl
+  return {
+    ...tpl,
+    pages: tpl.pages.map((p, i) => (i === pageIndex ? { ...p, elements: nextElements } : p)),
+  }
 }
 
 /**
- * 不可变地添加元素(返回新 Template,新元素追加到末尾)。
+ * 不可变地添加元素到指定 page 末尾。
  */
-export function addElement(tpl: Template, el: Element): Template {
-  return { ...tpl, elements: [...tpl.elements, el] }
+export function addElement(tpl: Template, pageIndex: number, el: Element): Template {
+  const page = tpl.pages[pageIndex]
+  if (!page) return tpl
+  return {
+    ...tpl,
+    pages: tpl.pages.map((p, i) =>
+      i === pageIndex ? { ...p, elements: [...p.elements, el] } : p,
+    ),
+  }
 }
 
 /**
- * 不可变地删除元素。
+ * 不可变地删除指定 page 的指定 id 元素。
  */
-export function removeElement(tpl: Template, id: string): Template {
-  return { ...tpl, elements: tpl.elements.filter((el) => el.id !== id) }
+export function removeElement(tpl: Template, pageIndex: number, id: string): Template {
+  const page = tpl.pages[pageIndex]
+  if (!page) return tpl
+  return {
+    ...tpl,
+    pages: tpl.pages.map((p, i) =>
+      i === pageIndex ? { ...p, elements: p.elements.filter((el) => el.id !== id) } : p,
+    ),
+  }
 }
 
 /**
@@ -230,8 +261,29 @@ export function setPaper(tpl: Template, paper: Template['paper']): Template {
 }
 
 /**
- * 按 id 查找元素(纯函数,无副作用)。
+ * 在指定 page 内按 id 查找元素。
  */
-export function findElement(tpl: Template, id: string): Element | undefined {
-  return tpl.elements.find((el) => el.id === id)
+export function findElement(tpl: Template, pageIndex: number, id: string): Element | undefined {
+  return tpl.pages[pageIndex]?.elements.find((el) => el.id === id)
+}
+
+/**
+ * 跨所有 pages 按 id 查找元素,返回 { pageIndex, el } 或 null。
+ */
+export function findElementGlobal(
+  tpl: Template,
+  id: string,
+): { pageIndex: number; el: Element } | null {
+  for (let i = 0; i < tpl.pages.length; i++) {
+    const el = tpl.pages[i].elements.find((e) => e.id === id)
+    if (el) return { pageIndex: i, el }
+  }
+  return null
+}
+
+/**
+ * 跨所有 pages 收集所有元素(flat)。供跨页吸附 / 框选 / 延长线穿透用。
+ */
+export function allElements(tpl: Template): Element[] {
+  return tpl.pages.flatMap((p) => p.elements)
 }

@@ -207,12 +207,22 @@ export type ElementOfType<T extends ElementType> = Extract<Element, { type: T }>
 /** 兼容旧字段名的别名(后续可能删) */
 export type PageBreakMode = RowBreakMode
 
-// ========== Template ==========
+// ========== Page / Template ==========
+
+/**
+ * 模板页。每页独立坐标系(0~paper.w / 0~paper.h),多页时 page 间错开排版。
+ * `repeatPerPage` 标记的元素会在所有 page 重复渲染(全局继承,如页眉/页码)。
+ */
+export interface Page {
+  id: string
+  elements: Element[]
+  repeatPerPage?: boolean
+}
 
 export interface Template {
   version: '1.0'
   paper: Paper
-  elements: Element[]
+  pages: Page[]
 }
 
 // ========== 工具类型 ==========

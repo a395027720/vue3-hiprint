@@ -6,10 +6,11 @@
  * - 垂直对齐(沿 Y 轴):top / middle / bottom
  *
  * 返回新 Template(不修改原对象)。
+ * 多页支持:对齐操作只在元素所在 page 内进行。
  */
 
 import type { Template } from './types'
-import { updateElement } from './schema'
+import { findElementGlobal, updateElement } from './schema'
 
 /** 水平对齐:相对画布,沿 X 轴 */
 export type HorizontalAlign = 'left' | 'center' | 'right'
@@ -23,9 +24,9 @@ function withXY(
   x: number,
   y: number,
 ): Template {
-  const el = tpl.elements.find((e) => e.id === id)
-  if (!el) return tpl
-  return updateElement(tpl, id, { x, y })
+  const found = findElementGlobal(tpl, id)
+  if (!found) return tpl
+  return updateElement(tpl, found.pageIndex, id, { x, y })
 }
 
 /** 水平对齐单个元素。 */
@@ -34,8 +35,9 @@ export function alignHorizontal(
   id: string,
   mode: HorizontalAlign,
 ): Template {
-  const el = tpl.elements.find((e) => e.id === id)
-  if (!el) return tpl
+  const found = findElementGlobal(tpl, id)
+  if (!found) return tpl
+  const el = found.el
   const { width: paperW } = tpl.paper
   let x = el.x
   switch (mode) {
@@ -52,8 +54,9 @@ export function alignVertical(
   id: string,
   mode: VerticalAlign,
 ): Template {
-  const el = tpl.elements.find((e) => e.id === id)
-  if (!el) return tpl
+  const found = findElementGlobal(tpl, id)
+  if (!found) return tpl
+  const el = found.el
   const { height: paperH } = tpl.paper
   let y = el.y
   switch (mode) {
