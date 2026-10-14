@@ -454,13 +454,22 @@ const offsetX = computed(() => {
 });
 const offsetY = computed(() => 0);
 
+/** 画布 0mm 距 wrap 顶的间距(对应 .canvas top:50)
+ *  overlay 公式需要包含这个间距,才能跟画布 0mm 视觉对齐 */
+const CANVAS_TOP_GAP = 50;
+
 /** mm 位置 → overlay 屏幕 px(.canvas-wrap 局部,已含 scale,扣 pan)
  *  用于 guide / self-line / snap-line / selfFill 浮层(不经过 scale 父级) */
 function overlayX(valMm: number): number {
   return offsetX.value + mmToPx(valMm) * zoomValue.value - (props.panX ?? 0);
 }
 function overlayY(valMm: number): number {
-  return offsetY.value + mmToPx(valMm) * zoomValue.value - (props.panY ?? 0);
+  return (
+    CANVAS_TOP_GAP +
+    offsetY.value +
+    mmToPx(valMm) * zoomValue.value -
+    (props.panY ?? 0)
+  );
 }
 
 /** 画布整体框(标尺已搬到 PrintDesigner 顶部浮层,这里 frame 只装画布 + 自线) */
@@ -1559,7 +1568,7 @@ watch(
 }
 .canvas {
   position: absolute;
-  top: 0;
+  top: 50px; /* 画布 0mm 距 .print-page 顶 50px,留呼吸 */
   left: 0;
   background: white;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);

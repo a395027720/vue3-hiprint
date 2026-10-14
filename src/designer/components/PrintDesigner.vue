@@ -302,8 +302,10 @@ function measureRulerOffsets() {
   if (!canvas) return
   const cr = canvas.getBoundingClientRect()
   const mr = main.getBoundingClientRect()
-  // ruler 浮层在 .main 内 top:0, left:0(紧贴 .main 顶 0 左 0)
-  // ruler 0 屏幕 = mr.left(h) / mr.top(v);画布 0mm 屏幕 = cr.left / cr.top
+  // ruler 浮层在 .main 内 top:0(紧贴 .main 顶 0)
+  // ruler 0 数字 baseline 屏幕 y = mr.top + 10,画布 0mm 屏幕 y = mr.top + 50
+  // ruler 0 数字视觉顶 屏幕 y = mr.top(文字 baseline 10,顶 0)
+  // 画布 0mm 屏幕 y 跟 ruler 0 数字视觉顶 差 50(.canvas top:50)
   rulerOffsetX.value = cr.left - mr.left
   rulerOffsetY.value = cr.top - mr.top
 }
