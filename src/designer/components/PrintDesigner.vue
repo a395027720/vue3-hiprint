@@ -203,7 +203,7 @@
         />
       </div>
       <PropertyPanel
-        v-if="propertyPanelOpen"
+        :open="propertyPanelOpen"
         :element="designer.selected.value"
         @update="onUpdate"
         @add-element="onAddDefault"

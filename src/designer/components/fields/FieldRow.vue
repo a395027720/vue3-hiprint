@@ -108,6 +108,7 @@ const displayValue = computed(() => {
 .field-label {
   display: block;
   margin-bottom: 2px;
+  font-weight: normal;
 }
 input,
 select,
@@ -138,5 +139,19 @@ textarea {
   display: flex;
   align-items: center;
   margin-bottom: 8px;
+}
+/* color 字段:label 在左,ColorPicker 触发器在右(参考 Vue-Print-Designer) */
+.field-row.kind-color {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.field-row.kind-color .field-label {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+.field-row.kind-color :deep(.cp-container) {
+  flex: 0 0 auto;
 }
 </style>

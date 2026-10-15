@@ -22,6 +22,7 @@ export const TEXT_SECTIONS: SectionDef[] = [
       { key: 'fontSize', label: '字号 (pt)', kind: 'number', min: 6, max: 96 },
       { key: 'fontFamily', label: '字体', kind: 'text' },
       { key: 'lineHeight', label: '行高', kind: 'number', min: 0.5, step: 0.1 },
+      { key: 'maxLines', label: '文本行数', kind: 'number', min: 1, step: 1 },
       { key: 'letterSpacing', label: '字距 (px)', kind: 'number', step: 0.5 },
       {
         key: 'fontWeight',
@@ -71,10 +72,16 @@ export const TEXT_SECTIONS: SectionDef[] = [
           { value: 'line-through', label: '穿梭线' },
         ],
       },
-      { key: 'color', label: '颜色', kind: 'color' },
-      { key: 'backgroundColor', label: '背景', kind: 'color' },
       { key: 'rotate', label: '旋转 (度)', kind: 'number', step: 1 },
-      { key: 'zIndex', label: '层级', kind: 'number', step: 1 },
+    ],
+  },
+  {
+    title: '颜色',
+    category: 'style',
+    columns: 2,
+    fields: [
+      { key: 'color', label: '字体颜色', kind: 'color' },
+      { key: 'backgroundColor', label: '背景颜色', kind: 'color' },
     ],
   },
 ]

@@ -1,5 +1,5 @@
 <template>
-  <div class="prop-col">
+  <div class="prop-col" :class="{ closed: !props.open }">
     <div class="prop-side">
       <button
         class="side-btn"
@@ -26,116 +26,118 @@
       ><arrow-down-outlined /></button>
     </div>
     <aside class="prop-panel">
-      <div v-if="!element" class="empty">未选中元素</div>
-      <template v-else>
-        <a-tabs v-model:active-key="activeKey" class="prop-tabs">
-          <a-tab-pane
-            v-if="groups.base.length"
-            key="base"
-            tab="基础"
-          >
-            <template v-for="section in groups.base" :key="section.title">
-              <div class="section-title">{{ section.title }}</div>
-              <div class="fields" :class="`cols-${section.columns ?? 1}`">
-                <FieldRow
-                  v-for="f in section.fields"
-                  :key="f.key"
-                  :field="f"
-                  :element="element"
-                  @change="onFieldChange(f, $event)"
-                />
-              </div>
-            </template>
-          </a-tab-pane>
+      <div class="prop-body">
+        <div v-if="!element" class="empty">未选中元素</div>
+        <template v-else>
+          <a-tabs v-model:active-key="activeKey" class="prop-tabs">
+            <a-tab-pane
+              v-if="groups.base.length"
+              key="base"
+              tab="基础"
+            >
+              <template v-for="section in groups.base" :key="section.title">
+                <div class="section-title">{{ section.title }}</div>
+                <div class="fields" :class="`cols-${section.columns ?? 1}`">
+                  <FieldRow
+                    v-for="f in section.fields"
+                    :key="f.key"
+                    :field="f"
+                    :element="element"
+                    @change="onFieldChange(f, $event)"
+                  />
+                </div>
+              </template>
+            </a-tab-pane>
 
-          <a-tab-pane
-            v-if="groups.style.length"
-            key="style"
-            tab="样式"
-          >
-            <template v-for="section in groups.style" :key="section.title">
-              <div class="section-title">{{ section.title }}</div>
-              <div class="fields" :class="`cols-${section.columns ?? 1}`">
-                <FieldRow
-                  v-for="f in section.fields"
-                  :key="f.key"
-                  :field="f"
-                  :element="element"
-                  @change="onFieldChange(f, $event)"
-                />
-              </div>
-            </template>
-          </a-tab-pane>
+            <a-tab-pane
+              v-if="groups.style.length"
+              key="style"
+              tab="样式"
+            >
+              <template v-for="section in groups.style" :key="section.title">
+                <div class="section-title">{{ section.title }}</div>
+                <div class="fields" :class="`cols-${section.columns ?? 1}`">
+                  <FieldRow
+                    v-for="f in section.fields"
+                    :key="f.key"
+                    :field="f"
+                    :element="element"
+                    @change="onFieldChange(f, $event)"
+                  />
+                </div>
+              </template>
+            </a-tab-pane>
 
-          <a-tab-pane
-            v-if="groups.border.length"
-            key="border"
-            tab="边框"
-          >
-            <template v-for="section in groups.border" :key="section.title">
-              <div class="section-title">{{ section.title }}</div>
-              <div class="fields" :class="`cols-${section.columns ?? 1}`">
-                <FieldRow
-                  v-for="f in section.fields"
-                  :key="f.key"
-                  :field="f"
-                  :element="element"
-                  @change="onFieldChange(f, $event)"
-                />
-              </div>
-            </template>
-            <!-- 4 边独立(已由 BORDER_SECTION 字段渲染) -->
-          </a-tab-pane>
+            <a-tab-pane
+              v-if="groups.border.length"
+              key="border"
+              tab="边框"
+            >
+              <template v-for="section in groups.border" :key="section.title">
+                <div class="section-title">{{ section.title }}</div>
+                <div class="fields" :class="`cols-${section.columns ?? 1}`">
+                  <FieldRow
+                    v-for="f in section.fields"
+                    :key="f.key"
+                    :field="f"
+                    :element="element"
+                    @change="onFieldChange(f, $event)"
+                  />
+                </div>
+              </template>
+              <!-- 4 边独立(已由 BORDER_SECTION 字段渲染) -->
+            </a-tab-pane>
 
-          <a-tab-pane
-            v-if="groups.advanced.length"
-            key="advanced"
-            tab="高级"
-          >
-            <template v-for="section in groups.advanced" :key="section.title">
-              <div class="section-title">{{ section.title }}</div>
-              <div class="fields" :class="`cols-${section.columns ?? 1}`">
-                <FieldRow
-                  v-for="f in section.fields"
-                  :key="f.key"
-                  :field="f"
-                  :element="element"
-                  @change="onFieldChange(f, $event)"
-                />
-              </div>
-            </template>
-          </a-tab-pane>
+            <a-tab-pane
+              v-if="groups.advanced.length"
+              key="advanced"
+              tab="高级"
+            >
+              <template v-for="section in groups.advanced" :key="section.title">
+                <div class="section-title">{{ section.title }}</div>
+                <div class="fields" :class="`cols-${section.columns ?? 1}`">
+                  <FieldRow
+                    v-for="f in section.fields"
+                    :key="f.key"
+                    :field="f"
+                    :element="element"
+                    @change="onFieldChange(f, $event)"
+                  />
+                </div>
+              </template>
+            </a-tab-pane>
 
-          <a-tab-pane
-            v-if="element.type === 'table'"
-            key="columns"
-            :tab="`列 (${element.columns.length})`"
-          >
-            <div v-for="(c, i) in element.columns" :key="i" class="col-row">
-              <input
-                type="text"
-                :value="c.field"
-                placeholder="field"
-                @input="patchColumn(i, 'field', $event)"
-              />
-              <input
-                type="text"
-                :value="c.title"
-                placeholder="标题"
-                @input="patchColumn(i, 'title', $event)"
-              />
-              <input
-                type="number"
-                :value="c.width"
-                placeholder="宽"
-                @input="patchColumn(i, 'width', $event)"
-              />
-              <button class="col-del" @click="removeColumn(i)">×</button>
-            </div>
-            <button class="col-add" @click="addColumn">+ 添加列</button>
-          </a-tab-pane>
-        </a-tabs>
-      </template>
+            <a-tab-pane
+              v-if="element.type === 'table'"
+              key="columns"
+              :tab="`列 (${element.columns.length})`"
+            >
+              <div v-for="(c, i) in element.columns" :key="i" class="col-row">
+                <input
+                  type="text"
+                  :value="c.field"
+                  placeholder="field"
+                  @input="patchColumn(i, 'field', $event)"
+                />
+                <input
+                  type="text"
+                  :value="c.title"
+                  placeholder="标题"
+                  @input="patchColumn(i, 'title', $event)"
+                />
+                <input
+                  type="number"
+                  :value="c.width"
+                  placeholder="宽"
+                  @input="patchColumn(i, 'width', $event)"
+                />
+                <button class="col-del" @click="removeColumn(i)">×</button>
+              </div>
+              <button class="col-add" @click="addColumn">+ 添加列</button>
+            </a-tab-pane>
+          </a-tabs>
+        </template>
+      </div>
     </aside>
   </div>
 </template>
@@ -153,6 +155,8 @@ import {
 import FieldRow from '../fields/FieldRow.vue'
 
 const props = defineProps<{
+  /** 是否展开(由 PrintDesigner 控制) */
+  open: boolean
   element: Element | null
 }>()
 
@@ -198,7 +202,7 @@ function onFieldChange(field: FieldDef, e: Event) {
   const target = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
   let raw: unknown
   if (target.type === 'checkbox') raw = (target as HTMLInputElement).checked
-  else if (target.type === 'number') raw = Number(target.value)
+  else if (target.type === 'number') raw = target.value === '' ? undefined : Number(target.value)
   else raw = target.value
   const value = normalizePatchValue(field, props.element, raw)
   emit('update', props.element.id, { [field.key]: value } as Partial<Element>)
@@ -242,6 +246,14 @@ function addColumn() {
   background: #ffffff;
   border-left: 1px solid #f0f0f0;
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.04);
+  transition: width 200ms;
+  width: 348px; /* prop-side(48) + prop-panel(300) */
+  overflow: hidden;
+}
+.prop-col.closed {
+  width: 0;
+  border-left: 0;
+  box-shadow: none;
 }
 .prop-side {
   display: flex;
@@ -280,10 +292,26 @@ function addColumn() {
   width: 300px;
   height: 100%;
   background: #ffffff;
-  padding: 16px;
-  overflow: auto;
   flex-shrink: 0;
   font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.prop-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+/* 颜色/背景字段:把 ColorPicker 触发器加宽成矩形(参考 Vue-Print-Designer PropertyColor) */
+.prop-body :deep(.cp-trigger) {
+  width: 36px;
+  height: 22px;
+  border-radius: 3px;
+  border-color: #d0d0d0;
+}
+.prop-body :deep(.cp-trigger:hover) {
+  border-color: #91caff;
 }
 .empty {
   color: #999;
@@ -301,10 +329,10 @@ function addColumn() {
   font-size: 13px;
 }
 .section-title {
-  font-weight: 500;
-  margin: 10px 0 8px;
-  color: #555;
-  font-size: 12px;
+  font-weight: 600;
+  margin: 12px 0 8px;
+  color: #333;
+  font-size: 14px;
 }
 .fields {
   display: flex;

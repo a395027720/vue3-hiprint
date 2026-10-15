@@ -67,6 +67,8 @@ export interface TextElement extends BaseElement {
   fontFamily?: string
   /** 行高倍数,默认 1.2 */
   lineHeight?: number
+  /** 限制最大行数(超出省略号截断),留空 = 不限制 */
+  maxLines?: number
   /** 背景色,hex */
   backgroundColor?: string
   /** 文本修饰(下划线/上划线/删除线) */

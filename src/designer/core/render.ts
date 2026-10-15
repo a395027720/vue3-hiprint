@@ -116,6 +116,9 @@ function textStyle(el: Extract<Element, { type: 'text' }>): string {
     el.color ? `color:${el.color}` : '',
     el.fontFamily ? `font-family:${escapeHtml(el.fontFamily)}` : '',
     el.lineHeight ? `line-height:${el.lineHeight}` : '',
+    el.maxLines != null && el.maxLines > 0
+      ? `display:-webkit-box;-webkit-line-clamp:${el.maxLines};-webkit-box-orient:vertical;overflow:hidden;`
+      : '',
     el.letterSpacing != null ? `letter-spacing:${el.letterSpacing}px` : '',
     el.textDecoration && el.textDecoration !== 'none' ? `text-decoration:${el.textDecoration}` : '',
     el.backgroundColor ? `background-color:${el.backgroundColor}` : '',
