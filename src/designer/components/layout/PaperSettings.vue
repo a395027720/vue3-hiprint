@@ -90,7 +90,7 @@
           </div>
         </div>
 
-        <div class="ps-grid-2">
+        <div class="ps-grid-2 ps-mt">
           <div class="ps-field">
             <label class="ps-field-label">水平边距 (mm)</label>
             <input
@@ -625,7 +625,9 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin-bottom: 12px;
+}
+.ps-mt {
+  margin-top: 10px;
 }
 .ps-field {
   display: flex;
