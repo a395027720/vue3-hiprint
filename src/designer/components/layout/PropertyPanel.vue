@@ -239,7 +239,7 @@ function addColumn() {
   height: calc(100% - 32px);
   z-index: 50;
   display: flex;
-  background: #fafafa;
+  background: #ffffff;
   border-left: 1px solid #f0f0f0;
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.04);
 }
@@ -248,7 +248,7 @@ function addColumn() {
   flex-direction: column;
   gap: 4px;
   padding: 12px 6px;
-  background: #fafafa;
+  background: #ffffff;
   border-left: 1px solid #f0f0f0;
   flex: 0 0 auto;
 }
@@ -279,7 +279,7 @@ function addColumn() {
 .prop-panel {
   width: 300px;
   height: 100%;
-  background: #fafafa;
+  background: #ffffff;
   padding: 16px;
   overflow: auto;
   flex-shrink: 0;
