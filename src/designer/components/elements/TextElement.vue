@@ -49,7 +49,7 @@ const style = computed(() => {
     lineHeight: e.lineHeight,
     letterSpacing: e.letterSpacing != null ? e.letterSpacing + 'px' : undefined,
     textDecoration: e.textDecoration ?? 'none',
-    backgroundColor: e.backgroundColor,
+    backgroundColor: e.backgroundColor ?? '#ffffff',
     zIndex: e.zIndex,
     display: 'flex',
     flexDirection: 'column',

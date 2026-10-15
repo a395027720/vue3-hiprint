@@ -21,6 +21,7 @@ export function createText(overrides: Partial<ElementOfType<'text'>> = {}): Elem
     h: 8,
     text: '文本',
     fontSize: DEFAULT_FONT_SIZE,
+    backgroundColor: '#ffffff',
     ...overrides,
   }
 }

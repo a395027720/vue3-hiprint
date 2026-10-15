@@ -157,7 +157,7 @@ function textStyle(el: Extract<Element, { type: "text" }>): string {
     el.textDecoration && el.textDecoration !== "none"
       ? `text-decoration:${el.textDecoration}`
       : "",
-    el.backgroundColor ? `background-color:${el.backgroundColor}` : "",
+    el.backgroundColor ? `background-color:${el.backgroundColor}` : "background-color:#ffffff",
     borderCss4Sides(el),
     el.borderRadius ? `border-radius:${el.borderRadius}mm` : "",
     paddingCss4Sides(el),
