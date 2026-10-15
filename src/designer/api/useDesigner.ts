@@ -230,10 +230,6 @@ export interface UseDesignerReturn {
   showFooterLine: Ref<boolean>
   /** 切换页脚分隔线显示 */
   toggleShowFooterLine: () => void
-  /** 是否启用表头页脚分隔线功能 */
-  enableHeaderFooterLineRendering: Ref<boolean>
-  /** 切换表头页脚分隔线功能启用 */
-  toggleEnableHeaderFooterLineRendering: () => void
 }
 
 export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn {
@@ -287,7 +283,6 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
   const footerHeight = ref(0)
   const showFooterLine = ref(false)
 
-  const enableHeaderFooterLineRendering = ref(false)
 
   // 用户自定义参考线(独立 ref,不入 history;后续可迁移到 Template.guides)
   const guides = ref<Guide[]>([])
@@ -774,9 +769,6 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     showFooterLine.value = !showFooterLine.value
   }
 
-  function toggleEnableHeaderFooterLineRendering(): void {
-    enableHeaderFooterLineRendering.value = !enableHeaderFooterLineRendering.value
-  }
 
   return {
     template,
@@ -860,8 +852,6 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     setFooterHeight,
     showFooterLine,
     toggleShowFooterLine,
-    enableHeaderFooterLineRendering,
-    toggleEnableHeaderFooterLineRendering,
     guides,
     highlightedGuideId,
     addGuide,

@@ -38,11 +38,7 @@
     </button>
 
     <Teleport to="body">
-      <div
-        v-if="isOpen"
-        class="ps-backdrop"
-        @click="isOpen = false"
-      />
+      <div v-if="isOpen" class="ps-backdrop" @click="isOpen = false" />
       <div
         v-if="isOpen"
         ref="dropdownRef"
@@ -61,7 +57,9 @@
             @click="onPresetPick(opt.key)"
           >
             <span class="ps-preset-key">{{ opt.key }}</span>
-            <span class="ps-preset-size">{{ opt.width }}×{{ opt.height }}mm</span>
+            <span class="ps-preset-size"
+              >{{ opt.width }}×{{ opt.height }}mm</span
+            >
           </button>
         </div>
 
@@ -73,7 +71,9 @@
               class="ps-input"
               min="1"
               :value="customWidth"
-              @input="onCustomWidthInput(($event.target as HTMLInputElement).value)"
+              @input="
+                onCustomWidthInput(($event.target as HTMLInputElement).value)
+              "
             />
           </div>
           <div class="ps-field">
@@ -83,7 +83,32 @@
               class="ps-input"
               min="1"
               :value="customHeight"
-              @input="onCustomHeightInput(($event.target as HTMLInputElement).value)"
+              @input="
+                onCustomHeightInput(($event.target as HTMLInputElement).value)
+              "
+            />
+          </div>
+        </div>
+
+        <div class="ps-grid-2">
+          <div class="ps-field">
+            <label class="ps-field-label">水平边距 (mm)</label>
+            <input
+              type="number"
+              class="ps-input"
+              min="0"
+              :value="pageMarginHorizontal"
+              @input="onMarginHInput(($event.target as HTMLInputElement).value)"
+            />
+          </div>
+          <div class="ps-field">
+            <label class="ps-field-label">垂直边距 (mm)</label>
+            <input
+              type="number"
+              class="ps-input"
+              min="0"
+              :value="pageMarginVertical"
+              @input="onMarginVInput(($event.target as HTMLInputElement).value)"
             />
           </div>
         </div>
@@ -107,7 +132,9 @@
                 <span class="ps-swatch-checker" />
                 <span
                   class="ps-swatch-fill"
-                  :style="{ backgroundColor: canvasBackground || 'transparent' }"
+                  :style="{
+                    backgroundColor: canvasBackground || 'transparent',
+                  }"
                 />
                 <span
                   v-if="canvasBackground === 'transparent'"
@@ -147,30 +174,6 @@
           </button>
         </div>
 
-        <div class="ps-section-title">页面边距</div>
-        <div class="ps-grid-2">
-          <div class="ps-field">
-            <label class="ps-field-label">水平边距 (mm)</label>
-            <input
-              type="number"
-              class="ps-input"
-              min="0"
-              :value="pageMarginHorizontal"
-              @input="onMarginHInput(($event.target as HTMLInputElement).value)"
-            />
-          </div>
-          <div class="ps-field">
-            <label class="ps-field-label">垂直边距 (mm)</label>
-            <input
-              type="number"
-              class="ps-input"
-              min="0"
-              :value="pageMarginVertical"
-              @input="onMarginVInput(($event.target as HTMLInputElement).value)"
-            />
-          </div>
-        </div>
-
         <div class="ps-toggle-row">
           <span class="ps-toggle-label">允许元素拖出画布</span>
           <button
@@ -201,10 +204,7 @@
           </button>
         </div>
 
-        <div
-          class="ps-hf-row"
-          :class="{ 'is-disabled': !enableHeaderFooterLineRendering }"
-        >
+        <div class="ps-hf-row">
           <div class="ps-hf-left">
             <button
               type="button"
@@ -223,16 +223,15 @@
               class="ps-hf-num"
               min="0"
               :value="headerHeight"
-              @input="onHeaderHeightInput(($event.target as HTMLInputElement).value)"
+              @input="
+                onHeaderHeightInput(($event.target as HTMLInputElement).value)
+              "
             />
             <span class="ps-hf-unit">mm</span>
           </div>
         </div>
 
-        <div
-          class="ps-hf-row"
-          :class="{ 'is-disabled': !enableHeaderFooterLineRendering }"
-        >
+        <div class="ps-hf-row">
           <div class="ps-hf-left">
             <button
               type="button"
@@ -251,7 +250,9 @@
               class="ps-hf-num"
               min="0"
               :value="footerHeight"
-              @input="onFooterHeightInput(($event.target as HTMLInputElement).value)"
+              @input="
+                onFooterHeightInput(($event.target as HTMLInputElement).value)
+              "
             />
             <span class="ps-hf-unit">mm</span>
           </div>
@@ -262,7 +263,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
 import ColorPicker from "../common/ColorPicker.vue";
 
 interface PresetOption {
@@ -297,8 +305,6 @@ const props = defineProps<{
   pageMarginVertical: number;
   /** 是否允许元素拖出画布 */
   allowDragOutsideCanvas: boolean;
-  /** 是否启用表头页脚分隔线渲染 */
-  enableHeaderFooterLineRendering: boolean;
   /** 表头分隔线 */
   headerLineColor: string;
   headerLineWidth: number;
@@ -324,7 +330,6 @@ const emit = defineEmits<{
   setPageMarginHorizontal: [mm: number];
   setPageMarginVertical: [mm: number];
   setAllowDragOutsideCanvas: [allow: boolean];
-  toggleEnableHeaderFooterLineRendering: [];
   setHeaderLineColor: [color: string];
   setHeaderLineWidth: [mm: number];
   setHeaderLineStyle: [style: LineStyle];
@@ -388,8 +393,14 @@ function updatePosition() {
   const screenW = window.innerWidth;
   const screenH = window.innerHeight;
   const style: Record<string, string> = { position: "fixed" };
-  style.left = rect.left + dw <= screenW - 8 ? `${rect.left}px` : `${Math.max(8, rect.right - dw)}px`;
-  style.top = rect.bottom + dh <= screenH - 8 ? `${rect.bottom + 6}px` : `${Math.max(8, rect.top - dh - 6)}px`;
+  style.left =
+    rect.left + dw <= screenW - 8
+      ? `${rect.left}px`
+      : `${Math.max(8, rect.right - dw)}px`;
+  style.top =
+    rect.bottom + dh <= screenH - 8
+      ? `${rect.bottom + 6}px`
+      : `${Math.max(8, rect.top - dh - 6)}px`;
   dropdownStyle.value = style;
 }
 
@@ -506,7 +517,11 @@ function onFooterHeightInput(raw: string) {
 onMounted(() => {
   document.addEventListener("mousedown", handleClickOutside);
   window.addEventListener("resize", () => isOpen.value && updatePosition());
-  window.addEventListener("scroll", () => isOpen.value && updatePosition(), true);
+  window.addEventListener(
+    "scroll",
+    () => isOpen.value && updatePosition(),
+    true,
+  );
 });
 
 onBeforeUnmount(() => {
@@ -667,7 +682,9 @@ onBeforeUnmount(() => {
   overflow: hidden;
   background: white;
   flex: 0 0 auto;
-  transition: border-color 120ms, box-shadow 120ms;
+  transition:
+    border-color 120ms,
+    box-shadow 120ms;
 }
 .ps-bg-swatch:hover {
   border-color: #1677ff;
@@ -711,7 +728,10 @@ onBeforeUnmount(() => {
   color: #555;
   font-size: 12px;
   cursor: pointer;
-  transition: background 120ms, color 120ms, border-color 120ms;
+  transition:
+    background 120ms,
+    color 120ms,
+    border-color 120ms;
 }
 .ps-link-btn:hover {
   background: #f5f5f5;
@@ -723,7 +743,6 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
 }
 .ps-toggle-label {
   color: #444;
@@ -763,116 +782,6 @@ onBeforeUnmount(() => {
   margin-top: -2px;
   padding-top: 4px;
 }
-.ps-line-block {
-  border: 1px solid #f0f0f0;
-  border-radius: 4px;
-  padding: 8px;
-  margin-top: 8px;
-  background: #fafafa;
-}
-.ps-line-block.is-disabled {
-  opacity: 0.4;
-  pointer-events: none;
-}
-.ps-line-title {
-  font-size: 11px;
-  font-weight: 500;
-  color: #555;
-  margin-bottom: 6px;
-}
-.ps-line-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-.ps-line-row:last-child {
-  margin-bottom: 0;
-}
-.ps-line-row > .ps-field-label {
-  flex: 1;
-}
-.ps-line-row-between {
-  justify-content: space-between;
-  margin-bottom: 0;
-}
-.ps-line-row-left {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.ps-line-row-right {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.ps-unit-label {
-  color: #8c8c8c;
-  font-size: 11px;
-}
-.ps-mini-switch {
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  position: relative;
-  flex: 0 0 auto;
-}
-.ps-mini-switch::before {
-  content: "—";
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #bfbfbf;
-  font-size: 10px;
-}
-.ps-mini-switch.is-on {
-  background: #1677ff;
-  border-color: #1677ff;
-}
-.ps-mini-switch.is-on::before {
-  content: "✓";
-  color: white;
-}
-.ps-color-swatch {
-  width: 24px;
-  height: 20px;
-  padding: 0;
-  border: 1px solid #d9d9d9;
-  border-radius: 3px;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  background: white;
-  flex: 0 0 auto;
-}
-.ps-color-swatch:hover {
-  border-color: #1677ff;
-}
-.ps-input-num {
-  flex: 1 1 0;
-  min-width: 0;
-  width: 50px;
-}
-.ps-select {
-  height: 24px;
-  padding: 0 4px;
-  border: 1px solid #d9d9d9;
-  border-radius: 2px;
-  background: white;
-  font-size: 12px;
-  outline: none;
-  flex: 0 0 auto;
-  cursor: pointer;
-}
-.ps-select-tight {
-  width: 50px;
-}
 
 /* ===== 页眉/页脚 section (照参考实现) ===== */
 .ps-hf-title {
@@ -896,7 +805,9 @@ onBeforeUnmount(() => {
   border-radius: 4px;
   color: #555;
   cursor: pointer;
-  transition: background 120ms, color 120ms;
+  transition:
+    background 120ms,
+    color 120ms;
 }
 .ps-icon-btn:hover {
   background: #f5f5f5;

@@ -434,7 +434,6 @@
           :page-margin-horizontal="pageMarginHorizontal"
           :page-margin-vertical="pageMarginVertical"
           :allow-drag-outside-canvas="allowDragOutsideCanvas"
-          :enable-header-footer-line-rendering="enableHeaderFooterLineRendering"
           :header-line-color="headerLineColor"
           :header-line-width="headerLineWidth"
           :header-line-style="headerLineStyle"
@@ -455,7 +454,6 @@
           @set-page-margin-horizontal="onSetPageMarginHorizontal"
           @set-page-margin-vertical="onSetPageMarginVertical"
           @set-allow-drag-outside-canvas="onSetAllowDragOutsideCanvas"
-          @toggle-enable-header-footer-line-rendering="onToggleEnableHeaderFooterLineRendering"
           @set-header-line-color="onSetHeaderLineColor"
           @set-header-line-width="onSetHeaderLineWidth"
           @set-header-line-style="onSetHeaderLineStyle"
@@ -670,8 +668,6 @@ const props = defineProps<{
   pageMarginVertical: number;
   /** 是否允许元素拖出画布 */
   allowDragOutsideCanvas: boolean;
-  /** 是否启用表头页脚分隔线渲染 */
-  enableHeaderFooterLineRendering: boolean;
   /** 表头分隔线 */
   headerLineColor: string;
   headerLineWidth: number;
@@ -736,7 +732,6 @@ const emit = defineEmits<{
   setPageMarginHorizontal: [mm: number];
   setPageMarginVertical: [mm: number];
   setAllowDragOutsideCanvas: [allow: boolean];
-  toggleEnableHeaderFooterLineRendering: [];
   setHeaderLineColor: [color: string];
   setHeaderLineWidth: [mm: number];
   setHeaderLineStyle: [style: "solid" | "dashed" | "dotted"];
@@ -751,7 +746,6 @@ const emit = defineEmits<{
   setFooterLineSpanMode: [m: "value" | "percent"];
   setFooterHeight: [mm: number];
   toggleShowFooterLine: [];
-  openHeaderFooterLineAdvanced: [];
   openHeaderFooterLineAdvanced: [];
   setZoom: [z: number];
   resetZoom: [];
@@ -831,9 +825,6 @@ function onSetPageMarginVertical(mm: number) {
 }
 function onSetAllowDragOutsideCanvas(allow: boolean) {
   emit("setAllowDragOutsideCanvas", allow);
-}
-function onToggleEnableHeaderFooterLineRendering() {
-  emit("toggleEnableHeaderFooterLineRendering");
 }
 
 function onSetHeaderLineColor(color: string) {
