@@ -30,6 +30,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { TableElement } from '../../core/types'
+import { mmToPx } from '../../core/render'
 
 const props = defineProps<{
   element: TableElement
@@ -40,7 +41,7 @@ const props = defineProps<{
 function cellStyle(align?: string) {
   return {
     textAlign: (align ?? 'left') as 'left' | 'center' | 'right',
-    fontSize: (props.element.fontSize ?? 12) + 'pt',
+    fontSize: mmToPx(props.element.fontSize ?? 3.7) + 'px',
   }
 }
 

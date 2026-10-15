@@ -11,7 +11,7 @@ export const TABLE_SECTIONS: SectionDef[] = [
     category: 'base',
     fields: [
       { key: 'dataPath', label: '数据路径', kind: 'text' },
-      { key: 'fontSize', label: '字号 (pt)', kind: 'number', min: 6, max: 96 },
+      { key: 'fontSize', label: '字号 (mm)', kind: 'number', min: 2, max: 30, step: 0.1, precision: 1 },
     ],
   },
   {

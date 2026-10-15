@@ -8,6 +8,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { PageNumElement } from '../../core/types'
+import { mmToPx } from '../../core/render'
 
 const props = defineProps<{
   element: PageNumElement
@@ -19,7 +20,7 @@ const style = computed(() => {
   const e = props.element
   const justify = e.align === 'center' ? 'center' : e.align === 'right' ? 'flex-end' : 'flex-start'
   return {
-    fontSize: e.fontSize + 'pt',
+    fontSize: mmToPx(e.fontSize) + 'px',
     fontWeight: e.fontWeight,
     color: e.color ?? '#000',
     fontFamily: e.fontFamily,

@@ -142,7 +142,7 @@ function textStyle(el: Extract<Element, { type: "text" }>): string {
         ? "flex-end"
         : "flex-start";
   return [
-    `font-size:${el.fontSize}pt`,
+    `font-size:${mmToPx(el.fontSize)}px`,
     el.fontWeight ? `font-weight:${el.fontWeight}` : "",
     el.fontStyle && el.fontStyle !== "normal"
       ? `font-style:${el.fontStyle}`
@@ -227,7 +227,7 @@ function renderTable(el: TableElement, data: unknown): string {
   const thead = `<thead><tr>${el.columns
     .map(
       (c) =>
-        `<th style="text-align:${c.align ?? "left"};font-size:${el.fontSize}pt;padding:2px 4px;border:1px solid ${el.borderColor ?? "#000"}">${escapeHtml(c.title)}</th>`,
+        `<th style="text-align:${c.align ?? "left"};font-size:${mmToPx(el.fontSize)}px;padding:2px 4px;border:1px solid ${el.borderColor ?? "#000"}">${escapeHtml(c.title)}</th>`,
     )
     .join("")}</tr></thead>`;
 
@@ -237,7 +237,7 @@ function renderTable(el: TableElement, data: unknown): string {
         `<tr>${el.columns
           .map((c) => {
             const v = (row as Record<string, unknown>)?.[c.field];
-            return `<td style="text-align:${c.align ?? "left"};font-size:${el.fontSize}pt;padding:2px 4px;border:1px solid ${el.borderColor ?? "#000"}">${escapeHtml(String(v ?? ""))}</td>`;
+            return `<td style="text-align:${c.align ?? "left"};font-size:${mmToPx(el.fontSize)}px;padding:2px 4px;border:1px solid ${el.borderColor ?? "#000"}">${escapeHtml(String(v ?? ""))}</td>`;
           })
           .join("")}</tr>`,
     )
@@ -271,7 +271,7 @@ function renderPageNum(el: Extract<Element, { type: "pagenum" }>): string {
     width:${mmToPx(el.w)}px;height:${mmToPx(el.h)}px;
     box-sizing:border-box;
     display:flex;align-items:center;justify-content:${el.align === "center" ? "center" : el.align === "right" ? "flex-end" : "flex-start"};
-    font-size:${el.fontSize}pt;
+    font-size:${mmToPx(el.fontSize)}px;
     ${el.fontWeight ? `font-weight:${el.fontWeight};` : ""}
     ${el.color ? `color:${el.color};` : ""}
     ${el.fontFamily ? `font-family:${escapeHtml(el.fontFamily)};` : ""}
@@ -347,7 +347,7 @@ function renderMultiLabel(
       width:${cellW.toFixed(1)}px;height:${cellH}px;
       background:${l.color ?? "#f0f7ff"};border:1px solid #91caff;border-radius:3px;
       display:flex;align-items:center;justify-content:center;
-      font-size:${el.fontSize}pt;color:${el.color ?? "#333"};
+      font-size:${mmToPx(el.fontSize)}px;color:${el.color ?? "#333"};
     ">${escapeHtml(l.text)}</div>`;
     })
     .join("");

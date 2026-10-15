@@ -61,7 +61,7 @@ export type WritingMode = 'horizontal-tb' | 'vertical-rl' | 'vertical-lr'
 export interface TextElement extends BaseElement {
   type: 'text'
   text: string
-  fontSize: number // pt
+  fontSize: number // mm
   fontWeight?: FontWeight
   fontStyle?: 'normal' | 'italic'
   color?: string // hex, e.g. '#000000'
@@ -121,7 +121,7 @@ export interface TableElement extends BaseElement {
   rowBreak: RowBreakMode
   /** 跨页时是否重复表头(thead { display: table-header-group }) */
   repeatHeader: boolean
-  fontSize: number // pt
+  fontSize: number // mm
   borderColor?: string
 }
 
@@ -237,5 +237,5 @@ export interface Template {
 /** 任意 element 的部分更新(用于 updateElement helper) */
 export type ElementPatch<T extends Element = Element> = Partial<Omit<T, 'id' | 'type'>>
 
-/** 默认字体 */
-export const DEFAULT_FONT_SIZE = 12
+/** 默认字号 (mm) */
+export const DEFAULT_FONT_SIZE = 3.7

@@ -49,9 +49,10 @@
             class="tqt-num"
             :value="fontSize ?? ''"
             :disabled="disabled"
-            min="1"
-            max="200"
-            title="字号"
+            min="2"
+            max="30"
+            step="0.1"
+            title="字号 (mm)"
             @change="onFontSizeInput"
           />
           <button
@@ -322,13 +323,13 @@ function onFontFamily(e: Event) {
 
 function onFontSize(delta: number) {
   if (!fontSize.value) return;
-  const next = Math.max(1, Math.min(200, fontSize.value + delta));
+  const next = Math.max(2, Math.min(30, +(fontSize.value + delta).toFixed(1)));
   emit("patch", { fontSize: next });
 }
 function onFontSizeInput(e: Event) {
   const v = Number((e.target as HTMLInputElement).value);
   if (Number.isFinite(v) && v > 0) {
-    emit("patch", { fontSize: Math.max(1, Math.min(200, v)) });
+    emit("patch", { fontSize: Math.max(2, Math.min(30, v)) });
   }
 }
 

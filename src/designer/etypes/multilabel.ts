@@ -19,7 +19,7 @@ export const MULTILABEL_SECTIONS: SectionDef[] = [
     category: 'style',
     columns: 2,
     fields: [
-      { key: 'fontSize', label: '字号 (pt)', kind: 'number', min: 6, max: 96 },
+      { key: 'fontSize', label: '字号 (mm)', kind: 'number', min: 2, max: 30, step: 0.1, precision: 1 },
       { key: 'color', label: '默认颜色', kind: 'color' },
     ],
   },

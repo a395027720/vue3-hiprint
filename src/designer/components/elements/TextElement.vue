@@ -18,6 +18,7 @@
 import { computed } from 'vue'
 import type { TextElement } from '../../core/types'
 import { boxStyle as applyBoxStyle } from '../../core/elementStyle'
+import { mmToPx } from '../../core/render'
 
 const props = defineProps<{
   element: TextElement
@@ -38,7 +39,7 @@ const style = computed(() => {
   const justifyV = va === 'middle' ? 'center' : va === 'bottom' ? 'flex-end' : 'flex-start'
   const alignH = e.align === 'center' ? 'center' : e.align === 'right' ? 'flex-end' : 'flex-start'
   return {
-    fontSize: e.fontSize + 'pt',
+    fontSize: mmToPx(e.fontSize) + 'px',
     fontFamily: e.fontFamily,
     fontWeight: e.fontWeight,
     fontStyle: e.fontStyle && e.fontStyle !== 'normal' ? e.fontStyle : undefined,

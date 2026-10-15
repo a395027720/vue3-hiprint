@@ -75,9 +75,10 @@
               class="vtb-num"
               :value="fontSize ?? ''"
               :disabled="!isText"
-              min="1"
-              max="200"
-              title="字号 (pt)"
+              min="2"
+              max="30"
+              step="0.1"
+              title="字号 (mm)"
               @change="onFontSizeChange"
             />
             <button

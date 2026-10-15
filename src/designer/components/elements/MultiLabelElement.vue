@@ -40,7 +40,7 @@ function chipStyle(l: { color?: string }) {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: (props.element.fontSize ?? 12) + 'pt',
+    fontSize: mmToPx(props.element.fontSize ?? 3.7) + 'px',
     color: props.element.color ?? '#333',
     height: '18px',
   }

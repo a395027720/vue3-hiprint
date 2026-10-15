@@ -685,7 +685,7 @@ function onClearFormat() {
     fontWeight: "normal",
     fontStyle: "normal",
     textDecoration: "none",
-    fontSize: 12,
+    fontSize: 3.7,
   } as Partial<TextElement>);
 }
 
@@ -723,7 +723,7 @@ function onFontSizeStep(delta: number) {
   const id = designer.selectedId.value;
   const t = selectedText.value;
   if (!id || !t) return;
-  const next = Math.max(6, Math.min(96, (t.fontSize ?? 12) + delta));
+  const next = Math.max(2, Math.min(30, (t.fontSize ?? 3.7) + delta));
   designer.update(id, { fontSize: next } as Partial<TextElement>);
 }
 
