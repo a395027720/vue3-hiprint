@@ -911,7 +911,6 @@ onBeforeUnmount(() => {
 }
 .ps-hf-row.is-disabled {
   opacity: 0.5;
-  pointer-events: none;
 }
 .ps-hf-left {
   display: inline-flex;
