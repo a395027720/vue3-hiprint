@@ -41,39 +41,12 @@
               @contextmenu.prevent.stop="onContextMenu($event, el.id)"
             >
               <ElementRenderer :element="el" />
-              <span v-if="el.locked" class="lock-badge" title="已锁定">🔒</span>
-              <!-- 选中元素的 handle 层(放在 .canvas-element 内,跟着 rotate 一起转) -->
-              <template v-if="el.id === selectedId && !el.locked">
-                <span
-                  v-for="h in resizeHandles"
-                  :key="h.dir"
-                  class="resize-handle"
-                  :class="`rh-${h.kind} rh-${h.dir}`"
-                  :style="handleStyle(el, h.dir)"
-                  @mousedown.stop="onResizeStart($event, el.id, h.dir)"
-                />
-                <span
-                  class="rotate-handle"
-                  :style="rotateHandleStyleReversed(el)"
-                  title="拖动旋转"
-                  @mousedown.stop="onRotateStart($event, el.id)"
-                >
-                  <svg
-                    viewBox="0 0 16 16"
-                    width="12"
-                    height="12"
-                    aria-hidden="true"
-                  >
-                    <path
-                      fill="currentColor"
-                      d="M8 2.5a5.5 5.5 0 1 0 5.45 6.3.85.85 0 0 0-1.69-.18 3.8 3.8 0 1 1-1-3.7l-1.3 1.3a.6.6 0 0 0 .42 1.03h3.5a.6.6 0 0 0 .6-.6V3.15a.6.6 0 0 0-1.03-.42l-1.1 1.1A5.48 5.48 0 0 0 8 2.5Z"
-                    />
-                  </svg>
-                </span>
-                <span class="rotate-deg" :style="rotateDegStyle(el)"
-                  >{{ el.rotate ?? 0 }}°</span
-                >
-              </template>
+              <ElementOverlayHandles
+                v-if="el.id === selectedId"
+                :element="el"
+                @resize-start="onResizeStart"
+                @rotate-start="onRotateStart"
+              />
             </div>
 
             <!-- 框选矩形(屏幕坐标,覆盖在 .canvas 上) -->
@@ -216,6 +189,7 @@ import { allElements, findElementGlobal } from "../../core/schema";
 import { snapValue } from "../../utils/snap";
 import ElementRenderer from "../elements/ElementRenderer.vue";
 import ContextMenu from "../floating/ContextMenu.vue";
+import ElementOverlayHandles from "./ElementOverlayHandles.vue";
 
 /** 多页之间的纵向间距(mm)。S2 暂用 0(单页行为不变),S3 接 pageSpacingX/Y。 */
 const PAGE_SPACING_MM = 20;
@@ -1014,68 +988,6 @@ function collectCandidatesForGroup(
 type ResizeDir = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 const MIN_SIZE_MM = 4;
 
-const resizeHandles: Array<{ dir: ResizeDir; kind: "corner" | "edge" }> = [
-  { dir: "nw", kind: "corner" },
-  { dir: "n", kind: "edge" },
-  { dir: "ne", kind: "corner" },
-  { dir: "e", kind: "edge" },
-  { dir: "se", kind: "corner" },
-  { dir: "s", kind: "edge" },
-  { dir: "sw", kind: "corner" },
-  { dir: "w", kind: "edge" },
-];
-
-/** 计算单个 handle 的位置/光标(handle 在元素盒内坐标,以元素内容区左上为原点)。
- *  角 handle 是 8x8 实心方块,中心对元素 4 角(corner offset = 4)。
- *  边 handle 是 14x3 / 3x14 短条,贴在边框上(edge offset 与方向相关)。
- *  父级 .canvas-scale 用 transform: scale(zoom) 视觉缩放,子元素用 raw mm→px。
- */
-function handleStyle(el: Element, dir: ResizeDir) {
-  const isCorner = dir === "nw" || dir === "ne" || dir === "sw" || dir === "se";
-  const isHorizontal = dir === "n" || dir === "s";
-  const offX = isCorner ? 4 : isHorizontal ? 7 : (dir === "w" ? 2 : 3);
-  const offY = isCorner ? 4 : isHorizontal ? (dir === "n" ? 2 : 3) : 7;
-  const posMap: Record<ResizeDir, { fx: number; fy: number; cursor: string }> =
-    {
-      nw: { fx: 0, fy: 0, cursor: "nwse-resize" },
-      n: { fx: 0.5, fy: 0, cursor: "ns-resize" },
-      ne: { fx: 1, fy: 0, cursor: "nesw-resize" },
-      e: { fx: 1, fy: 0.5, cursor: "ew-resize" },
-      se: { fx: 1, fy: 1, cursor: "nwse-resize" },
-      s: { fx: 0.5, fy: 1, cursor: "ns-resize" },
-      sw: { fx: 0, fy: 1, cursor: "nesw-resize" },
-      w: { fx: 0, fy: 0.5, cursor: "ew-resize" },
-    };
-  const p = posMap[dir];
-  // handle 现在是 .canvas-element 的子元素,在 .canvas-scale 内由父级 transform: scale(zoom) 视觉缩放
-  // 所以用 raw mm→px,与 elBox 一致(不再 * zoom,避免重复)
-  return {
-    left: p.fx * mmToPx(el.w) - offX + "px",
-    top: p.fy * mmToPx(el.h) - offY + "px",
-    cursor: p.cursor,
-  };
-}
-
-/** 旋转手柄圆点(handle 现在在 .canvas-element 内,坐标用相对位置;
- *  反向旋转 -el.rotate 让旋转图标始终保持正向)。
- *  元素盒 (x, y, w, h) 中:手柄放在元素右侧外,垂直居中(8px 距右边缘)。 */
-function rotateHandleStyleReversed(el: Element) {
-  return {
-    left: mmToPx(el.w) + 8 + "px",
-    top: mmToPx(el.h) / 2 - 9 + "px",
-    transform: `rotate(${-(el.rotate ?? 0)}deg)`,
-  };
-}
-
-/** 实时旋转角度文本(元素底边中点下方,反向旋转保持正向可读) */
-function rotateDegStyle(el: Element) {
-  return {
-    left: mmToPx(el.w) / 2 + "px",
-    top: mmToPx(el.h) + 6 + "px",
-    transform: `translate(-50%, 0) rotate(${-(el.rotate ?? 0)}deg)`,
-  };
-}
-
 /**
  * 启动 resize 拖拽。
  * 用元素盒的屏幕坐标 + 鼠标增量来反推新 x/y/w/h(保证 zoom 下视觉一致),
@@ -1524,39 +1436,6 @@ watch(
   border-color: #faad14 !important;
   cursor: not-allowed !important;
 }
-/* 锁定徽标(元素左上角) */
-.lock-badge {
-  position: absolute;
-  top: -10px;
-  left: -10px;
-  width: 20px;
-  height: 20px;
-  font-size: 12px;
-  line-height: 20px;
-  text-align: center;
-  background: #faad14;
-  color: #fff;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  pointer-events: none;
-  z-index: 100;
-}
-/* 实时旋转角度文本(元素底边中点下方,反向旋转保持正向可读) */
-.rotate-deg {
-  position: absolute;
-  padding: 1px 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #fff;
-  background: #1890ff;
-  border-radius: 3px;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 101;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
 /* 拖动中的延长线(从元素/组 4 边出发,跨整个 .main viewport,延伸到 ruler 区域):浅蓝虚线
    提到 .ruler-overlay 内是为了在 ruler 区域内也能看到浅蓝短截,坐标公式用 canvasOffsetX/Y */
 .self-line {
@@ -1642,87 +1521,7 @@ watch(
 }
 /* 吸附命中线不需要 label(用户不需要冗余 mm 显示) */
 
-/* ========== Resize / Rotate handles ==========
-   handle 视觉与元素边框融合:
-   - 角:8x8 实心蓝方块,骑在元素 4 角边框上(角点是边框交叉处)
-   - 边:短条一半在外、一半压住边框(看上去是边框的加粗控制点)
-*/
-.resize-handle {
-  position: absolute;
-  pointer-events: auto;
-  z-index: 100;
-  background: transparent;
-}
-/* ---------- 角 handle:8x8 实心蓝方块 ---------- */
-.rh-corner {
-  width: 8px;
-  height: 8px;
-  background: #1890ff;
-  border: 1px solid #fff;
-  border-radius: 2px;
-  box-shadow: 0 0 0 1px rgba(24, 144, 255, 0.35);
-  transition:
-    transform 140ms,
-    box-shadow 140ms;
-}
-.rh-corner:hover {
-  transform: scale(1.15);
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.5);
-}
-
-/* ---------- 边 handle:贴在边框上的短条(骑线) ---------- */
-.rh-edge {
-  background: #1890ff;
-  border-radius: 1.5px;
-  opacity: 0.95;
-  transition:
-    opacity 120ms,
-    transform 120ms;
-}
-.rh-edge:hover {
-  opacity: 1;
-  transform: scale(1.2);
-}
-/* 上下边:横条(中点对元素上/下边中点) */
-.rh-n,
-.rh-s {
-  width: 14px;
-  height: 3px;
-}
-/* 左右边:竖条 */
-.rh-e,
-.rh-w {
-  width: 3px;
-  height: 14px;
-}
-.rotate-handle {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  background: #1890ff;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  pointer-events: auto;
-  cursor: grab;
-  z-index: 101;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition:
-    transform 120ms,
-    box-shadow 120ms;
-}
-.rotate-handle:active {
-  cursor: grabbing;
-}
-.rotate-handle:hover {
-  transform: scale(1.15);
-  box-shadow:
-    0 0 0 3px rgba(24, 144, 255, 0.25),
-    0 2px 4px rgba(0, 0, 0, 0.3);
-}
+/* ========== Resize / Rotate handles 已搬到 ElementOverlayHandles.vue ========== */
 
 /* ========== 框选 / 多选 ========== */
 .marquee-rect {
