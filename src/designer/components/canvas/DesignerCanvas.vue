@@ -21,8 +21,6 @@
             :style="canvasStyle"
             @dragover.prevent
             @drop.stop="onDrop"
-            @mousemove="onCanvasMouseMove"
-            @mouseleave="onCanvasMouseLeave"
           >
             <div
               v-for="el in page.elements"
@@ -321,21 +319,6 @@ function overlayY(valMm: number): number {
   );
 }
 
-/** 画布整体框(标尺已搬到 PrintDesigner 顶部浮层,这里 frame 只装画布 + 自线) */
-const frameStyle = computed(() => {
-  const w = mmToPx(props.template.paper.width);
-  const pages = props.template.pages.length;
-  const singleH = mmToPx(props.template.paper.height);
-  const spacing = mmToPx(PAGE_SPACING_MM);
-  const h = Math.max(singleH, pages * singleH + (pages - 1) * spacing);
-  return {
-    width: w + "px",
-    height: h + "px",
-    widthPx: w,
-    heightPx: singleH, // cursor chip / 延长线仍按单页纸算
-  };
-});
-
 /** .canvas-pan 单独承接 pan(在 .canvas-scale 之外,不被 scale 二次缩放) */
 const panStyle = computed(() => ({
   transform: `translate(${props.panX ?? 0}px, ${props.panY ?? 0}px)`,
@@ -356,42 +339,6 @@ const selectedEl = computed<Element | null>(() => {
 });
 
 // ========== 标尺:鼠标游标 + 选中元素位置标记 ==========
-
-/** 鼠标在画布内的位置(同时给水平/垂直标尺用) */
-const mousePos = ref<{
-  /** 鼠标在 canvas 内的 px(从 canvas 左上角算) */
-  xPx: number;
-  yPx: number;
-  /** 鼠标在 canvas 内的 mm */
-  xMm: number;
-  yMm: number;
-  /** 是否在画布内(0 ≤ mm ≤ paper) */
-  inCanvas: boolean;
-} | null>(null);
-
-/** 当前是否有任何选中(主选 / 多选) */
-const hasSelection = computed(
-  () =>
-    !!props.selectedId ||
-    (props.multiSelectedIds && props.multiSelectedIds.length > 0),
-);
-
-/** 鼠标游标 chip 位置(ruler 跟 canvas 走,viewBox 0 = canvas 0mm,直接用 mousePos.xPx) */
-function cursorChipX(): number {
-  if (!mousePos.value) return 0;
-  const x = mousePos.value.xPx + 4;
-  // 距右边界 < 40 时,改为显示在鼠标左侧
-  const totalW = frameStyle.value.widthPx;
-  if (x + 40 > totalW) return Math.max(0, mousePos.value.xPx - 40);
-  return x;
-}
-function cursorChipY(): number {
-  if (!mousePos.value) return 0;
-  const y = mousePos.value.yPx + 4;
-  const totalH = frameStyle.value.heightPx;
-  if (y + 18 > totalH) return Math.max(0, mousePos.value.yPx - 18);
-  return y;
-}
 
 /** guide mm 位置 → wrap 内 px(水平线) */
 function guideYStyle(positionMm: number): string {
@@ -445,26 +392,6 @@ function onDrop(e: DragEvent) {
 function onWrapDragOver(e: DragEvent) {
   // 仅占位,模板上 .prevent 已让 drop 生效
   void e;
-}
-
-/** 鼠标在画布上:更新标尺游标位置(同时给水平/垂直标尺) */
-function onCanvasMouseMove(e: MouseEvent) {
-  const canvas = e.currentTarget as HTMLElement;
-  const rect = canvas.getBoundingClientRect();
-  const xPx = e.clientX - rect.left;
-  const yPx = e.clientY - rect.top;
-  const z = zoomValue.value;
-  const xMm = xPx / (mmToPx(1) * z);
-  const yMm = yPx / (mmToPx(1) * z);
-  const inCanvas =
-    xMm >= 0 &&
-    xMm <= props.template.paper.width &&
-    yMm >= 0 &&
-    yMm <= props.template.paper.height;
-  mousePos.value = { xPx, yPx, xMm, yMm, inCanvas };
-}
-function onCanvasMouseLeave() {
-  mousePos.value = null;
 }
 
 // ========== Context Menu ==========
