@@ -63,28 +63,15 @@
       </div>
     </div>
 
-    <!-- 用户自定义参考线(guides):跨整个 wrap,从 ruler 区域穿过 -->
-    <div v-for="g in props.guides" v-show="false" :key="`g-hidden-${g.id}`" />
-    <template v-for="g in props.guides ?? []" :key="g.id">
-      <div
-        v-if="g.axis === 'horizontal'"
-        class="guide-line guide-h"
-        :class="{ highlighted: props.highlightedGuideId === g.id }"
-        :style="{ top: guideYStyle(g.position) }"
-        @mouseenter="emit('guideHover', g.id)"
-        @mouseleave="emit('guideHover', null)"
-        @dblclick.stop="emit('guideRemove', g.id)"
-      />
-      <div
-        v-else
-        class="guide-line guide-v"
-        :class="{ highlighted: props.highlightedGuideId === g.id }"
-        :style="{ left: guideXStyle(g.position) }"
-        @mouseenter="emit('guideHover', g.id)"
-        @mouseleave="emit('guideHover', null)"
-        @dblclick.stop="emit('guideRemove', g.id)"
-      />
-    </template>
+    <!-- 用户自定义参考线(guides)浮层(由 GuideOverlay 渲染) -->
+    <GuideOverlay
+      :guides="props.guides ?? []"
+      :highlighted-id="props.highlightedGuideId ?? null"
+      :get-x="guideXStyle"
+      :get-y="guideYStyle"
+      @hover="emit('guideHover', $event)"
+      @remove="emit('guideRemove', $event)"
+    />
 
     <!-- 拖动中的"延长线 + 选区填充" + 吸附命中红线浮层(由 SnapAndSelfLinesOverlay 渲染) -->
     <SnapAndSelfLinesOverlay
@@ -144,6 +131,7 @@ import ElementOverlayHandles from "./ElementOverlayHandles.vue";
 import SnapAndSelfLinesOverlay, {
   type OverlayLine,
 } from "./SnapAndSelfLinesOverlay.vue";
+import GuideOverlay from "./GuideOverlay.vue";
 
 /** 多页之间的纵向间距(mm)。S2 暂用 0(单页行为不变),S3 接 pageSpacingX/Y。 */
 const PAGE_SPACING_MM = 20;
@@ -1347,31 +1335,8 @@ watch(
   flex-shrink: 0;
   /* width / height 由 :style 注入 */
 }
-/* 用户自定义参考线(guide),跨整个 wrap,延伸进 ruler 区域;双击删除 */
-.guide-line {
-  position: absolute;
-  pointer-events: auto;
-  z-index: 6;
-  cursor: pointer;
-}
-.guide-h {
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: #1677ff;
-  transform: translateY(-0.5px);
-}
-.guide-v {
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: #1677ff;
-  transform: translateX(-0.5px);
-}
-.guide-line.highlighted {
-  background: #4096ff;
-  box-shadow: 0 0 0 1px rgba(64, 150, 255, 0.3);
-}
+
+/* 用户自定义参考线已搬到 GuideOverlay.vue */
 
 /* 拖动中延长线围成的范围浅蓝半透明填充已搬到 SnapAndSelfLinesOverlay.vue */
 .canvas {
