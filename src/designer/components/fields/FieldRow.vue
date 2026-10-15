@@ -71,6 +71,10 @@ const displayValue = computed(() => {
     if (props.field.key === 'rowBreak') return v === 'row'
     return !!v
   }
+  // number + precision 字段:固定小数位显示(如 X/Y/W/H 显示 "10.50")
+  if (props.field.kind === 'number' && typeof v === 'number' && props.field.precision != null) {
+    return v.toFixed(props.field.precision)
+  }
   return v
 })
 </script>

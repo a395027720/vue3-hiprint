@@ -46,6 +46,8 @@ export interface FieldDef {
   min?: number
   max?: number
   step?: number
+  /** number 类型显示时保留的小数位数(不传 = 原样显示) */
+  precision?: number
   showWhen?: (el: Element) => boolean
 }
 
@@ -65,10 +67,10 @@ const POSITION_SECTION: SectionDef = {
   category: 'base',
   columns: 2,
   fields: [
-    { key: 'x', label: 'X', kind: 'number', step: 0.5 },
-    { key: 'y', label: 'Y', kind: 'number', step: 0.5 },
-    { key: 'w', label: 'W', kind: 'number', min: 1, step: 0.5 },
-    { key: 'h', label: 'H', kind: 'number', min: 0, step: 0.5 },
+    { key: 'x', label: 'X', kind: 'number', step: 0.5, precision: 2 },
+    { key: 'y', label: 'Y', kind: 'number', step: 0.5, precision: 2 },
+    { key: 'w', label: 'W', kind: 'number', min: 1, step: 0.5, precision: 2 },
+    { key: 'h', label: 'H', kind: 'number', min: 0, step: 0.5, precision: 2 },
   ],
 }
 
