@@ -308,7 +308,7 @@ const canvasStyle = computed(() => ({
   // 父级 .canvas-scale 的 transform: scale(zoom) 视觉缩放,这里用 raw mm→px
   width: mmToPx(props.template.paper.width) + "px",
   height: mmToPx(props.template.paper.height) + "px",
-  backgroundColor: props.canvasBackground || undefined,
+  backgroundColor: props.canvasBackground || "#ffffff",
   backgroundImage: gridStyle.value.image,
   backgroundSize: gridStyle.value.size || undefined,
 }));
