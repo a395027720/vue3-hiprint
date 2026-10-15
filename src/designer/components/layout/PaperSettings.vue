@@ -113,8 +113,8 @@
           </div>
         </div>
 
-        <div class="ps-section-title">背景颜色</div>
-        <div class="ps-bg-row">
+        <div class="ps-toggle-row">
+          <span class="ps-toggle-label">背景颜色</span>
           <ColorPicker
             :model-value="canvasBackground"
             :allow-transparent="true"
@@ -143,22 +143,6 @@
               </button>
             </template>
           </ColorPicker>
-          <button
-            v-if="canvasBackground !== 'transparent'"
-            type="button"
-            class="ps-link-btn"
-            @click="$emit('setCanvasBackground', 'transparent')"
-          >
-            透明
-          </button>
-          <button
-            v-else
-            type="button"
-            class="ps-link-btn"
-            @click="$emit('setCanvasBackground', '#ffffff')"
-          >
-            白色
-          </button>
         </div>
 
         <div class="ps-toggle-row">
@@ -189,7 +173,7 @@
 
         <div class="ps-hf-title">
           <span class="ps-section-title">页眉/页脚</span>
-          <button
+          <!-- <button
             type="button"
             class="ps-icon-btn"
             title="分隔线高级设置"
@@ -201,7 +185,7 @@
                 d="M11 22.5v-3h2v3zm-7-1.5v-2h16v2zM4 18q-.825 0-1.412-.587T2 16V6q0-.825.588-1.412T4 4h16q.825 0 1.413.588T22 6v10q0 .825-.587 1.413T20 18zm0-2h16V8H4z"
               />
             </svg>
-          </button>
+          </button> -->
         </div>
 
         <div class="ps-hf-row">
@@ -665,12 +649,6 @@ onBeforeUnmount(() => {
 .ps-input:focus {
   border-color: #1677ff;
 }
-.ps-bg-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
 .ps-bg-swatch {
   position: relative;
   width: 32px;
@@ -719,24 +697,6 @@ onBeforeUnmount(() => {
   height: 1px;
   background: #ff4d4f;
   transform: rotate(45deg);
-}
-.ps-link-btn {
-  padding: 2px 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background: white;
-  color: #555;
-  font-size: 12px;
-  cursor: pointer;
-  transition:
-    background 120ms,
-    color 120ms,
-    border-color 120ms;
-}
-.ps-link-btn:hover {
-  background: #f5f5f5;
-  color: #1677ff;
-  border-color: #1677ff;
 }
 .ps-toggle-row {
   display: flex;
