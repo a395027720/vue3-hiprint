@@ -41,6 +41,7 @@
       v-else-if="field.kind === 'color'"
       :model-value="(displayValue as string) || ''"
       :allowTransparent="true"
+      :hideEmptyStrike="field.key === 'backgroundColor'"
       @update:model-value="onColorChange"
     />
     <label v-else-if="field.kind === 'checkbox'" class="checkbox-wrap">

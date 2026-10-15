@@ -12,12 +12,12 @@
       <div
         class="cp-trigger"
         :class="{ 'is-disabled': disabled, 'is-open': isOpen, 'is-empty': !modelValue }"
-        :style="{ backgroundColor: isTransparent ? 'transparent' : (modelValue || defaultColor || '#000000') }"
+        :style="{ backgroundColor: triggerBg }"
         @click="handleTriggerClick"
         @mousedown.stop
       >
         <!-- 空值 / transparent 的斜线标记 -->
-        <div v-if="!modelValue" class="cp-strike" />
+        <div v-if="!modelValue && !hideEmptyStrike" class="cp-strike" />
         <div v-if="isTransparent" class="cp-transparent-bg" />
       </div>
     </slot>
@@ -125,6 +125,8 @@ const props = defineProps<{
   disabled?: boolean;
   defaultColor?: string;
   allowTransparent?: boolean;
+  /** 空值时不画黑斜线(背景色等"空=透明"语义的字段用,避免误以为"未设置") */
+  hideEmptyStrike?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -146,6 +148,13 @@ const isTransparent = computed(() => props.modelValue === "transparent");
 const displayColor = computed(() => {
   if (!props.modelValue) return props.defaultColor || "#000000";
   if (isTransparent.value) return "transparent";
+  return props.modelValue;
+});
+
+/** trigger 背景色:空值用白底(配合黑斜线表示"未设置颜色"),与 macOS ColorPicker 一致 */
+const triggerBg = computed(() => {
+  if (isTransparent.value) return "transparent";
+  if (!props.modelValue) return "#ffffff";
   return props.modelValue;
 });
 
@@ -354,10 +363,12 @@ function selectPreset(color: string) {
 }
 
 onMounted(() => {
-  document.addEventListener("mousedown", handleClickOutside);
+  // capture 阶段监听:HeaderToolbar 的自定义 trigger 用 @mousedown.stopPropagation
+  // 阻止冒泡,普通冒泡阶段收不到;capture 在 stopPropagation 之前触发
+  document.addEventListener("mousedown", handleClickOutside, true);
 });
 onUnmounted(() => {
-  document.removeEventListener("mousedown", handleClickOutside);
+  document.removeEventListener("mousedown", handleClickOutside, true);
   window.removeEventListener("scroll", updatePosition, true);
   window.removeEventListener("resize", updatePosition);
 });
@@ -404,7 +415,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   height: 1px;
-  background: #ff4d4f;
+  background: #000000;
   transform: rotate(-45deg);
   transform-origin: center;
 }
