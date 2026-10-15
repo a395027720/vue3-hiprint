@@ -202,6 +202,7 @@
           @viewport-change="measureRulerOffsets"
           @change-header-height="(mm) => designer.setHeaderHeight(mm)"
           @change-footer-height="(mm) => designer.setFooterHeight(mm)"
+          @set-zoom="onSetZoom"
         />
       </div>
       <PropertyPanel

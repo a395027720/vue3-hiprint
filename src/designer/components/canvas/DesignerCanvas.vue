@@ -279,6 +279,8 @@ const emit = defineEmits<{
   changeHeaderHeight: [mm: number];
   /** 拖动页脚分隔线改变位置(mm) */
   changeFooterHeight: [mm: number];
+  /** ctrl/cmd + 滚轮触发缩放,父级走 designer.setZoom */
+  setZoom: [z: number];
 }>();
 
 // 吸附阈值(单位:mm,4px / 3.78 ≈ 1mm,这里取 1mm 适中)
@@ -412,6 +414,16 @@ function onWrapScroll() {
   emit("viewportChange");
 }
 
+/** Ctrl/Cmd + 滚轮:画布缩放(pan-mode 留给原生滚动,避免冲突)。
+ *  deltaY > 0 缩小,< 0 放大;每次 0.1 步进,保持跟 HeaderToolbar +/- 一致。 */
+function onWheel(e: WheelEvent) {
+  if (props.panMode) return;
+  if (!e.ctrlKey && !e.metaKey) return;
+  e.preventDefault();
+  const step = e.deltaY > 0 ? -0.1 : 0.1;
+  emit("setZoom", (props.zoom ?? 1) + step);
+}
+
 /** 页眉/页脚分隔线拖动:鼠标 clientY 变化 → new offset(mm,zoom 修正)。
  * mousedown.stop 阻断冒泡,不让 wrap mousedown 进入 marquee 路径。 */
 function onLineMouseDown(e: MouseEvent, edge: "header" | "footer") {
@@ -447,6 +459,7 @@ onMounted(() => {
   }
   if (wrapRef.value) {
     wrapRef.value.addEventListener("scroll", onWrapScroll, { passive: true });
+    wrapRef.value.addEventListener("wheel", onWheel, { passive: false });
   }
 });
 // wrap 用 flex 布局:水平居中(justify-content: center)+ 垂直顶对齐(align-items: flex-start)
@@ -802,7 +815,10 @@ function onDocMouseDown(e: MouseEvent) {
 onMounted(() => document.addEventListener("mousedown", onDocMouseDown));
 onBeforeUnmount(() => {
   document.removeEventListener("mousedown", onDocMouseDown);
-  if (wrapRef.value) wrapRef.value.removeEventListener("scroll", onWrapScroll);
+  if (wrapRef.value) {
+    wrapRef.value.removeEventListener("scroll", onWrapScroll);
+    wrapRef.value.removeEventListener("wheel", onWheel);
+  }
 });
 
 /** template 变化时实时同步 multi 集合(template 引用本身不变,但 elements 数组会换) */
