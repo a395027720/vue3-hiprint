@@ -125,28 +125,12 @@
             >
               <s>S</s>
             </button>
-            <label
-              class="vtb-color"
-              :class="{ disabled: !isText }"
-              title="字体颜色"
-            >
-              <font-colors-outlined />
-              <span
-                class="vtb-color-swatch"
-                :style="{ background: textColor ?? '#000' }"
-              />
-              <input
-                type="color"
-                :value="textColor ?? '#000000'"
-                :disabled="!isText"
-                @input="
-                  $emit(
-                    'onTextColor',
-                    ($event.target as HTMLInputElement).value,
-                  )
-                "
-              />
-            </label>
+            <ColorPicker
+              :model-value="textColor ?? ''"
+              :disabled="!isText"
+              :allow-transparent="true"
+              @update:model-value="onTextColorPicker"
+            />
             <button
               class="vtb-tb"
               :disabled="!isText"
@@ -499,6 +483,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import ColorPicker from "../common/ColorPicker.vue";
 
 interface FontOption {
   value: string;
@@ -677,6 +662,11 @@ function onFontSizeChange(e: Event) {
   if (!Number.isNaN(v) && v > 0 && props.fontSize) {
     emit("fontSizeStep", v - props.fontSize);
   }
+}
+// ColorPicker 的 update:modelValue 是 string | undefined,
+// 上游 onTextColor 约定是 string;undefined(清空)→ '' 保持一致。
+function onTextColorPicker(color: string | undefined) {
+  emit("onTextColor", color ?? "");
 }
 
 onMounted(() => {
@@ -921,44 +911,6 @@ const chevronRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" class=
   background: transparent;
   color: #bfbfbf;
   cursor: not-allowed;
-}
-.vtb-color {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 26px;
-  cursor: pointer;
-  border-radius: 4px;
-  color: #444;
-  flex: 0 0 auto;
-}
-.vtb-color.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.vtb-color:hover:not(.disabled) {
-  background: #e6f4ff;
-  color: #1677ff;
-}
-.vtb-color-swatch {
-  position: absolute;
-  bottom: 1px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 14px;
-  height: 3px;
-  border-radius: 1px;
-}
-.vtb-color input[type="color"] {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: inherit;
-}
-.vtb-color.disabled input[type="color"] {
-  pointer-events: none;
 }
 .rotate-90 {
   display: inline-block;
