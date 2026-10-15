@@ -69,14 +69,12 @@ const emit = defineEmits<{
   change: [e: Event];
 }>();
 
-/** ColorPicker 发的是颜色字符串,PropertyPanel 的 onFieldChange 要 Event;
- *  这里包成一个伪 input 事件(只取 target.value),保持上游不变。 */
+/** ColorPicker 发的是颜色字符串(含 'transparent'),PropertyPanel 的 onFieldChange 要 Event。
+ *  不能用真实 <input type="color"> —— 其 value setter 会把 'transparent' 等非 #rrggbb
+ *  字符串静默清空。改成 fake target,PropertyPanel 只读 target.value,不受影响。 */
 function onColorChange(color: string | undefined) {
-  const input = document.createElement("input");
-  input.type = "color";
-  input.value = color || "";
-  // PropertyPanel 读 target.value + target.type === 'color' → raw = target.value
-  emit("change", { target: input } as unknown as Event);
+  const target = { type: "color", value: color ?? "" };
+  emit("change", { target } as unknown as Event);
 }
 
 const displayValue = computed(() => {
