@@ -103,6 +103,7 @@
       @set-footer-line-span-mode="(m) => designer.setFooterLineSpanMode(m)"
       @set-footer-height="(mm) => designer.setFooterHeight(mm)"
       @toggle-show-footer-line="designer.toggleShowFooterLine"
+      @open-header-footer-line-advanced="onOpenHeaderFooterLineAdvanced"
       @set-zoom="onSetZoom"
       @reset-zoom="onResetZoom"
       @export-pdf="onExportPdf"
@@ -692,6 +693,10 @@ function onSetCanvasBackground(color: string) {
 
 function onToggleGrid() {
   designer.toggleGrid();
+}
+
+function onOpenHeaderFooterLineAdvanced() {
+  // 占位:暂不实现"高级设置"弹窗(颜色/样式/宽度/水平宽度),只保留 UI 入口
 }
 
 function onFontSizeStep(delta: number) {

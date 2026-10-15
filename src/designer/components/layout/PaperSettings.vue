@@ -184,60 +184,76 @@
           </button>
         </div>
 
-        <div class="ps-section-title">页眉/页脚</div>
+        <div class="ps-hf-title">
+          <span class="ps-section-title">页眉/页脚</span>
+          <button
+            type="button"
+            class="ps-icon-btn"
+            title="分隔线高级设置"
+            @click="$emit('openHeaderFooterLineAdvanced')"
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14">
+              <path
+                fill="currentColor"
+                d="M11 22.5v-3h2v3zm-7-1.5v-2h16v2zM4 18q-.825 0-1.412-.587T2 16V6q0-.825.588-1.412T4 4h16q.825 0 1.413.588T22 6v10q0 .825-.587 1.413T20 18zm0-2h16V8H4z"
+              />
+            </svg>
+          </button>
+        </div>
+
         <div
-          class="ps-line-block"
+          class="ps-hf-row"
           :class="{ 'is-disabled': !enableHeaderFooterLineRendering }"
         >
-          <div class="ps-line-row ps-line-row-between">
-            <div class="ps-line-row-left">
-              <button
-                type="button"
-                class="ps-mini-switch"
-                :class="{ 'is-on': showHeaderLine }"
-                @click="$emit('toggleShowHeaderLine')"
-                :aria-pressed="showHeaderLine"
-              />
-              <span class="ps-field-label">表头</span>
-            </div>
-            <div class="ps-line-row-right">
-              <input
-                type="number"
-                class="ps-input ps-input-num"
-                min="0"
-                :value="headerHeight"
-                @input="onHeaderHeightInput(($event.target as HTMLInputElement).value)"
-              />
-              <span class="ps-unit-label">mm</span>
-            </div>
+          <div class="ps-hf-left">
+            <button
+              type="button"
+              class="ps-toggle-sm"
+              :class="{ 'is-on': showHeaderLine }"
+              @click="$emit('toggleShowHeaderLine')"
+              :aria-pressed="showHeaderLine"
+            >
+              <span class="ps-toggle-sm-thumb" />
+            </button>
+            <span class="ps-hf-label">表头</span>
+          </div>
+          <div class="ps-hf-right">
+            <input
+              type="number"
+              class="ps-hf-num"
+              min="0"
+              :value="headerHeight"
+              @input="onHeaderHeightInput(($event.target as HTMLInputElement).value)"
+            />
+            <span class="ps-hf-unit">mm</span>
           </div>
         </div>
 
         <div
-          class="ps-line-block"
+          class="ps-hf-row"
           :class="{ 'is-disabled': !enableHeaderFooterLineRendering }"
         >
-          <div class="ps-line-row ps-line-row-between">
-            <div class="ps-line-row-left">
-              <button
-                type="button"
-                class="ps-mini-switch"
-                :class="{ 'is-on': showFooterLine }"
-                @click="$emit('toggleShowFooterLine')"
-                :aria-pressed="showFooterLine"
-              />
-              <span class="ps-field-label">页脚</span>
-            </div>
-            <div class="ps-line-row-right">
-              <input
-                type="number"
-                class="ps-input ps-input-num"
-                min="0"
-                :value="footerHeight"
-                @input="onFooterHeightInput(($event.target as HTMLInputElement).value)"
-              />
-              <span class="ps-unit-label">mm</span>
-            </div>
+          <div class="ps-hf-left">
+            <button
+              type="button"
+              class="ps-toggle-sm"
+              :class="{ 'is-on': showFooterLine }"
+              @click="$emit('toggleShowFooterLine')"
+              :aria-pressed="showFooterLine"
+            >
+              <span class="ps-toggle-sm-thumb" />
+            </button>
+            <span class="ps-hf-label">页脚</span>
+          </div>
+          <div class="ps-hf-right">
+            <input
+              type="number"
+              class="ps-hf-num"
+              min="0"
+              :value="footerHeight"
+              @input="onFooterHeightInput(($event.target as HTMLInputElement).value)"
+            />
+            <span class="ps-hf-unit">mm</span>
           </div>
         </div>
       </div>
@@ -323,6 +339,7 @@ const emit = defineEmits<{
   setFooterLineSpanMode: [m: SpanMode];
   setFooterHeight: [mm: number];
   toggleShowFooterLine: [];
+  openHeaderFooterLineAdvanced: [];
 }>();
 
 const isOpen = ref(false);
@@ -855,5 +872,111 @@ onBeforeUnmount(() => {
 }
 .ps-select-tight {
   width: 50px;
+}
+
+/* ===== 页眉/页脚 section (照参考实现) ===== */
+.ps-hf-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0 6px;
+}
+.ps-hf-title .ps-section-title {
+  margin: 0;
+}
+.ps-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: #555;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+}
+.ps-icon-btn:hover {
+  background: #f5f5f5;
+  color: #1677ff;
+}
+.ps-hf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-top: 1px solid #f0f0f0;
+}
+.ps-hf-row.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.ps-hf-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ps-hf-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ps-hf-label {
+  font-size: 12px;
+  color: #555;
+}
+.ps-hf-num {
+  width: 64px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid #d9d9d9;
+  border-radius: 2px;
+  font-size: 12px;
+  text-align: right;
+  outline: none;
+  background: white;
+  transition: border-color 120ms;
+}
+.ps-hf-num:focus {
+  border-color: #1677ff;
+}
+.ps-hf-unit {
+  font-size: 11px;
+  color: #8c8c8c;
+}
+
+/* pill 风格小开关(参考实现 h-5 w-9 36×20) */
+.ps-toggle-sm {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 36px;
+  height: 20px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #e5e7eb;
+  cursor: pointer;
+  transition: background 200ms;
+}
+.ps-toggle-sm.is-on {
+  background: #1677ff;
+}
+.ps-toggle-sm-thumb {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  transform: translate(0, -50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: left 200ms;
+}
+.ps-toggle-sm.is-on .ps-toggle-sm-thumb {
+  left: 18px;
 }
 </style>

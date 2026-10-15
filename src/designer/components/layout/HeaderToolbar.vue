@@ -470,6 +470,7 @@
           @set-footer-line-span-mode="onSetFooterLineSpanMode"
           @set-footer-height="onSetFooterHeight"
           @toggle-show-footer-line="onToggleShowFooterLine"
+          @open-header-footer-line-advanced="$emit('openHeaderFooterLineAdvanced')"
         />
       </div>
 
@@ -750,6 +751,8 @@ const emit = defineEmits<{
   setFooterLineSpanMode: [m: "value" | "percent"];
   setFooterHeight: [mm: number];
   toggleShowFooterLine: [];
+  openHeaderFooterLineAdvanced: [];
+  openHeaderFooterLineAdvanced: [];
   setZoom: [z: number];
   resetZoom: [];
   exportPdf: [];
