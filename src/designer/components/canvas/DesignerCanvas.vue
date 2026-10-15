@@ -53,11 +53,6 @@
                   @mousedown.stop="onResizeStart($event, el.id, h.dir)"
                 />
                 <span
-                  class="rotate-line"
-                  :style="rotateLineStyle"
-                  @mousedown.stop="onRotateStart($event, el.id)"
-                />
-                <span
                   class="rotate-handle"
                   :style="rotateHandleStyleReversed(el)"
                   title="拖动旋转"
@@ -1062,15 +1057,16 @@ const resizeHandles: Array<{ dir: ResizeDir; kind: "corner" | "edge" }> = [
   { dir: "w", kind: "edge" },
 ];
 
-/** 计算单个 handle 的位置/光标(绝对像素,handle 在 canvas 坐标系下作为兄弟节点)。
- *  角 handle 用 10x10 框(L 在框内),边 handle 用 14x3 / 3x14 短条,
- *  所以 offset 不同(corner = 5,edge-横 = 7x1.5,edge-竖 = 1.5x7)。
+/** 计算单个 handle 的位置/光标(handle 在元素盒内坐标,以元素内容区左上为原点)。
+ *  角 handle 是 8x8 实心方块,中心对元素 4 角(corner offset = 4)。
+ *  边 handle 是 14x3 / 3x14 短条,贴在边框上(edge offset 与方向相关)。
+ *  父级 .canvas-scale 用 transform: scale(zoom) 视觉缩放,子元素用 raw mm→px。
  */
 function handleStyle(el: Element, dir: ResizeDir) {
   const isCorner = dir === "nw" || dir === "ne" || dir === "sw" || dir === "se";
   const isHorizontal = dir === "n" || dir === "s";
-  const offX = isCorner ? 5 : isHorizontal ? 7 : 1.5;
-  const offY = isCorner ? 5 : isHorizontal ? 1.5 : 7;
+  const offX = isCorner ? 4 : isHorizontal ? 7 : (dir === "w" ? 2 : 3);
+  const offY = isCorner ? 4 : isHorizontal ? (dir === "n" ? 2 : 3) : 7;
   const posMap: Record<ResizeDir, { fx: number; fy: number; cursor: string }> =
     {
       nw: { fx: 0, fy: 0, cursor: "nwse-resize" },
@@ -1083,35 +1079,22 @@ function handleStyle(el: Element, dir: ResizeDir) {
       w: { fx: 0, fy: 0.5, cursor: "ew-resize" },
     };
   const p = posMap[dir];
-  // handle 现在是 .canvas-element 的子元素,坐标相对元素盒 0~w / 0~h
+  // handle 现在是 .canvas-element 的子元素,在 .canvas-scale 内由父级 transform: scale(zoom) 视觉缩放
+  // 所以用 raw mm→px,与 elBox 一致(不再 * zoom,避免重复)
   return {
-    left: p.fx * mmToPxScaled(el.w) - offX + "px",
-    top: p.fy * mmToPxScaled(el.h) - offY + "px",
+    left: p.fx * mmToPx(el.w) - offX + "px",
+    top: p.fy * mmToPx(el.h) - offY + "px",
     cursor: p.cursor,
   };
 }
-
-/** 旋转连杆线(元素顶边右侧 → 旋转手柄,相对元素盒的 0~w / 0~h 坐标)
- *  handle 现在在 .canvas-element 内,坐标以元素盒左上角为原点。 */
-const rotateLineStyle = computed(() => {
-  const e = selectedEl.value;
-  if (!e) return {};
-  const cx = mmToPxScaled(e.w);
-  return {
-    left: cx - 0.5 + "px",
-    top: "0px",
-    width: "1px",
-    height: "20px",
-  };
-});
 
 /** 旋转手柄圆点(handle 现在在 .canvas-element 内,坐标用相对位置;
  *  反向旋转 -el.rotate 让旋转图标始终保持正向)。
  *  元素盒 (x, y, w, h) 中:手柄放在元素右侧外,垂直居中(8px 距右边缘)。 */
 function rotateHandleStyleReversed(el: Element) {
   return {
-    left: mmToPxScaled(el.w) + 8 + "px",
-    top: mmToPxScaled(el.h) / 2 - 9 + "px",
+    left: mmToPx(el.w) + 8 + "px",
+    top: mmToPx(el.h) / 2 - 9 + "px",
     transform: `rotate(${-(el.rotate ?? 0)}deg)`,
   };
 }
@@ -1119,8 +1102,8 @@ function rotateHandleStyleReversed(el: Element) {
 /** 实时旋转角度文本(元素底边中点下方,反向旋转保持正向可读) */
 function rotateDegStyle(el: Element) {
   return {
-    left: mmToPxScaled(el.w) / 2 + "px",
-    top: mmToPxScaled(el.h) + 6 + "px",
+    left: mmToPx(el.w) / 2 + "px",
+    top: mmToPx(el.h) + 6 + "px",
     transform: `translate(-50%, 0) rotate(${-(el.rotate ?? 0)}deg)`,
   };
 }
@@ -1698,9 +1681,9 @@ watch(
 }
 
 /* ========== Resize / Rotate handles ==========
-   角 handle(corner):18x18 框 + 内部 L 形(10x3 横 + 3x10 竖)圆角条
-   边 handle(edge):12x3 短条,方向决定横/竖
-   旋转 handle:圆点 + 连线
+   handle 视觉与元素边框融合:
+   - 角:8x8 实心蓝方块,骑在元素 4 角边框上(角点是边框交叉处)
+   - 边:短条一半在外、一半压住边框(看上去是边框的加粗控制点)
 */
 .resize-handle {
   position: absolute;
@@ -1708,76 +1691,28 @@ watch(
   z-index: 100;
   background: transparent;
 }
-/* ---------- 角 handle:L 形(横 + 竖) ---------- */
+/* ---------- 角 handle:8x8 实心蓝方块 ---------- */
 .rh-corner {
-  width: 10px;
-  height: 10px;
-}
-.rh-corner::before,
-.rh-corner::after {
-  content: "";
-  position: absolute;
+  width: 8px;
+  height: 8px;
   background: #1890ff;
-  border-radius: 1.5px;
-  opacity: 0.9;
-  transition: opacity 120ms;
+  border: 1px solid #fff;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(24, 144, 255, 0.35);
+  transition:
+    transform 140ms,
+    box-shadow 140ms;
 }
-.rh-corner:hover::before,
-.rh-corner:hover::after {
-  opacity: 1;
-}
-/* 横条(顶部或底部) */
-.rh-corner::before {
-  left: 0;
-  width: 10px;
-  height: 3px;
-}
-/* 竖条(左侧或右侧) */
-.rh-corner::after {
-  top: 0;
-  width: 3px;
-  height: 10px;
-}
-/* 角 handle 的 L 角点位置 */
-.rh-nw::before {
-  top: 0;
-}
-.rh-nw::after {
-  left: 0;
-}
-.rh-ne::before {
-  top: 0;
-  right: 0;
-  left: auto;
-}
-.rh-ne::after {
-  right: 0;
-  top: 0;
-}
-.rh-se::before {
-  bottom: 0;
-  top: auto;
-}
-.rh-se::after {
-  right: 0;
-  bottom: 0;
-  top: auto;
-}
-.rh-sw::before {
-  bottom: 0;
-  top: auto;
-}
-.rh-sw::after {
-  left: 0;
-  bottom: 0;
-  top: auto;
+.rh-corner:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.5);
 }
 
-/* ---------- 边 handle:单方向短条 ---------- */
+/* ---------- 边 handle:贴在边框上的短条(骑线) ---------- */
 .rh-edge {
   background: #1890ff;
   border-radius: 1.5px;
-  opacity: 0.85;
+  opacity: 0.95;
   transition:
     opacity 120ms,
     transform 120ms;
@@ -1786,7 +1721,7 @@ watch(
   opacity: 1;
   transform: scale(1.2);
 }
-/* 上下边:横条 */
+/* 上下边:横条(中点对元素上/下边中点) */
 .rh-n,
 .rh-s {
   width: 14px;
@@ -1797,13 +1732,6 @@ watch(
 .rh-w {
   width: 3px;
   height: 14px;
-}
-.rotate-line {
-  position: absolute;
-  background: #1890ff;
-  opacity: 0.75;
-  pointer-events: auto;
-  z-index: 100;
 }
 .rotate-handle {
   position: absolute;
