@@ -31,11 +31,10 @@
         {{ opt.label }}
       </option>
     </select>
-    <input
+    <ColorPicker
       v-else-if="field.kind === 'color'"
-      type="color"
-      :value="displayValue"
-      @input="$emit('change', $event)"
+      :model-value="(displayValue as string) || ''"
+      @update:model-value="onColorChange"
     />
     <label v-else-if="field.kind === 'checkbox'" class="checkbox-wrap">
       <input
@@ -52,6 +51,7 @@
 import { computed } from 'vue'
 import type { Element } from '../../core/types'
 import type { FieldDef } from '../../core/fieldSchema'
+import ColorPicker from '../common/ColorPicker.vue'
 
 const props = defineProps<{
   field: FieldDef
@@ -61,6 +61,16 @@ const props = defineProps<{
 defineEmits<{
   change: [e: Event]
 }>()
+
+/** ColorPicker 发的是颜色字符串,PropertyPanel 的 onFieldChange 要 Event;
+ *  这里包成一个伪 input 事件(只取 target.value),保持上游不变。 */
+function onColorChange(color: string | undefined) {
+  const input = document.createElement('input')
+  input.type = 'color'
+  input.value = color || ''
+  // PropertyPanel 读 target.value + target.type === 'color' → raw = target.value
+  emit('change', { target: input } as unknown as Event)
+}
 
 const displayValue = computed(() => {
   const v = (props.element as Record<string, unknown>)[props.field.key]
@@ -102,11 +112,6 @@ textarea {
   font-family: inherit;
 }
 textarea { resize: vertical; }
-input[type='color'] {
-  height: 32px;
-  padding: 2px;
-  cursor: pointer;
-}
 .checkbox-wrap {
   display: flex;
   align-items: center;
