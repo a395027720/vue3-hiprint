@@ -640,68 +640,6 @@ function onWrapMouseDown(e: MouseEvent) {
   document.addEventListener("mouseup", onUp);
 }
 
-/**
- * 刻度数组:根据 zoom 自适应密度(越大越密)。
- *  mm === 0 是 zero tick(加粗深色),mm % major === 0 是 major(长 + 数字),
- *  其余是 minor(短)。
- */
-
-/** 根据 zoom 选 major / minor 间距
- *  - zoom ≥ 0.6: major 10mm,minor 1mm(每 1mm 一条细线,10mm 带数字;默认 zoom=1)
- *  - zoom < 0.6: major 20mm,minor 5mm(缩小后避免刻度过密) */
-function chooseStep(zoom: number): { major: number; minor: number } {
-  if (zoom >= 0.6) return { major: 10, minor: 1 };
-  return { major: 20, minor: 5 };
-}
-
-function buildTicks(
-  axisLen: number,
-  axis: "x" | "y",
-): Array<{
-  mm: number;
-  x: number;
-  major: boolean;
-  zero: boolean;
-  inCanvas: boolean;
-}> {
-  const { major: majorStep, minor: minorStep } = chooseStep(zoomValue.value);
-  const ticks: Array<{
-    mm: number;
-    x: number;
-    major: boolean;
-    zero: boolean;
-    inCanvas: boolean;
-  }> = [];
-  // ruler 跟画布走,刻度范围 0 ~ axisLen,每 minorStep 一个
-  const firstTick = Math.ceil(0 / minorStep) * minorStep;
-  const endMm = axisLen;
-  for (let mm = firstTick; mm <= endMm; mm += minorStep) {
-    const x = mmToPxScaled(mm);
-    const zero = mm === 0;
-    const major = mm % majorStep === 0;
-    const inCanvas = mm >= 0 && mm <= axisLen;
-    if (zero || major || mm % minorStep === 0) {
-      ticks.push({ mm, x, major, zero, inCanvas });
-    }
-  }
-  // 末尾强制 tick:保证 ruler 视觉末端有刻度,即使 axisLen 不是 minorStep 倍数
-  const lastInLoop = ticks[ticks.length - 1];
-  if (!lastInLoop || Math.abs(axisLen - lastInLoop.mm) > minorStep / 2) {
-    ticks.push({
-      mm: axisLen,
-      x: mmToPxScaled(axisLen),
-      major: false,
-      zero: false,
-      inCanvas: true,
-    });
-  }
-  return ticks;
-}
-
-/** ruler 跟 .canvas-frame 一起走,刻度范围 = 画布 0 ~ paper.w/h */
-const hTicks = computed(() => buildTicks(props.template.paper.width, "x"));
-const vTicks = computed(() => buildTicks(props.template.paper.height, "y"));
-
 const snapLines = reactive<{ vertical: number[]; horizontal: number[] }>({
   vertical: [],
   horizontal: [],
@@ -1515,76 +1453,6 @@ watch(
   flex-shrink: 0;
   /* width / height 由 :style 注入 */
 }
-.ruler {
-  position: absolute;
-  background: linear-gradient(to bottom, #fbfbfd, #f3f3f6);
-  display: block;
-  pointer-events: none;
-  z-index: 5; /* 在 snap-line 之上,让辅助线延伸到 ruler 位置时 ruler 仍然可见 */
-  user-select: none;
-}
-/* 标尺已搬到 .canvas-frame 内(跟画布走),不再用 viewport 覆盖式 .ruler-overlay */
-.ruler-h {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 32px;
-  border-bottom: 1px solid #d8d8de;
-  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.04);
-}
-.ruler-v {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 32px;
-  border-right: 1px solid #d8d8de;
-  box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.04);
-}
-.ruler-corner {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 11;
-  border-right: 1px solid #d8d8de;
-  border-bottom: 1px solid #d8d8de;
-}
-.ruler-corner-dot {
-  fill: #1890ff;
-  filter: drop-shadow(0 0 2px rgba(24, 144, 255, 0.6));
-}
-
-/* 刻度线:默认 minor 灰色短, major 更长更深, zero 贯穿整高(加粗) */
-.ruler-tick {
-  stroke: #b8b8c0;
-  stroke-width: 1;
-  shape-rendering: crispEdges;
-}
-.ruler-tick-major {
-  stroke: #6a6a72;
-  stroke-width: 1;
-}
-.ruler-tick-zero {
-  stroke: #1890ff;
-  stroke-width: 1.5;
-}
-
-/* 文字 */
-.ruler-text {
-  font-size: 10px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  fill: #6a6a72;
-  letter-spacing: 0.2px;
-  paint-order: stroke;
-  stroke: rgba(252, 252, 253, 0.85);
-  stroke-width: 2.5;
-  stroke-linejoin: round;
-}
-.ruler-text-zero {
-  fill: #1890ff;
-  font-weight: 600;
-  stroke: rgba(252, 252, 253, 0.9);
-}
-
 /* 用户自定义参考线(guide),跨整个 wrap,延伸进 ruler 区域;双击删除 */
 .guide-line {
   position: absolute;
@@ -1618,23 +1486,6 @@ watch(
   z-index: 1;
   background: rgba(24, 144, 255, 0.08);
   transition: opacity 80ms;
-}
-
-/* 鼠标游标 */
-.ruler-cursor line {
-  stroke: #ff4d4f;
-  stroke-width: 1;
-  shape-rendering: crispEdges;
-}
-.ruler-cursor rect {
-  fill: #ff4d4f;
-  filter: drop-shadow(0 1px 2px rgba(255, 77, 79, 0.4));
-}
-.ruler-cursor text {
-  font-size: 10px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-weight: 600;
-  fill: #fff;
 }
 .canvas {
   position: absolute;
