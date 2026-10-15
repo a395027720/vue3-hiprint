@@ -129,10 +129,13 @@
         }"
       />
       <span
-        v-for="x in selfLines.v"
+        v-for="(x, idx) in selfLines.v"
         :key="`self-v-label-${x}`"
         class="self-line-label self-v-label"
-        :style="{ left: overlayX(x) + 'px' }"
+        :style="{
+          left: overlayX(x) + 'px',
+          transform: idx === 0 ? 'translateX(-100%)' : 'none',
+        }"
         >{{ formatMm(x) }}</span
       >
       <div
@@ -149,7 +152,7 @@
         v-for="y in selfLines.h"
         :key="`self-h-label-${y}`"
         class="self-line-label self-h-label"
-        :style="{ top: overlayY(y) + 'px' }"
+        :style="{ top: overlayY(y) - 16 + 'px' }"
         >{{ formatMm(y) }}</span
       >
     </template>
@@ -162,10 +165,13 @@
       :style="{ left: overlayX(x) + 'px' }"
     />
     <span
-      v-for="x in snapLines.vertical"
+      v-for="(x, idx) in snapLines.vertical"
       :key="`v-label-${x}`"
       class="snap-line-label snap-v-label"
-      :style="{ left: overlayX(x) + 'px' }"
+      :style="{
+        left: overlayX(x) + 'px',
+        transform: idx === 0 ? 'translateX(-100%)' : 'none',
+      }"
       >{{ formatMm(x) }}</span
     >
     <div
@@ -178,7 +184,7 @@
       v-for="y in snapLines.horizontal"
       :key="`h-label-${y}`"
       class="snap-line-label snap-h-label"
-      :style="{ top: overlayY(y) + 'px' }"
+      :style="{ top: overlayY(y) - 16 + 'px' }"
       >{{ formatMm(y) }}</span
     />
 
@@ -1789,14 +1795,17 @@ watch(
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 .self-v-label {
-  /* chip 贴 ruler-h 内底部(避开 ruler 主刻度文字 0~16px 区域,落在 18px 处),
-     左对齐 self-v 端点(取消 -50% 避免贴 ruler 0 时 chip 一半被裁) */
+  /* chip 贴 ruler-h 区域底部:
+     inline left = overlayX(x),transform 根据 v-for idx 区分:
+       idx=0 (元素左 x):translateX(-100%) 让 chip 右沿贴虚线
+       idx=1 (元素右 x):none 让 chip 左沿贴虚线 */
   top: 18px;
   background: #69c0ff;
   color: #fff;
 }
 .self-h-label {
-  /* chip 贴 ruler-v 内右侧,顶对齐 self-h 端点 */
+  /* chip 底部对齐 self-h 端点(虚线上方):
+     inline top = overlayY(y) - 16(让 chip 底部贴虚线顶部) */
   left: 18px;
   background: #69c0ff;
   color: #fff;
