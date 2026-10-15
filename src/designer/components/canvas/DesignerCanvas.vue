@@ -1145,6 +1145,13 @@ function onResizeStart(e: MouseEvent, id: string, dir: ResizeDir) {
   const pxPerMmLocal = mmToPx(1) * zoomValue.value;
   const ratio = origW / origH;
   const isCorner = dir === "nw" || dir === "ne" || dir === "sw" || dir === "se";
+  const vCandidates = collectCandidates("x", id);
+  const hCandidates = collectCandidates("y", id);
+  // 启动时设延长线(用元素当前 4 边)
+  selfLines.value = {
+    v: [origX, origX + el.w],
+    h: [origY, origY + el.h],
+  };
 
   function onMove(ev: MouseEvent) {
     const dxMm = (ev.clientX - startMouseX) / pxPerMmLocal;
@@ -1176,11 +1183,47 @@ function onResizeStart(e: MouseEvent, id: string, dir: ResizeDir) {
         h = newH;
       }
     }
+    // resize 也画延长线 + snap 命中(跟移动一致,只是 4 边都参与)
+    const newRight = x + w;
+    const newBottom = y + h;
+    const sxLeft = snapValue(x, vCandidates, SNAP_THRESHOLD_MM);
+    const sxRight = snapValue(newRight, vCandidates, SNAP_THRESHOLD_MM);
+    const syTop = snapValue(y, hCandidates, SNAP_THRESHOLD_MM);
+    const syBottom = snapValue(newBottom, hCandidates, SNAP_THRESHOLD_MM);
+    if (sxLeft.lineAt !== null) {
+      const delta = sxLeft.value - x;
+      x = sxLeft.value;
+      w = Math.max(MIN_SIZE_MM, w - delta);
+    } else if (sxRight.lineAt !== null) {
+      w = Math.max(MIN_SIZE_MM, sxRight.value - x);
+    }
+    if (syTop.lineAt !== null) {
+      const delta = syTop.value - y;
+      y = syTop.value;
+      h = Math.max(MIN_SIZE_MM, h - delta);
+    } else if (syBottom.lineAt !== null) {
+      h = Math.max(MIN_SIZE_MM, syBottom.value - y);
+    }
+    snapLines.vertical = [sxLeft.lineAt, sxRight.lineAt].filter(
+      (v): v is number => v !== null,
+    );
+    snapLines.horizontal = [syTop.lineAt, syBottom.lineAt].filter(
+      (v): v is number => v !== null,
+    );
+    if (selfLines.value) {
+      selfLines.value = {
+        v: [x, x + w],
+        h: [y, y + h],
+      };
+    }
     emit("resize", id, { x, y, w, h });
   }
   function onUp() {
     document.removeEventListener("mousemove", onMove);
     document.removeEventListener("mouseup", onUp);
+    snapLines.vertical = [];
+    snapLines.horizontal = [];
+    selfLines.value = null;
   }
   document.addEventListener("mousemove", onMove);
   document.addEventListener("mouseup", onUp);
