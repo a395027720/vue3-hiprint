@@ -296,6 +296,9 @@ export function useCanvasDrag(opts: CanvasDragOptions) {
   function startElementDrag(e: MouseEvent, id: string) {
     const el = findElementGlobal(opts.template(), id)?.el;
     if (!el) return;
+    // 缓存到 const,避免 TS 5.3 闭包 narrowing 丢 el 类型(inner onMove 用)
+    const elW = el.w;
+    const elH = el.h;
     const startX = e.clientX;
     const startY = e.clientY;
     const origX = el.x;
@@ -304,15 +307,15 @@ export function useCanvasDrag(opts: CanvasDragOptions) {
     const vCandidates = collectCandidates("x", id);
     const hCandidates = collectCandidates("y", id);
     // 启动时设延长线
-    selfLines.value = { v: [origX, origX + el.w], h: [origY, origY + el.h] };
+    selfLines.value = { v: [origX, origX + elW], h: [origY, origY + elH] };
 
     function onMove(ev: MouseEvent) {
       const dx = (ev.clientX - startX) / pxPerMmLocal;
       const dy = (ev.clientY - startY) / pxPerMmLocal;
       let newX = Math.max(0, origX + dx);
       let newY = Math.max(0, origY + dy);
-      const newRight = newX + el.w;
-      const newBottom = newY + el.h;
+      const newRight = newX + elW;
+      const newBottom = newY + elH;
 
       const sxLeft = snapValue(newX, vCandidates, SNAP_THRESHOLD_MM);
       const sxRight = snapValue(newRight, vCandidates, SNAP_THRESHOLD_MM);
@@ -320,9 +323,9 @@ export function useCanvasDrag(opts: CanvasDragOptions) {
       const syBottom = snapValue(newBottom, hCandidates, SNAP_THRESHOLD_MM);
 
       if (sxLeft.lineAt !== null) newX = sxLeft.value;
-      else if (sxRight.lineAt !== null) newX = sxRight.value - el.w;
+      else if (sxRight.lineAt !== null) newX = sxRight.value - elW;
       if (syTop.lineAt !== null) newY = syTop.value;
-      else if (syBottom.lineAt !== null) newY = syBottom.value - el.h;
+      else if (syBottom.lineAt !== null) newY = syBottom.value - elH;
 
       snapLines.vertical = [sxLeft.lineAt, sxRight.lineAt].filter(
         (v): v is number => v !== null,
@@ -332,8 +335,8 @@ export function useCanvasDrag(opts: CanvasDragOptions) {
       );
       if (selfLines.value) {
         selfLines.value = {
-          v: [newX, newX + el.w],
-          h: [newY, newY + el.h],
+          v: [newX, newX + elW],
+          h: [newY, newY + elH],
         };
       }
       opts.onMove(id, newX, newY);
