@@ -139,5 +139,10 @@ export function normalizePatchValue(
     }
     return rawValue
   }
+  // 字号字段 UI 用 px(用户视角),内部存储 mm(画布坐标一致);
+  // 1mm = 96/25.4 px,mm ≈ px * 25.4/96
+  if (field.key === 'fontSize' && typeof rawValue === 'number') {
+    return +(rawValue * 25.4 / 96).toFixed(2)
+  }
   return rawValue
 }

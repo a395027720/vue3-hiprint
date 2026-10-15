@@ -87,6 +87,10 @@ const displayValue = computed(() => {
     if (props.field.key === "rowBreak") return v === "row";
     return !!v;
   }
+  // 字号字段:内部存 mm,UI 显示 px 整数(1mm ≈ 3.78px @ 96DPI)
+  if (props.field.kind === "number" && props.field.key === "fontSize" && typeof v === "number") {
+    return Math.round(v * 96 / 25.4);
+  }
   // number + precision 字段:固定小数位显示(如 X/Y/W/H 显示 "10.50")
   if (
     props.field.kind === "number" &&

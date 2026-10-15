@@ -47,12 +47,12 @@
           </button>
           <input
             class="tqt-num"
-            :value="fontSize ?? ''"
+            :value="fontSizePx ?? ''"
             :disabled="disabled"
-            min="2"
-            max="30"
-            step="0.1"
-            title="字号 (mm)"
+            min="8"
+            max="113"
+            step="1"
+            title="字号 (px)"
             @change="onFontSizeInput"
           />
           <button
@@ -270,6 +270,9 @@ const fontFamily = computed(
 const fontSize = computed(
   () => (props.element as TextElement | null)?.fontSize ?? null,
 );
+const fontSizePx = computed(() =>
+  fontSize.value == null ? null : Math.round(fontSize.value * 96 / 25.4),
+);
 const textAlign = computed(
   () => (props.element as TextElement | null)?.align ?? "",
 );
@@ -321,15 +324,16 @@ function onFontFamily(e: Event) {
   emit("patch", { fontFamily: v || undefined });
 }
 
-function onFontSize(delta: number) {
-  if (!fontSize.value) return;
-  const next = Math.max(2, Math.min(30, +(fontSize.value + delta).toFixed(1)));
-  emit("patch", { fontSize: next });
+function onFontSize(deltaPx: number) {
+  if (fontSizePx.value == null) return;
+  const nextPx = Math.max(8, Math.min(113, fontSizePx.value + deltaPx));
+  emit("patch", { fontSize: +(nextPx * 25.4 / 96).toFixed(2) });
 }
 function onFontSizeInput(e: Event) {
   const v = Number((e.target as HTMLInputElement).value);
   if (Number.isFinite(v) && v > 0) {
-    emit("patch", { fontSize: Math.max(2, Math.min(30, v)) });
+    const px = Math.max(8, Math.min(113, v));
+    emit("patch", { fontSize: +(px * 25.4 / 96).toFixed(2) });
   }
 }
 

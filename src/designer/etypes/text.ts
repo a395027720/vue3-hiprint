@@ -19,7 +19,7 @@ export const TEXT_SECTIONS: SectionDef[] = [
     category: 'style',
     columns: 2,
     fields: [
-      { key: 'fontSize', label: '字号 (mm)', kind: 'number', min: 2, max: 30, step: 0.1, precision: 1 },
+      { key: 'fontSize', label: '字号 (px)', kind: 'number', min: 8, max: 113, step: 1 },
       { key: 'fontFamily', label: '字体', kind: 'select', options: FONT_FAMILY_OPTIONS },
       { key: 'lineHeight', label: '行高', kind: 'number', min: 0.5, step: 0.1 },
       { key: 'maxLines', label: '文本行数', kind: 'number', min: 1, step: 1 },

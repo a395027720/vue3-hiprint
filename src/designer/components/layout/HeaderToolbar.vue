@@ -73,12 +73,12 @@
             </button>
             <input
               class="vtb-num"
-              :value="fontSize ?? ''"
+              :value="fontSizePx"
               :disabled="!isText"
-              min="2"
-              max="30"
-              step="0.1"
-              title="字号 (mm)"
+              min="8"
+              max="113"
+              step="1"
+              title="字号 (px)"
               @change="onFontSizeChange"
             />
             <button
@@ -787,8 +787,9 @@ function onFontFamilyChange(e: Event) {
 }
 function onFontSizeChange(e: Event) {
   const v = Number((e.target as HTMLInputElement).value);
-  if (!Number.isNaN(v) && v > 0 && props.fontSize) {
-    emit("fontSizeStep", v - props.fontSize);
+  if (!Number.isNaN(v) && v > 0 && props.fontSize != null) {
+    // input 是 px,父组件存的是 mm:delta 也要转 mm
+    emit("fontSizeStep", (v - Math.round(props.fontSize * 96 / 25.4)) * 25.4 / 96);
   }
 }
 // ColorPicker 的 update:modelValue 是 string | undefined,
@@ -863,6 +864,10 @@ function onSetFooterHeight(mm: number) {
 function onToggleShowFooterLine() {
   emit("toggleShowFooterLine");
 }
+
+const fontSizePx = computed(() =>
+  props.fontSize == null ? "" : Math.round(props.fontSize * 96 / 25.4),
+);
 
 onMounted(() => {
   setTimeout(updateScrollState, 0);
