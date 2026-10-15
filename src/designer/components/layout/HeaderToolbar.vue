@@ -431,9 +431,45 @@
           :paper-height="paperHeight"
           :canvas-background="canvasBackground"
           :show-grid="showGrid"
+          :page-margin-horizontal="pageMarginHorizontal"
+          :page-margin-vertical="pageMarginVertical"
+          :allow-drag-outside-canvas="allowDragOutsideCanvas"
+          :enable-header-footer-line-rendering="enableHeaderFooterLineRendering"
+          :header-line-color="headerLineColor"
+          :header-line-width="headerLineWidth"
+          :header-line-style="headerLineStyle"
+          :header-line-span="headerLineSpan"
+          :header-line-span-mode="headerLineSpanMode"
+          :header-height="headerHeight"
+          :show-header-line="showHeaderLine"
+          :footer-line-color="footerLineColor"
+          :footer-line-width="footerLineWidth"
+          :footer-line-style="footerLineStyle"
+          :footer-line-span="footerLineSpan"
+          :footer-line-span-mode="footerLineSpanMode"
+          :footer-height="footerHeight"
+          :show-footer-line="showFooterLine"
           @set-paper="onSetPaper"
           @set-canvas-background="onSetCanvasBackground"
           @toggle-grid="onToggleGrid"
+          @set-page-margin-horizontal="onSetPageMarginHorizontal"
+          @set-page-margin-vertical="onSetPageMarginVertical"
+          @set-allow-drag-outside-canvas="onSetAllowDragOutsideCanvas"
+          @toggle-enable-header-footer-line-rendering="onToggleEnableHeaderFooterLineRendering"
+          @set-header-line-color="onSetHeaderLineColor"
+          @set-header-line-width="onSetHeaderLineWidth"
+          @set-header-line-style="onSetHeaderLineStyle"
+          @set-header-line-span="onSetHeaderLineSpan"
+          @set-header-line-span-mode="onSetHeaderLineSpanMode"
+          @set-header-height="onSetHeaderHeight"
+          @toggle-show-header-line="onToggleShowHeaderLine"
+          @set-footer-line-color="onSetFooterLineColor"
+          @set-footer-line-width="onSetFooterLineWidth"
+          @set-footer-line-style="onSetFooterLineStyle"
+          @set-footer-line-span="onSetFooterLineSpan"
+          @set-footer-line-span-mode="onSetFooterLineSpanMode"
+          @set-footer-height="onSetFooterHeight"
+          @toggle-show-footer-line="onToggleShowFooterLine"
         />
       </div>
 
@@ -627,6 +663,30 @@ const props = defineProps<{
   paperHeight: number;
   /** 画布背景色 */
   canvasBackground: string;
+  /** 水平页面边距 (mm) */
+  pageMarginHorizontal: number;
+  /** 垂直页面边距 (mm) */
+  pageMarginVertical: number;
+  /** 是否允许元素拖出画布 */
+  allowDragOutsideCanvas: boolean;
+  /** 是否启用表头页脚分隔线渲染 */
+  enableHeaderFooterLineRendering: boolean;
+  /** 表头分隔线 */
+  headerLineColor: string;
+  headerLineWidth: number;
+  headerLineStyle: "solid" | "dashed" | "dotted";
+  headerLineSpan: number;
+  headerLineSpanMode: "value" | "percent";
+  headerHeight: number;
+  showHeaderLine: boolean;
+  /** 页脚分隔线 */
+  footerLineColor: string;
+  footerLineWidth: number;
+  footerLineStyle: "solid" | "dashed" | "dotted";
+  footerLineSpan: number;
+  footerLineSpanMode: "value" | "percent";
+  footerHeight: number;
+  showFooterLine: boolean;
   /** 缩放比例(1 = 100%) */
   zoom: number;
   /** 手型模式 */
@@ -672,6 +732,24 @@ const emit = defineEmits<{
   setPaper: [paper: { width: number; height: number }];
   setCanvasBackground: [color: string];
   toggleGrid: [];
+  setPageMarginHorizontal: [mm: number];
+  setPageMarginVertical: [mm: number];
+  setAllowDragOutsideCanvas: [allow: boolean];
+  toggleEnableHeaderFooterLineRendering: [];
+  setHeaderLineColor: [color: string];
+  setHeaderLineWidth: [mm: number];
+  setHeaderLineStyle: [style: "solid" | "dashed" | "dotted"];
+  setHeaderLineSpan: [v: number];
+  setHeaderLineSpanMode: [m: "value" | "percent"];
+  setHeaderHeight: [mm: number];
+  toggleShowHeaderLine: [];
+  setFooterLineColor: [color: string];
+  setFooterLineWidth: [mm: number];
+  setFooterLineStyle: [style: "solid" | "dashed" | "dotted"];
+  setFooterLineSpan: [v: number];
+  setFooterLineSpanMode: [m: "value" | "percent"];
+  setFooterHeight: [mm: number];
+  toggleShowFooterLine: [];
   setZoom: [z: number];
   resetZoom: [];
   exportPdf: [];
@@ -740,6 +818,63 @@ function onSetCanvasBackground(color: string) {
 }
 function onToggleGrid() {
   emit("toggleGrid");
+}
+
+function onSetPageMarginHorizontal(mm: number) {
+  emit("setPageMarginHorizontal", mm);
+}
+function onSetPageMarginVertical(mm: number) {
+  emit("setPageMarginVertical", mm);
+}
+function onSetAllowDragOutsideCanvas(allow: boolean) {
+  emit("setAllowDragOutsideCanvas", allow);
+}
+function onToggleEnableHeaderFooterLineRendering() {
+  emit("toggleEnableHeaderFooterLineRendering");
+}
+
+function onSetHeaderLineColor(color: string) {
+  emit("setHeaderLineColor", color);
+}
+function onSetHeaderLineWidth(mm: number) {
+  emit("setHeaderLineWidth", mm);
+}
+function onSetHeaderLineStyle(style: "solid" | "dashed" | "dotted") {
+  emit("setHeaderLineStyle", style);
+}
+function onSetHeaderLineSpan(v: number) {
+  emit("setHeaderLineSpan", v);
+}
+function onSetHeaderLineSpanMode(m: "value" | "percent") {
+  emit("setHeaderLineSpanMode", m);
+}
+function onSetHeaderHeight(mm: number) {
+  emit("setHeaderHeight", mm);
+}
+function onToggleShowHeaderLine() {
+  emit("toggleShowHeaderLine");
+}
+
+function onSetFooterLineColor(color: string) {
+  emit("setFooterLineColor", color);
+}
+function onSetFooterLineWidth(mm: number) {
+  emit("setFooterLineWidth", mm);
+}
+function onSetFooterLineStyle(style: "solid" | "dashed" | "dotted") {
+  emit("setFooterLineStyle", style);
+}
+function onSetFooterLineSpan(v: number) {
+  emit("setFooterLineSpan", v);
+}
+function onSetFooterLineSpanMode(m: "value" | "percent") {
+  emit("setFooterLineSpanMode", m);
+}
+function onSetFooterHeight(mm: number) {
+  emit("setFooterHeight", mm);
+}
+function onToggleShowFooterLine() {
+  emit("toggleShowFooterLine");
 }
 
 onMounted(() => {

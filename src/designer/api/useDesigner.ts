@@ -162,6 +162,78 @@ export interface UseDesignerReturn {
   removeGuide: (id: string) => void
   /** 高亮 guide(不入 history) */
   setHighlightedGuide: (id: string | null) => void
+  /** 水平页面边距 (mm) */
+  pageMarginHorizontal: Ref<number>
+  /** 设置水平页面边距 (mm) */
+  setPageMarginHorizontal: (mm: number) => void
+  /** 垂直页面边距 (mm) */
+  pageMarginVertical: Ref<number>
+  /** 设置垂直页面边距 (mm) */
+  setPageMarginVertical: (mm: number) => void
+  /** 是否允许元素拖出画布 */
+  allowDragOutsideCanvas: Ref<boolean>
+  /** 设置是否允许元素拖出画布 */
+  setAllowDragOutsideCanvas: (allow: boolean) => void
+  /** 表头分隔线颜色 */
+  headerLineColor: Ref<string>
+  /** 设置表头分隔线颜色 */
+  setHeaderLineColor: (color: string) => void
+  /** 表头分隔线宽度 (mm) */
+  headerLineWidth: Ref<number>
+  /** 设置表头分隔线宽度 (mm) */
+  setHeaderLineWidth: (mm: number) => void
+  /** 表头分隔线样式 */
+  headerLineStyle: Ref<"solid" | "dashed" | "dotted">
+  /** 设置表头分隔线样式 */
+  setHeaderLineStyle: (style: "solid" | "dashed" | "dotted") => void
+  /** 表头分隔线水平宽度 */
+  headerLineSpan: Ref<number>
+  /** 设置表头分隔线水平宽度 */
+  setHeaderLineSpan: (v: number) => void
+  /** 表头分隔线水平宽度模式 */
+  headerLineSpanMode: Ref<"value" | "percent">
+  /** 设置表头分隔线水平宽度模式 */
+  setHeaderLineSpanMode: (m: "value" | "percent") => void
+  /** 表头水平高度 (mm) */
+  headerHeight: Ref<number>
+  /** 设置表头水平高度 (mm) */
+  setHeaderHeight: (mm: number) => void
+  /** 是否显示表头分隔线 */
+  showHeaderLine: Ref<boolean>
+  /** 切换表头分隔线显示 */
+  toggleShowHeaderLine: () => void
+  /** 页脚分隔线颜色 */
+  footerLineColor: Ref<string>
+  /** 设置页脚分隔线颜色 */
+  setFooterLineColor: (color: string) => void
+  /** 页脚分隔线宽度 (mm) */
+  footerLineWidth: Ref<number>
+  /** 设置页脚分隔线宽度 (mm) */
+  setFooterLineWidth: (mm: number) => void
+  /** 页脚分隔线样式 */
+  footerLineStyle: Ref<"solid" | "dashed" | "dotted">
+  /** 设置页脚分隔线样式 */
+  setFooterLineStyle: (style: "solid" | "dashed" | "dotted") => void
+  /** 页脚分隔线水平宽度 */
+  footerLineSpan: Ref<number>
+  /** 设置页脚分隔线水平宽度 */
+  setFooterLineSpan: (v: number) => void
+  /** 页脚分隔线水平宽度模式 */
+  footerLineSpanMode: Ref<"value" | "percent">
+  /** 设置页脚分隔线水平宽度模式 */
+  setFooterLineSpanMode: (m: "value" | "percent") => void
+  /** 页脚水平高度 (mm) */
+  footerHeight: Ref<number>
+  /** 设置页脚水平高度 (mm) */
+  setFooterHeight: (mm: number) => void
+  /** 是否显示页脚分隔线 */
+  showFooterLine: Ref<boolean>
+  /** 切换页脚分隔线显示 */
+  toggleShowFooterLine: () => void
+  /** 是否启用表头页脚分隔线功能 */
+  enableHeaderFooterLineRendering: Ref<boolean>
+  /** 切换表头页脚分隔线功能启用 */
+  toggleEnableHeaderFooterLineRendering: () => void
 }
 
 export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn {
@@ -194,6 +266,28 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
   const zoom = ref(1)
   const showGrid = ref(false)
   const canvasBackground = ref("#ffffff")
+
+  const pageMarginHorizontal = ref(0)
+  const pageMarginVertical = ref(0)
+  const allowDragOutsideCanvas = ref(false)
+
+  const headerLineColor = ref("#f87171")
+  const headerLineWidth = ref(1)
+  const headerLineStyle = ref<"solid" | "dashed" | "dotted">("dashed")
+  const headerLineSpan = ref(100)
+  const headerLineSpanMode = ref<"value" | "percent">("percent")
+  const headerHeight = ref(0)
+  const showHeaderLine = ref(false)
+
+  const footerLineColor = ref("#f87171")
+  const footerLineWidth = ref(1)
+  const footerLineStyle = ref<"solid" | "dashed" | "dotted">("dashed")
+  const footerLineSpan = ref(100)
+  const footerLineSpanMode = ref<"value" | "percent">("percent")
+  const footerHeight = ref(0)
+  const showFooterLine = ref(false)
+
+  const enableHeaderFooterLineRendering = ref(false)
 
   // 用户自定义参考线(独立 ref,不入 history;后续可迁移到 Template.guides)
   const guides = ref<Guide[]>([])
@@ -626,6 +720,64 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     canvasBackground.value = color
   }
 
+  function setPageMarginHorizontal(mm: number): void {
+    pageMarginHorizontal.value = Math.max(0, mm)
+  }
+  function setPageMarginVertical(mm: number): void {
+    pageMarginVertical.value = Math.max(0, mm)
+  }
+  function setAllowDragOutsideCanvas(allow: boolean): void {
+    allowDragOutsideCanvas.value = allow
+  }
+
+  function setHeaderLineColor(color: string): void {
+    headerLineColor.value = color
+  }
+  function setHeaderLineWidth(mm: number): void {
+    headerLineWidth.value = Math.max(0, mm)
+  }
+  function setHeaderLineStyle(style: "solid" | "dashed" | "dotted"): void {
+    headerLineStyle.value = style
+  }
+  function setHeaderLineSpan(v: number): void {
+    headerLineSpan.value = v
+  }
+  function setHeaderLineSpanMode(m: "value" | "percent"): void {
+    headerLineSpanMode.value = m
+  }
+  function setHeaderHeight(mm: number): void {
+    headerHeight.value = Math.max(0, mm)
+  }
+  function toggleShowHeaderLine(): void {
+    showHeaderLine.value = !showHeaderLine.value
+  }
+
+  function setFooterLineColor(color: string): void {
+    footerLineColor.value = color
+  }
+  function setFooterLineWidth(mm: number): void {
+    footerLineWidth.value = Math.max(0, mm)
+  }
+  function setFooterLineStyle(style: "solid" | "dashed" | "dotted"): void {
+    footerLineStyle.value = style
+  }
+  function setFooterLineSpan(v: number): void {
+    footerLineSpan.value = v
+  }
+  function setFooterLineSpanMode(m: "value" | "percent"): void {
+    footerLineSpanMode.value = m
+  }
+  function setFooterHeight(mm: number): void {
+    footerHeight.value = Math.max(0, mm)
+  }
+  function toggleShowFooterLine(): void {
+    showFooterLine.value = !showFooterLine.value
+  }
+
+  function toggleEnableHeaderFooterLineRendering(): void {
+    enableHeaderFooterLineRendering.value = !enableHeaderFooterLineRendering.value
+  }
+
   return {
     template,
     currentPageIndex,
@@ -674,6 +826,42 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     toggleGrid,
     canvasBackground,
     setCanvasBackground,
+    pageMarginHorizontal,
+    setPageMarginHorizontal,
+    pageMarginVertical,
+    setPageMarginVertical,
+    allowDragOutsideCanvas,
+    setAllowDragOutsideCanvas,
+    headerLineColor,
+    setHeaderLineColor,
+    headerLineWidth,
+    setHeaderLineWidth,
+    headerLineStyle,
+    setHeaderLineStyle,
+    headerLineSpan,
+    setHeaderLineSpan,
+    headerLineSpanMode,
+    setHeaderLineSpanMode,
+    headerHeight,
+    setHeaderHeight,
+    showHeaderLine,
+    toggleShowHeaderLine,
+    footerLineColor,
+    setFooterLineColor,
+    footerLineWidth,
+    setFooterLineWidth,
+    footerLineStyle,
+    setFooterLineStyle,
+    footerLineSpan,
+    setFooterLineSpan,
+    footerLineSpanMode,
+    setFooterLineSpanMode,
+    footerHeight,
+    setFooterHeight,
+    showFooterLine,
+    toggleShowFooterLine,
+    enableHeaderFooterLineRendering,
+    toggleEnableHeaderFooterLineRendering,
     guides,
     highlightedGuideId,
     addGuide,
