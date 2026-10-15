@@ -24,6 +24,7 @@
       :font-size="currentFontSize"
       :font-family="currentFontFamily"
       :text-color="currentTextColor"
+      :bg-color="currentBgColor"
       :bold-active="boldActive"
       :italic-active="italicActive"
       :underline-active="underlineActive"
@@ -55,6 +56,7 @@
       @font-size-step="onFontSizeStep"
       @font-family="onFontFamily"
       @on-text-color="onTextColor"
+      @on-bg-color="onBgColor"
       @toggle-bold="onToggleBold"
       @toggle-italic="onToggleItalic"
       @toggle-underline="onToggleUnderline"
@@ -460,6 +462,9 @@ const currentFontFamily = computed<string | null>(
 const currentTextColor = computed<string | null>(
   () => selectedText.value?.color ?? null,
 );
+const currentBgColor = computed<string | null>(
+  () => selectedText.value?.backgroundColor ?? null,
+);
 const boldActive = computed(() => {
   const fw = selectedText.value?.fontWeight;
   return fw === "bold" || fw === "700" || fw === "900";
@@ -711,6 +716,12 @@ function onTextColor(color: string) {
   const t = selectedText.value;
   if (!t) return;
   designer.update(t.id, { color } as Partial<TextElement>);
+}
+
+function onBgColor(color: string) {
+  const t = selectedText.value;
+  if (!t) return;
+  designer.update(t.id, { backgroundColor: color } as Partial<TextElement>);
 }
 
 async function onPrint() {

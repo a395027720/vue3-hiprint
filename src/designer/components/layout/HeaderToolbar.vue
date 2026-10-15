@@ -130,7 +130,71 @@
               :disabled="!isText"
               :allow-transparent="true"
               @update:model-value="onTextColorPicker"
-            />
+            >
+              <template #trigger="{ onClick, onMousedown }">
+                <button
+                  type="button"
+                  class="vtb-color-trigger"
+                  :disabled="!isText"
+                  title="文本颜色"
+                  @click="onClick"
+                  @mousedown="onMousedown"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="1em"
+                    height="1em"
+                    class="cp-icon"
+                  >
+                    <path
+                      fill="currentColor"
+                      d="M6.4 18h2.1l1.1-3.05h4.8L15.5 18h2.1L13.05 6h-2.1L6.4 18zm3.8-4.8l1.75-4.95h.1l1.75 4.95H10.2zM4 22q-.825 0-1.412-.587T2 20V4q0-.825.588-1.412T4 2h16q.825 0 1.413.588T22 4v16q0 .825-.587 1.413T20 22H4z"
+                    />
+                  </svg>
+                  <span
+                    class="cp-swatch"
+                    :style="{ backgroundColor: textColor ?? 'transparent' }"
+                  />
+                </button>
+              </template>
+            </ColorPicker>
+            <ColorPicker
+              :model-value="bgColor ?? ''"
+              :disabled="!isText"
+              :allow-transparent="true"
+              @update:model-value="onBgColorPicker"
+            >
+              <template #trigger="{ onClick, onMousedown }">
+                <button
+                  type="button"
+                  class="vtb-color-trigger"
+                  :disabled="!isText"
+                  title="背景颜色"
+                  @click="onClick"
+                  @mousedown="onMousedown"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="1em"
+                    height="1em"
+                    class="cp-icon"
+                  >
+                    <path
+                      fill="currentColor"
+                      d="M6.175 1.4L7.6 0l8.575 8.575q.575.575.575 1.425t-.575 1.425l-4.75 4.75q-.575.575-1.425.575t-1.425-.575l-4.75-4.75Q3.25 10.85 3.25 10t.575-1.425L8.575 3.8zM10 5.225L5.225 10h9.55zm7.588 11.188Q17 15.825 17 15q0-.525.313-1.125T18 12.75q.225-.3.475-.625T19 11.5q.275.3.525.625t.475.625q.375.525.688 1.125T21 15q0 .825-.587 1.413T19 17t-1.412-.587M2 24v-4h20v4z"
+                    />
+                  </svg>
+                  <span class="cp-swatch cp-swatch-transparent">
+                    <span class="cp-swatch-checker" />
+                    <span
+                      class="cp-swatch-fill"
+                      :style="{ backgroundColor: bgColor ?? 'transparent' }"
+                    />
+                    <span class="cp-swatch-strike" />
+                  </span>
+                </button>
+              </template>
+            </ColorPicker>
             <button
               class="vtb-tb"
               :disabled="!isText"
@@ -563,6 +627,8 @@ const props = defineProps<{
   fontFamily: string | null;
   /** 字色 */
   textColor: string | null;
+  /** 背景色(text 元素) */
+  bgColor: string | null;
   /** 样式激活态 */
   boldActive: boolean;
   italicActive: boolean;
@@ -605,6 +671,7 @@ const emit = defineEmits<{
   fontSizeStep: [delta: number];
   fontFamily: [family: string];
   onTextColor: [color: string];
+  onBgColor: [color: string];
   toggleBold: [];
   toggleItalic: [];
   toggleUnderline: [];
@@ -664,9 +731,12 @@ function onFontSizeChange(e: Event) {
   }
 }
 // ColorPicker 的 update:modelValue 是 string | undefined,
-// 上游 onTextColor 约定是 string;undefined(清空)→ '' 保持一致。
+// 上游 onTextColor / onBgColor 约定是 string;undefined(清空)→ '' 保持一致。
 function onTextColorPicker(color: string | undefined) {
   emit("onTextColor", color ?? "");
+}
+function onBgColorPicker(color: string | undefined) {
+  emit("onBgColor", color ?? "");
 }
 
 onMounted(() => {
@@ -915,5 +985,73 @@ const chevronRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" class=
 .rotate-90 {
   display: inline-block;
   transform: rotate(90deg);
+}
+
+/* ===== 颜色按钮 trigger(图标 + 14×3.5 色块) ===== */
+.vtb-color-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 4px;
+  color: #444;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+  flex: 0 0 auto;
+  font-size: 16px;
+}
+.vtb-color-trigger:hover:not(:disabled) {
+  background: #e6f4ff;
+  border-color: #91caff;
+  color: #1677ff;
+}
+.vtb-color-trigger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.cp-icon {
+  display: block;
+}
+.cp-swatch {
+  display: inline-block;
+  width: 4px;
+  height: 14px;
+  border-radius: 1px;
+  border: 1px solid #d9d9d9;
+  background: transparent;
+  flex: 0 0 auto;
+}
+.cp-swatch-transparent {
+  position: relative;
+  background: #fff;
+}
+.cp-swatch-checker {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAIAAADZF8uwAAAAGUlEQVQYV2M4gwZ+5wNisxL//8n04mEeRAAAhNwX869V4DYAAAAASUVORK5CYII=");
+  background-repeat: repeat;
+  background-size: 6px 6px;
+  opacity: 0.5;
+}
+.cp-swatch-fill {
+  position: absolute;
+  inset: 0;
+}
+.cp-swatch-strike {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.cp-swatch-strike::before {
+  content: "";
+  width: 100%;
+  height: 1px;
+  background: #ff4d4f;
+  transform: rotate(-45deg) scale(1.5);
 }
 </style>

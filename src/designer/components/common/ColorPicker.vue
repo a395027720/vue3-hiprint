@@ -1,17 +1,26 @@
 <template>
   <div ref="containerRef" class="cp-container">
-    <!-- 触发器(色块) -->
-    <div
-      class="cp-trigger"
-      :class="{ 'is-disabled': disabled, 'is-open': isOpen, 'is-empty': !modelValue }"
-      :style="{ backgroundColor: isTransparent ? 'transparent' : (modelValue || defaultColor || '#000000') }"
-      @click="toggleOpen"
-      @mousedown.stop
+    <!-- 触发器:可由外部用 #trigger 插槽自定义(HeaderToolbar 用图标+色块);
+         不传插槽时使用默认 cp-trigger 色块(供 PropertyPanel 使用)。 -->
+    <slot
+      name="trigger"
+      :is-open="isOpen"
+      :disabled="disabled"
+      :on-click="handleTriggerClick"
+      :on-mousedown="stopMousedown"
     >
-      <!-- 空值 / transparent 的斜线标记 -->
-      <div v-if="!modelValue" class="cp-strike" />
-      <div v-if="isTransparent" class="cp-transparent-bg" />
-    </div>
+      <div
+        class="cp-trigger"
+        :class="{ 'is-disabled': disabled, 'is-open': isOpen, 'is-empty': !modelValue }"
+        :style="{ backgroundColor: isTransparent ? 'transparent' : (modelValue || defaultColor || '#000000') }"
+        @click="handleTriggerClick"
+        @mousedown.stop
+      >
+        <!-- 空值 / transparent 的斜线标记 -->
+        <div v-if="!modelValue" class="cp-strike" />
+        <div v-if="isTransparent" class="cp-transparent-bg" />
+      </div>
+    </slot>
 
     <!-- 下拉面板(Teleport 到 body 避免被父级 overflow 裁剪) -->
     <Teleport to="body">
@@ -263,22 +272,26 @@ function handleClickOutside(e: MouseEvent) {
   if (!isOpen.value) return;
   const target = e.target as HTMLElement | null;
   if (!target) return;
-  const trigger = containerRef.value;
-  const dropdown = dropdownRef.value;
-  if (!trigger) return;
-  const inTrigger = trigger.contains(target) || !!target.closest(".cp-trigger");
-  const inDropdown = !!dropdown?.contains(target) || !!target.closest(".cp-dropdown");
-  if (!inTrigger && !inDropdown) isOpen.value = false;
+  const container = containerRef.value;
+  if (!container) return;
+  // 自定义 trigger 时,整个 cp-container 内部都算"内部点击",统一用 containerRef.contains 判定
+  const inContainer = container.contains(target);
+  const inDropdown = !!target.closest(".cp-dropdown");
+  if (!inContainer && !inDropdown) isOpen.value = false;
 }
 
-async function toggleOpen(e?: MouseEvent) {
+function handleTriggerClick(e: MouseEvent) {
   if (props.disabled) return;
-  e?.stopPropagation();
+  e.stopPropagation();
   isOpen.value = !isOpen.value;
   if (isOpen.value) {
-    await nextTick();
-    updatePosition();
+    nextTick(updatePosition);
   }
+}
+
+/** 暴露给自定义 trigger 插槽的 mousedown 处理器(防止画布/父级误判 mousedown 开始) */
+function stopMousedown(e: MouseEvent) {
+  e.stopPropagation();
 }
 
 function clearColor() {
