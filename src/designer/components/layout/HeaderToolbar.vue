@@ -29,6 +29,24 @@
         @scroll="updateScrollState"
       >
         <div class="vtb-content" :class="{ 'is-end': !isOverflow }">
+          <div class="vtb-pill">
+            <button
+              class="vtb-tb"
+              :disabled="!canUndo"
+              title="撤销"
+              @click="$emit('undo')"
+            >
+              <span v-html="undoIcon" />
+            </button>
+            <button
+              class="vtb-tb"
+              :disabled="!canRedo"
+              title="重做"
+              @click="$emit('redo')"
+            >
+              <span v-html="redoIcon" />
+            </button>
+          </div>
           <!-- 字体 + 字号 + B/I/U/S + 竖排 + 颜色 + 清除 + 旋转复位 -->
           <div class="vtb-pill">
             <select
@@ -107,7 +125,6 @@
             >
               <s>S</s>
             </button>
-            <span class="vtb-pill-sep" />
             <label
               class="vtb-color"
               :class="{ disabled: !isText }"
@@ -130,7 +147,6 @@
                 "
               />
             </label>
-            <span class="vtb-pill-sep" />
             <button
               class="vtb-tb"
               :disabled="!isText"
@@ -139,7 +155,6 @@
             >
               <span v-html="formatClearIcon" />
             </button>
-            <span class="vtb-pill-sep" />
             <button
               class="vtb-tb"
               :disabled="!hasSelection"
@@ -295,30 +310,12 @@
           <div class="vtb-pill">
             <button
               class="vtb-tb"
-              :disabled="!canUndo"
-              title="撤销"
-              @click="$emit('undo')"
-            >
-              <span v-html="undoIcon" />
-            </button>
-            <button
-              class="vtb-tb"
-              :disabled="!canRedo"
-              title="重做"
-              @click="$emit('redo')"
-            >
-              <span v-html="redoIcon" />
-            </button>
-            <span class="vtb-pill-sep" />
-            <button
-              class="vtb-tb"
               :disabled="!hasSelection"
               title="全选当前页"
               @click="$emit('selectAll')"
             >
               <span v-html="selectAllIcon" />
             </button>
-            <span class="vtb-pill-sep" />
             <button
               class="vtb-tb"
               :disabled="!hasSelection"
