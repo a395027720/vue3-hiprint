@@ -18,17 +18,13 @@
       <div ref="saveMenuRef" class="save-group">
         <button
           class="save-btn"
-          :disabled="!dirty"
-          @click="$emit('save')"
+          :class="{ 'is-disabled': !dirty }"
+          @click="handleClick"
         >
           <save-outlined />
           <span class="save-label">保存</span>
         </button>
-        <button
-          class="save-arrow"
-          title="更多保存操作"
-          @click="toggleSaveMenu"
-        >
+        <button class="save-arrow" title="更多保存操作" @click="toggleSaveMenu">
           <down-outlined />
         </button>
         <div v-if="saveMenuOpen" class="save-menu">
@@ -69,7 +65,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
 
-defineProps<{
+const props = defineProps<{
   /** 当前模板是否有未保存修改(决定保存按钮是否可用) */
   dirty?: boolean;
 }>();
@@ -101,6 +97,11 @@ type SaveAction =
   | "help"
   | "settings";
 
+const handleClick = () => {
+  if (!props.dirty) return;
+  emit("save");
+};
+
 function onPick(action: SaveAction) {
   saveMenuOpen.value = false;
   emit(action);
@@ -126,7 +127,9 @@ onBeforeUnmount(() =>
 <style scoped>
 .topbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, clamp(360px, 58vw, 860px)) minmax(0, 1fr);
+  grid-template-columns:
+    minmax(0, 1fr) minmax(0, clamp(360px, 58vw, 860px))
+    minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   height: 56px;
@@ -192,13 +195,11 @@ onBeforeUnmount(() =>
 .save-btn:hover:not(:disabled) {
   background: #4096ff;
 }
-.save-btn:disabled {
-  background: #f0f0f0;
-  border-right-color: #f0f0f0;
-  border-radius: 6px 0 0 6px;
-  color: #bfbfbf;
+
+.save-btn.is-disabled {
   cursor: not-allowed;
 }
+
 .save-label {
   white-space: nowrap;
 }
