@@ -36,6 +36,25 @@ export const FONT_WEIGHT_OPTIONS: FieldOption[] = [
   { value: '900', label: '900(粗)' },
 ]
 
+/** 字体族:对应 CSS font-family 字符串;同时被 PropertyPanel 下拉与 TextQuickToolbar 复用 */
+export const FONT_FAMILY_OPTIONS: FieldOption[] = [
+  { value: '', label: '默认' },
+  { value: 'system-ui, sans-serif', label: '系统默认' },
+  { value: 'SimSun, "宋体", serif', label: '宋体' },
+  { value: 'SimHei, "黑体", sans-serif', label: '黑体' },
+  { value: '"Microsoft YaHei", "微软雅黑", sans-serif', label: '微软雅黑' },
+  { value: 'KaiTi, "楷体", serif', label: '楷体' },
+  { value: 'FangSong, "仿宋", serif', label: '仿宋' },
+  { value: 'Arial, sans-serif', label: 'Arial' },
+  { value: '"Times New Roman", serif', label: 'Times New Roman' },
+  { value: 'Georgia, serif', label: 'Georgia' },
+  { value: 'Helvetica, Arial, sans-serif', label: 'Helvetica' },
+  { value: 'Verdana, sans-serif', label: 'Verdana' },
+  { value: '"Courier New", monospace', label: 'Courier New' },
+  { value: 'Consolas, "Courier New", monospace', label: 'Consolas' },
+  { value: 'Monaco, monospace', label: 'Monaco' },
+]
+
 /** 内边距固定值(mm,1 档默认 + 27 档,0.25 起步 0.5 步进到 10mm) */
 const PADDING_VALUES: number[] = [
   0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10,

@@ -26,11 +26,13 @@
           title="字体"
           @change="onFontFamily"
         >
-          <optgroup v-for="g in fontGroups" :key="g.label" :label="g.label">
-            <option v-for="o in g.options" :key="o.value" :value="o.value">
-              {{ o.label }}
-            </option>
-          </optgroup>
+          <option
+            v-for="o in fontGroups"
+            :key="o.value"
+            :value="o.value"
+          >
+            {{ o.label }}
+          </option>
         </select>
 
         <span class="tqt-sep" />
@@ -182,55 +184,9 @@ import {
   type Ref,
 } from "vue";
 import type { TextElement } from "../../core/types";
+import { FONT_FAMILY_OPTIONS } from "../../etypes/base";
 
-interface FontOption {
-  value: string;
-  label: string;
-}
-interface FontGroup {
-  label: string;
-  options: FontOption[];
-}
-
-// 三方样式:常用 / 中文字体 / 西文字体 / 等宽字体
-const FONT_GROUPS: FontGroup[] = [
-  {
-    label: "常用",
-    options: [
-      { value: "", label: "默认" },
-      { value: "system-ui, sans-serif", label: "系统默认" },
-    ],
-  },
-  {
-    label: "中文字体",
-    options: [
-      { value: 'SimSun, "宋体", serif', label: "宋体" },
-      { value: 'SimHei, "黑体", sans-serif', label: "黑体" },
-      { value: '"Microsoft YaHei", "微软雅黑", sans-serif', label: "微软雅黑" },
-      { value: 'KaiTi, "楷体", serif', label: "楷体" },
-      { value: 'FangSong, "仿宋", serif', label: "仿宋" },
-    ],
-  },
-  {
-    label: "西文字体",
-    options: [
-      { value: "Arial, sans-serif", label: "Arial" },
-      { value: '"Times New Roman", serif', label: "Times New Roman" },
-      { value: "Georgia, serif", label: "Georgia" },
-      { value: "Helvetica, Arial, sans-serif", label: "Helvetica" },
-      { value: "Verdana, sans-serif", label: "Verdana" },
-    ],
-  },
-  {
-    label: "等宽字体",
-    options: [
-      { value: '"Courier New", monospace', label: "Courier New" },
-      { value: 'Consolas, "Courier New", monospace', label: "Consolas" },
-      { value: "Monaco, monospace", label: "Monaco" },
-    ],
-  },
-];
-const fontGroups = FONT_GROUPS;
+const fontGroups = FONT_FAMILY_OPTIONS;
 
 const props = defineProps<{
   /** 当前选中的文本元素(必须 type === 'text') */

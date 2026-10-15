@@ -3,7 +3,7 @@
  * 基础 = 内容;样式 = 字号/字体/颜色/对齐/换行/装饰/背景/层级;无高级。
  */
 
-import { FONT_WEIGHT_OPTIONS } from './base'
+import { FONT_FAMILY_OPTIONS, FONT_WEIGHT_OPTIONS } from './base'
 import type { SectionDef } from '../core/fieldSchema'
 
 export const TEXT_SECTIONS: SectionDef[] = [
@@ -20,7 +20,7 @@ export const TEXT_SECTIONS: SectionDef[] = [
     columns: 2,
     fields: [
       { key: 'fontSize', label: '字号 (pt)', kind: 'number', min: 6, max: 96 },
-      { key: 'fontFamily', label: '字体', kind: 'text' },
+      { key: 'fontFamily', label: '字体', kind: 'select', options: FONT_FAMILY_OPTIONS },
       { key: 'lineHeight', label: '行高', kind: 'number', min: 0.5, step: 0.1 },
       { key: 'maxLines', label: '文本行数', kind: 'number', min: 1, step: 1 },
       { key: 'letterSpacing', label: '字距 (px)', kind: 'number', step: 0.5 },
