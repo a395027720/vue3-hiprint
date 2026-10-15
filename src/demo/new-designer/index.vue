@@ -33,20 +33,25 @@ defineOptions({ name: "printNewDesigner" });
 const designerRef = ref<InstanceType<typeof PrintDesigner> | null>(null);
 
 const initialTemplate: Template = createTemplate({
-  elements: [
-    createText({
-      x: 75,
-      y: 20,
-      w: 60,
-      h: 10,
-      text: "销售单",
-      fontSize: 18,
-      fontWeight: "bold",
-      align: "center",
-    }),
-    createText({ x: 20, y: 40, w: 60, h: 6, text: "客户:示例客户" }),
-    createText({ x: 20, y: 50, w: 60, h: 6, text: "日期:2026-10-13" }),
-    createTable({ x: 20, y: 60, w: 170, h: 80, dataPath: "rows" }),
+  pages: [
+    {
+      id: "p_demo",
+      elements: [
+        createText({
+          x: 75,
+          y: 20,
+          w: 60,
+          h: 12,
+          text: "销售单",
+          fontSize: 6.4,
+          fontWeight: "bold",
+          align: "center",
+        }),
+        createText({ x: 20, y: 40, w: 60, h: 6, text: "客户:示例客户" }),
+        createText({ x: 20, y: 50, w: 60, h: 6, text: "日期:2026-10-13" }),
+        createTable({ x: 20, y: 60, w: 170, h: 80, dataPath: "rows" }),
+      ],
+    },
   ],
 });
 

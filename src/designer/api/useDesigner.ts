@@ -234,11 +234,32 @@ export interface UseDesignerReturn {
 
 export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn {
   const initial = options.template ?? createTemplate()
-  // 兼容老 JSON(无 pages):自动迁移
-  const normalized: Template =
-    initial.pages && initial.pages.length > 0
-      ? initial
-      : { ...initial, pages: [{ id: createId(), elements: (initial as unknown as { elements?: Element[] }).elements ?? [] }] }
+  // 兼容老 hiprint 格式(顶层 elements 字段):
+  //   - 有 pages 但 pages[0].elements 空 + 顶层有 elements → 合并到 pages[0].elements
+  //   - 无 pages + 顶层有 elements → 包到新 pages[0]
+  //   - 任何情况下都剥掉顶层 elements(避免污染 toJson 输出)
+  const legacyElements = (initial as unknown as { elements?: Element[] }).elements
+  const normalized: Template = (() => {
+    if (initial.pages && initial.pages.length > 0) {
+      if (legacyElements && legacyElements.length > 0) {
+        return {
+          version: initial.version,
+          paper: initial.paper,
+          pages: initial.pages.map((p, i) =>
+            i === 0 && p.elements.length === 0
+              ? { ...p, elements: legacyElements }
+              : p,
+          ),
+        }
+      }
+      return initial
+    }
+    return {
+      version: "1.0",
+      paper: initial.paper,
+      pages: [{ id: createId(), elements: legacyElements ?? [] }],
+    }
+  })()
   // 用 shallowRef 避免深代理,Template 整体替换
   const template = shallowRef<Template>(normalized)
   const currentPageIndex = ref(0)
@@ -679,10 +700,12 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     try {
       const parsed = JSON.parse(raw) as Template & { elements?: Element[] }
       if (!parsed || parsed.version !== '1.0' || !parsed.paper) return false
-      // 兼容老格式(无 pages,有 elements):迁移到 pages
+      // 兼容老格式(无 pages,有 elements):迁移到 pages;新格式若残留顶层 elements 也剥掉
       let next: Template
       if (Array.isArray(parsed.pages) && parsed.pages.length > 0) {
-        next = parsed
+        next = Array.isArray(parsed.elements)
+          ? { version: parsed.version, paper: parsed.paper, pages: parsed.pages }
+          : parsed
       } else if (Array.isArray(parsed.elements)) {
         next = {
           version: '1.0',
