@@ -46,24 +46,25 @@
         :style="dropdownStyle"
         @click.stop
       >
-        <div class="ps-section-title">纸张大小</div>
-        <div class="ps-presets">
-          <button
-            v-for="opt in PRESETS"
-            :key="opt.key"
-            type="button"
-            class="ps-preset-btn"
-            :class="{ 'is-active': opt.key === selectedKey }"
-            @click="onPresetPick(opt.key)"
-          >
-            <span class="ps-preset-key">{{ opt.key }}</span>
-            <span class="ps-preset-size"
-              >{{ opt.width }}×{{ opt.height }}mm</span
-            >
-          </button>
+        <div class="ps-group-title">
+          <span class="ps-section-title">页面设置</span>
         </div>
 
-        <div class="ps-grid-2">
+        <div class="ps-field">
+          <label class="ps-field-label">纸张大小</label>
+          <select
+            class="ps-select"
+            :value="selectedKey"
+            @change="onPresetSelect"
+          >
+            <option v-for="opt in PRESETS" :key="opt.key" :value="opt.key">
+              {{ opt.label }}
+            </option>
+            <option value="Custom">自定义</option>
+          </select>
+        </div>
+
+        <div class="ps-grid-2 ps-mt">
           <div class="ps-field">
             <label class="ps-field-label">宽 (mm)</label>
             <input
@@ -171,7 +172,7 @@
           </button>
         </div>
 
-        <div class="ps-hf-title">
+        <div class="ps-group-title">
           <span class="ps-section-title">页眉/页脚</span>
           <!-- <button
             type="button"
@@ -199,7 +200,7 @@
             >
               <span class="ps-toggle-sm-thumb" />
             </button>
-            <span class="ps-hf-label">表头</span>
+            <span class="ps-hf-label">页眉线</span>
           </div>
           <div class="ps-hf-right">
             <input
@@ -226,7 +227,7 @@
             >
               <span class="ps-toggle-sm-thumb" />
             </button>
-            <span class="ps-hf-label">页脚</span>
+            <span class="ps-hf-label">页脚线</span>
           </div>
           <div class="ps-hf-right">
             <input
@@ -270,6 +271,8 @@ const PRESETS: PresetOption[] = [
   { key: "A3", label: "A3 (297×420mm)", width: 297, height: 420 },
   { key: "Letter", label: "Letter (216×279mm)", width: 216, height: 279 },
 ];
+
+const CUSTOM_KEY = "Custom";
 
 type LineStyle = "solid" | "dashed" | "dotted";
 type SpanMode = "value" | "percent";
@@ -338,20 +341,27 @@ const dropdownStyle = ref<Record<string, string>>({ top: "0", left: "0" });
 
 const customWidth = ref(props.paperWidth);
 const customHeight = ref(props.paperHeight);
+/** 用户主动切到"自定义"标签的粘性状态;width/height 改回预设时再清掉。
+ *  否则 select 选了 Custom 后,下一帧 :value 重算成原预设 key,DOM 又跳回去。 */
+const userCustom = ref(false);
 
 watch(
   () => [props.paperWidth, props.paperHeight] as const,
   ([w, h]) => {
     customWidth.value = w;
     customHeight.value = h;
+    const match = PRESETS.find((p) => p.width === w && p.height === h);
+    userCustom.value = !match;
   },
+  { immediate: true },
 );
 
 const selectedKey = computed(() => {
+  if (userCustom.value) return CUSTOM_KEY;
   const match = PRESETS.find(
     (p) => p.width === props.paperWidth && p.height === props.paperHeight,
   );
-  return match?.key ?? "Custom";
+  return match?.key ?? CUSTOM_KEY;
 });
 
 const currentLabel = computed(() => {
@@ -397,9 +407,15 @@ function handleClickOutside(e: MouseEvent) {
   isOpen.value = false;
 }
 
-function onPresetPick(key: string) {
+function onPresetSelect(e: Event) {
+  const key = (e.target as HTMLSelectElement).value;
+  if (key === CUSTOM_KEY) {
+    userCustom.value = true;
+    return;
+  }
   const opt = PRESETS.find((p) => p.key === key);
   if (!opt) return;
+  userCustom.value = false;
   customWidth.value = opt.width;
   customHeight.value = opt.height;
   emit("setPaper", { width: opt.width, height: opt.height });
@@ -580,46 +596,24 @@ onBeforeUnmount(() => {
 .ps-section-title:first-child {
   margin-top: 0;
 }
-.ps-presets {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-  margin-bottom: 10px;
-}
-.ps-preset-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 6px 8px;
+.ps-select {
+  width: 100%;
+  box-sizing: border-box;
+  height: 28px;
+  padding: 0 6px;
   border: 1px solid #d9d9d9;
-  border-radius: 4px;
+  border-radius: 2px;
   background: white;
+  font-size: 12px;
+  outline: none;
   cursor: pointer;
-  text-align: left;
-  transition:
-    background 120ms,
-    border-color 120ms,
-    color 120ms;
+  transition: border-color 120ms;
 }
-.ps-preset-btn:hover {
-  background: #e6f4ff;
+.ps-select:hover {
   border-color: #91caff;
 }
-.ps-preset-btn.is-active {
-  background: #e6f4ff;
+.ps-select:focus {
   border-color: #1677ff;
-  color: #1677ff;
-}
-.ps-preset-key {
-  font-size: 12px;
-  font-weight: 500;
-}
-.ps-preset-size {
-  font-size: 11px;
-  color: #8c8c8c;
-}
-.ps-preset-btn.is-active .ps-preset-size {
-  color: #1677ff;
 }
 .ps-grid-2 {
   display: grid;
@@ -745,15 +739,29 @@ onBeforeUnmount(() => {
   padding-top: 4px;
 }
 
-/* ===== 页眉/页脚 section (照参考实现) ===== */
-.ps-hf-title {
+/* ===== 组标题(页面设置 / 页眉页脚 共用) ===== */
+.ps-group-title {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 8px 0 6px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 14px;
+  margin-top: 16px;
 }
-.ps-hf-title .ps-section-title {
+/* 第一个组标题在 dropdown 顶部,不要分割线和上方间距,但下方留点呼吸距离 */
+.ps-dropdown .ps-group-title:first-of-type {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 6px;
+}
+.ps-group-title .ps-section-title {
   margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  text-transform: none;
+  letter-spacing: 0;
 }
 .ps-icon-btn {
   display: inline-flex;
@@ -780,7 +788,6 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 4px 0;
-  border-top: 1px solid #f0f0f0;
 }
 .ps-hf-row.is-disabled {
   opacity: 0.5;

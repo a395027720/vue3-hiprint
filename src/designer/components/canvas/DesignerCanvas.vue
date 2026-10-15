@@ -22,6 +22,35 @@
             @dragover.prevent
             @drop.stop="onDrop"
           >
+            <!-- 可印刷区域(页边距内框),置于元素之前,层级 0 让元素自然覆盖 -->
+            <div
+              v-if="showSafeArea"
+              class="safe-area"
+              :style="safeAreaStyle"
+              aria-hidden="true"
+            />
+            <!-- 页眉分隔线(距 paper 顶部 headerHeight mm 处一条横线,可拖动) -->
+            <div
+              v-if="showHeaderLineV"
+              class="paper-line"
+              :style="headerLineStyle"
+              role="separator"
+              title="拖动调整页眉线位置"
+              @mousedown.stop="onLineMouseDown($event, 'header')"
+            >
+              <span class="paper-line-label">页眉</span>
+            </div>
+            <!-- 页脚分隔线(距 paper 底部 footerHeight mm 处一条横线,可拖动) -->
+            <div
+              v-if="showFooterLineV"
+              class="paper-line"
+              :style="footerLineStyle"
+              role="separator"
+              title="拖动调整页脚线位置"
+              @mousedown.stop="onLineMouseDown($event, 'footer')"
+            >
+              <span class="paper-line-label">页脚</span>
+            </div>
             <div
               v-for="el in page.elements"
               :key="el.id"
@@ -157,6 +186,40 @@ const props = defineProps<{
   multiSelectedIds?: string[];
   /** dark mode 配色 */
   darkMode?: boolean;
+  /** 画布背景色(#rrggbb / transparent) */
+  canvasBackground?: string;
+  /** 水平页面边距(mm),在 .canvas 内画一个虚线内框表示可印刷区域 */
+  pageMarginHorizontal?: number;
+  /** 垂直页面边距(mm) */
+  pageMarginVertical?: number;
+  /** 页眉线距离画布顶部的距离(mm) */
+  headerHeight?: number;
+  /** 是否显示页眉分隔线 */
+  showHeaderLine?: boolean;
+  /** 页眉线颜色 */
+  headerLineColor?: string;
+  /** 页眉线宽度(mm) */
+  headerLineWidth?: number;
+  /** 页眉线样式 */
+  headerLineStyle?: "solid" | "dashed" | "dotted";
+  /** 页眉线水平跨度 */
+  headerLineSpan?: number;
+  /** 页眉线跨度单位 */
+  headerLineSpanMode?: "value" | "percent";
+  /** 页脚线距离画布底部的距离(mm) */
+  footerHeight?: number;
+  /** 是否显示页脚分隔线 */
+  showFooterLine?: boolean;
+  /** 页脚线颜色 */
+  footerLineColor?: string;
+  /** 页脚线宽度(mm) */
+  footerLineWidth?: number;
+  /** 页脚线样式 */
+  footerLineStyle?: "solid" | "dashed" | "dotted";
+  /** 页脚线水平跨度 */
+  footerLineSpan?: number;
+  /** 页脚线跨度单位 */
+  footerLineSpanMode?: "value" | "percent";
   /** 用户自定义参考线 */
   guides?: Array<{
     id: string;
@@ -212,6 +275,10 @@ const emit = defineEmits<{
   guideRemove: [id: string];
   /** 画布 wrap 滚动/wrap size 变化,通知父级重算 ruler offset */
   viewportChange: [];
+  /** 拖动页眉分隔线改变位置(mm) */
+  changeHeaderHeight: [mm: number];
+  /** 拖动页脚分隔线改变位置(mm) */
+  changeFooterHeight: [mm: number];
 }>();
 
 // 吸附阈值(单位:mm,4px / 3.78 ≈ 1mm,这里取 1mm 适中)
@@ -239,9 +306,79 @@ const canvasStyle = computed(() => ({
   // 父级 .canvas-scale 的 transform: scale(zoom) 视觉缩放,这里用 raw mm→px
   width: mmToPx(props.template.paper.width) + "px",
   height: mmToPx(props.template.paper.height) + "px",
+  backgroundColor: props.canvasBackground || undefined,
   backgroundImage: gridStyle.value.image,
   backgroundSize: gridStyle.value.size || undefined,
 }));
+
+/** 可印刷区域框:水平/垂直边距都 > 0 才显示 */
+const safeAreaStyle = computed(() => {
+  const h = props.pageMarginHorizontal ?? 0;
+  const v = props.pageMarginVertical ?? 0;
+  return {
+    left: mmToPx(h) + "px",
+    top: mmToPx(v) + "px",
+    right: mmToPx(h) + "px",
+    bottom: mmToPx(v) + "px",
+  };
+});
+const showSafeArea = computed(
+  () =>
+    (props.pageMarginHorizontal ?? 0) > 0 ||
+    (props.pageMarginVertical ?? 0) > 0,
+);
+
+/** 页眉 / 页脚分隔线:headerHeight = 距顶部偏移,footerHeight = 距底部偏移。
+ * 渲染为带颜色/宽度/样式的水平线段,span 控制水平长度(value mm 或 percent)。
+ * height:0 + padding 6px 0 撑出 hit area,border-top 在 padding-box 顶部,
+ * 线视觉正好等于 top/bottom 偏移值(header 贴顶,footer 贴底)。 */
+function lineStyle(
+  offsetMm: number,
+  lineWidthMm: number,
+  lineColor: string | undefined,
+  lineStyleStr: "solid" | "dashed" | "dotted" | undefined,
+  spanValue: number | undefined,
+  spanMode: "value" | "percent" | undefined,
+  edge: "top" | "bottom",
+) {
+  const paperW = props.template.paper.width;
+  const span = spanValue ?? 100;
+  const widthMm = spanMode === "percent" ? (paperW * span) / 100 : span;
+  const lwPx = Math.max(mmToPx(lineWidthMm), 1);
+  return {
+    [edge]: mmToPx(offsetMm) + "px",
+    left: "0",
+    width: mmToPx(widthMm) + "px",
+    height: "0",
+    borderTop: `${lwPx}px ${lineStyleStr || "dashed"} ${lineColor || "#f87171"}`,
+  };
+}
+
+const headerLineStyle = computed(() =>
+  lineStyle(
+    props.headerHeight ?? 0,
+    props.headerLineWidth ?? 1,
+    props.headerLineColor,
+    props.headerLineStyle,
+    props.headerLineSpan,
+    props.headerLineSpanMode,
+    "top",
+  ),
+);
+const showHeaderLineV = computed(() => props.showHeaderLine === true);
+
+const footerLineStyle = computed(() =>
+  lineStyle(
+    props.footerHeight ?? 0,
+    props.footerLineWidth ?? 1,
+    props.footerLineColor,
+    props.footerLineStyle,
+    props.footerLineSpan,
+    props.footerLineSpanMode,
+    "bottom",
+  ),
+);
+const showFooterLineV = computed(() => props.showFooterLine === true);
 
 /** 单个 page 的尺寸(S2:多页用 .canvas-scale 的 flex-col + rowGap 自动堆叠,不再 transform) */
 function pageStyle(_pageIndex: number) {
@@ -274,6 +411,35 @@ function onWrapScroll() {
   // wrap 滚动改变 canvas 视觉位置,触发 ruler 重算
   emit("viewportChange");
 }
+
+/** 页眉/页脚分隔线拖动:鼠标 clientY 变化 → new offset(mm,zoom 修正)。
+ * mousedown.stop 阻断冒泡,不让 wrap mousedown 进入 marquee 路径。 */
+function onLineMouseDown(e: MouseEvent, edge: "header" | "footer") {
+  e.preventDefault();
+  const initialClientY = e.clientY;
+  const initialMm =
+    edge === "header" ? (props.headerHeight ?? 0) : (props.footerHeight ?? 0);
+  const zoom = zoomValue.value;
+  const PX_PER_MM = 96 / 25.4;
+
+  function onMove(ev: MouseEvent) {
+    const dyPx = (ev.clientY - initialClientY) / zoom;
+    // header: 距顶,鼠标下移 → 增大;footer: 距底,鼠标上移 → 增大,方向相反
+    const next =
+      edge === "header"
+        ? Math.max(0, initialMm + dyPx / PX_PER_MM)
+        : Math.max(0, initialMm - dyPx / PX_PER_MM);
+    if (edge === "header") emit("changeHeaderHeight", next);
+    else emit("changeFooterHeight", next);
+  }
+  function onUp() {
+    window.removeEventListener("mousemove", onMove);
+    window.removeEventListener("mouseup", onUp);
+  }
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("mouseup", onUp);
+}
+
 onMounted(() => {
   measureWrap();
   if (wrapRef.value && "ResizeObserver" in window) {
@@ -444,9 +610,10 @@ function formatMm(mm: number): string {
 }
 
 /** 把 selfLines (mm 数组) 转成 SnapAndSelfLinesOverlay 需要的 OverlayLine 数组(mm + px) */
-const selfLinesOverlay = computed<
-  { v: OverlayLine[]; h: OverlayLine[] } | null
->(() => {
+const selfLinesOverlay = computed<{
+  v: OverlayLine[];
+  h: OverlayLine[];
+} | null>(() => {
   if (!selfLines.value) return null;
   return {
     v: selfLines.value.v.map((mm, i) => ({ id: i, mm, px: overlayX(mm) })),
@@ -696,8 +863,6 @@ watch(
   /* width / height 由 :style 注入 */
 }
 
-/* 用户自定义参考线已搬到 GuideOverlay.vue */
-
 /* 拖动中延长线围成的范围浅蓝半透明填充已搬到 SnapAndSelfLinesOverlay.vue */
 .canvas {
   position: absolute;
@@ -706,6 +871,35 @@ watch(
   background: white;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
+}
+/* 可印刷区域框:水平/垂直边距界定的内框,虚线浅蓝,元素自然覆盖 */
+.safe-area {
+  position: absolute;
+  pointer-events: none;
+  border: 1px dashed #91caff;
+  box-sizing: border-box;
+}
+
+.paper-line {
+  position: absolute;
+  cursor: ns-resize;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+/* 线右端文字标签:flex 自动贴右边、padding-box 内垂直居中,
+ * pointer-events:none 避免拦截拖动 */
+.paper-line-label {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  color: #f87171;
+  padding-right: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  /* 上挪一点,避免压在线视觉上;header 在线之上,footer 在 paper 内、line 之上 */
+  transform: translateY(-10px);
 }
 .canvas-element {
   position: absolute;

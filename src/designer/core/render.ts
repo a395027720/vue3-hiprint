@@ -370,8 +370,13 @@ export function paginate(tpl: Template): Element[][] {
 
 // ========== Template + data → 完整 HTML 文档 ==========
 
-export function renderTemplate(tpl: Template, data: unknown): string {
-  const inner = renderInner(tpl, data)
+export function renderTemplate(
+  tpl: Template,
+  data: unknown,
+  pageMarginHorizontal = 0,
+  pageMarginVertical = 0,
+): string {
+  const inner = renderInner(tpl, data, pageMarginHorizontal, pageMarginVertical)
   return `<!doctype html>
 <html><head><meta charset="utf-8"/><style>
   @page { size: ${tpl.paper.width}mm ${tpl.paper.height}mm; margin: 0; }
@@ -389,10 +394,20 @@ export function renderTemplate(tpl: Template, data: unknown): string {
  * 只输出 <section class="paper">…</section> 列表,不含 doctype / html / body / style。
  * 用于 PreviewModal 这种 v-html 渲染场景(被嵌入父文档,父 style 已经生效,
  * 不需要再写一遍 @page / html,body 等)。
+ *
+ * pageMarginHorizontal / pageMarginVertical(mm):paper 内的可印刷区域边距,
+ * 元素渲染到一个 inset = margin 的内层容器 .paper-content 中。
  */
-export function renderInner(tpl: Template, data: unknown): string {
+export function renderInner(
+  tpl: Template,
+  data: unknown,
+  pageMarginHorizontal = 0,
+  pageMarginVertical = 0,
+): string {
   const paperW = mmToPx(tpl.paper.width)
   const paperH = mmToPx(tpl.paper.height)
+  const mh = mmToPx(pageMarginHorizontal)
+  const mv = mmToPx(pageMarginVertical)
   const pages = paginate(tpl)
   const lastIdx = pages.length - 1
   return pages
@@ -404,7 +419,10 @@ export function renderInner(tpl: Template, data: unknown): string {
         width:${paperW}px;height:${paperH}px;
         page-break-after:${breakAfter};
         overflow:hidden;
-      ">${elements.map((el) => renderElement(el, data)).join('\n')}</section>`
+      "><div class="paper-content" style="
+        position:absolute;
+        left:${mh}px;top:${mv}px;right:${mh}px;bottom:${mv}px;
+      ">${elements.map((el) => renderElement(el, data)).join('\n')}</div></section>`
     })
     .join('\n')
 }

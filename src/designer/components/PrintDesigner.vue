@@ -164,6 +164,23 @@
           :can-undo="designer.canUndo.value"
           :can-redo="designer.canRedo.value"
           :dark-mode="darkMode"
+          :canvas-background="designer.canvasBackground.value"
+          :page-margin-horizontal="designer.pageMarginHorizontal.value"
+          :page-margin-vertical="designer.pageMarginVertical.value"
+          :header-height="designer.headerHeight.value"
+          :show-header-line="designer.showHeaderLine.value"
+          :header-line-color="designer.headerLineColor.value"
+          :header-line-width="designer.headerLineWidth.value"
+          :header-line-style="designer.headerLineStyle.value"
+          :header-line-span="designer.headerLineSpan.value"
+          :header-line-span-mode="designer.headerLineSpanMode.value"
+          :footer-height="designer.footerHeight.value"
+          :show-footer-line="designer.showFooterLine.value"
+          :footer-line-color="designer.footerLineColor.value"
+          :footer-line-width="designer.footerLineWidth.value"
+          :footer-line-style="designer.footerLineStyle.value"
+          :footer-line-span="designer.footerLineSpan.value"
+          :footer-line-span-mode="designer.footerLineSpanMode.value"
           :guides="designer.guides.value"
           :highlighted-guide-id="designer.highlightedGuideId.value"
           @add="onAdd"
@@ -181,6 +198,8 @@
           @guide-hover="designer.setHighlightedGuide"
           @guide-remove="designer.removeGuide"
           @viewport-change="measureRulerOffsets"
+          @change-header-height="(mm) => designer.setHeaderHeight(mm)"
+          @change-footer-height="(mm) => designer.setFooterHeight(mm)"
         />
       </div>
       <PropertyPanel
@@ -758,14 +777,24 @@ function onBgColor(color: string) {
 }
 
 async function onPrint() {
-  const ok = await printTemplate(designer.template.value, props.printData);
+  const ok = await printTemplate(
+    designer.template.value,
+    props.printData,
+    designer.pageMarginHorizontal.value,
+    designer.pageMarginVertical.value,
+  );
   if (ok) emit("printOk");
   else emit("printError");
 }
 
 async function onPreview() {
   // 渲染 inner HTML(.paper 区块)给 v-html,避免内嵌 doctype
-  previewHtml.value = renderInner(designer.template.value, props.printData);
+  previewHtml.value = renderInner(
+    designer.template.value,
+    props.printData,
+    designer.pageMarginHorizontal.value,
+    designer.pageMarginVertical.value,
+  );
   previewVisible.value = true;
 }
 
@@ -781,7 +810,12 @@ function onReset() {
 
 async function onExportPdf() {
   emit("notice", "正在生成 PDF...", "info");
-  const ok = await exportPdf(designer.template.value, props.printData);
+  const ok = await exportPdf(
+    designer.template.value,
+    props.printData,
+    designer.pageMarginHorizontal.value,
+    designer.pageMarginVertical.value,
+  );
   if (ok) emit("notice", "PDF 已下载", "success");
   else emit("notice", "PDF 生成失败", "error");
 }

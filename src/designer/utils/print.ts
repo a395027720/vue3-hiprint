@@ -20,7 +20,12 @@ let originalBodyOverflow: string | null = null
  * 触发浏览器打印。
  * @returns Promise<true> 成功进入打印流程
  */
-export function printTemplate(tpl: Template, data: unknown): Promise<boolean> {
+export function printTemplate(
+  tpl: Template,
+  data: unknown,
+  pageMarginHorizontal = 0,
+  pageMarginVertical = 0,
+): Promise<boolean> {
   return new Promise((resolve) => {
     // 清理上一次的 iframe
     if (iframe) {
@@ -49,7 +54,7 @@ export function printTemplate(tpl: Template, data: unknown): Promise<boolean> {
 
     // 写 HTML
     doc.open()
-    doc.write(renderTemplate(tpl, data))
+    doc.write(renderTemplate(tpl, data, pageMarginHorizontal, pageMarginVertical))
     doc.close()
 
     el.onload = () => {

@@ -549,16 +549,8 @@
 
       <span class="vtb-group-sep" />
 
-      <!-- system 组:网格 + 主题 + 帮助 + 设置 -->
+      <!-- system 组:主题 + 帮助 + 设置 -->
       <div class="vtb-pill">
-        <button
-          class="vtb-tb"
-          :class="{ active: showGrid }"
-          title="网格"
-          @click="$emit('toggleGrid')"
-        >
-          <span v-html="gridIcon" />
-        </button>
         <button
           class="vtb-tb"
           :title="theme === 'dark' ? '切换到亮色' : '切换到暗色'"
@@ -882,7 +874,6 @@ const stroke = "currentColor";
 const sw = 1.5;
 const undoIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>`;
 const redoIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/></svg>`;
-const gridIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>`;
 const handIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6.5a1.5 1.5 0 0 0-3 0v4.5"/><path d="M14 10V4.5a1.5 1.5 0 0 0-3 0V11"/><path d="M10 10.5V5.5a1.5 1.5 0 0 0-3 0V14"/><path d="M18 8a1.5 1.5 0 0 0-3 0"/><path d="M7 15v-3.5a1.5 1.5 0 0 0-3 0V17a6 6 0 0 0 6 6h2a6 6 0 0 0 6-6v-3a1.5 1.5 0 0 0-3 0"/></svg>`;
 const alignLeftIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>`;
 const alignCenterHIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>`;

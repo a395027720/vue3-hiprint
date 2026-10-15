@@ -20,7 +20,12 @@ import { renderTemplate } from '../core/render'
  * 把模板导出为 PDF 文件(直接下载,不弹打印对话框)。
  * 内部用 jsPDF + html2canvas(已声明在 package.json)。
  */
-export async function exportPdf(tpl: Template, data: unknown): Promise<boolean> {
+export async function exportPdf(
+  tpl: Template,
+  data: unknown,
+  pageMarginHorizontal = 0,
+  pageMarginVertical = 0,
+): Promise<boolean> {
   // 动态 import 避免 SSR 报错(jsPDF 引用了 window)
   const { jsPDF } = await import('jspdf')
   // 临时隐藏 iframe
@@ -35,7 +40,7 @@ export async function exportPdf(tpl: Template, data: unknown): Promise<boolean> 
     return false
   }
   doc.open()
-  doc.write(renderTemplate(tpl, data))
+  doc.write(renderTemplate(tpl, data, pageMarginHorizontal, pageMarginVertical))
   doc.close()
 
   // 等资源(images/canvas/svg)异步加载完

@@ -260,7 +260,7 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
   })
 
   const zoom = ref(1)
-  const showGrid = ref(false)
+  const showGrid = ref(true)
   const canvasBackground = ref("#ffffff")
 
   const pageMarginHorizontal = ref(0)
@@ -268,7 +268,7 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
   const allowDragOutsideCanvas = ref(false)
 
   const headerLineColor = ref("#f87171")
-  const headerLineWidth = ref(1)
+  const headerLineWidth = ref(0.5)
   const headerLineStyle = ref<"solid" | "dashed" | "dotted">("dashed")
   const headerLineSpan = ref(100)
   const headerLineSpanMode = ref<"value" | "percent">("percent")
@@ -276,7 +276,7 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
   const showHeaderLine = ref(false)
 
   const footerLineColor = ref("#f87171")
-  const footerLineWidth = ref(1)
+  const footerLineWidth = ref(0.5)
   const footerLineStyle = ref<"solid" | "dashed" | "dotted">("dashed")
   const footerLineSpan = ref(100)
   const footerLineSpanMode = ref<"value" | "percent">("percent")
