@@ -175,12 +175,24 @@ function textStyle(el: Extract<Element, { type: "text" }>): string {
     .join(";");
 }
 
-function renderText(el: Extract<Element, { type: "text" }>): string {
+function renderText(
+  el: Extract<Element, { type: "text" }>,
+  data: unknown,
+): string {
   const listType = el.listType ?? "none";
+  // variable 字段:绑数据 key(支持点号路径),渲染时优先用 data[variable];空/null/undefined 回退 text
+  const raw =
+    el.variable && (data != null || el.variable.includes("."))
+      ? resolveDataPath(data, el.variable)
+      : undefined;
+  const text =
+    raw != null && raw !== ""
+      ? String(raw)
+      : el.text;
   const inner =
     listType === "none"
-      ? escapeHtml(el.text)
-      : `<${listType} style="margin:0;padding-left:1.2em;">${el.text
+      ? escapeHtml(text)
+      : `<${listType} style="margin:0;padding-left:1.2em;">${text
           .split("\n")
           .map((line) => `<li>${escapeHtml(line)}</li>`)
           .join("")}</${listType}>`;
@@ -384,7 +396,7 @@ function renderCircle(el: Extract<Element, { type: "circle" }>): string {
 export function renderElement(el: Element, data: unknown): string {
   switch (el.type) {
     case "text":
-      return renderText(el);
+      return renderText(el, data);
     case "image":
       return renderImage(el);
     case "table":

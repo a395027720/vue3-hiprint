@@ -4,7 +4,7 @@
 -->
 <template>
   <div class="el-text" :style="style">
-    <template v-if="!element.listType || element.listType === 'none'">{{ element.text }}</template>
+    <template v-if="!element.listType || element.listType === 'none'">{{ displayText }}</template>
     <ul v-else-if="element.listType === 'ul'" style="margin: 0; padding-left: 1.2em">
       <li v-for="(line, i) in textLines" :key="i">{{ line }}</li>
     </ul>
@@ -25,6 +25,8 @@ const props = defineProps<{
 }>()
 
 const textLines = computed<string[]>(() => props.element.text.split('\n'))
+/** 画布预览显示:无 data 注入时直接展示 text,带 {{key}} 也能看到;variable 字段在打印/导出时由 render.ts 替换 */
+const displayText = computed(() => props.element.text)
 
 const style = computed(() => {
   const e = props.element

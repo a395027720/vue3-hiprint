@@ -12,6 +12,7 @@ export const TEXT_SECTIONS: SectionDef[] = [
     category: 'base',
     fields: [
       { key: 'text', label: '文本', kind: 'textarea' },
+      { key: 'variable', label: '变量', kind: 'text', placeholder: '如 name / user.name' },
     ],
   },
   {
