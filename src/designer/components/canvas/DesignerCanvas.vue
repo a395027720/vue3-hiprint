@@ -149,10 +149,10 @@
         }"
       />
       <span
-        v-for="y in selfLines.h"
+        v-for="(y, idx) in selfLines.h"
         :key="`self-h-label-${y}`"
         class="self-line-label self-h-label"
-        :style="{ top: overlayY(y) - 16 + 'px' }"
+        :style="{ top: idx === 0 ? overlayY(y) - 16 + 'px' : overlayY(y) + 'px' }"
         >{{ formatMm(y) }}</span
       >
     </template>
@@ -164,28 +164,11 @@
       class="snap-line snap-v"
       :style="{ left: overlayX(x) + 'px' }"
     />
-    <span
-      v-for="(x, idx) in snapLines.vertical"
-      :key="`v-label-${x}`"
-      class="snap-line-label snap-v-label"
-      :style="{
-        left: overlayX(x) + 'px',
-        transform: idx === 0 ? 'translateX(-100%)' : 'none',
-      }"
-      >{{ formatMm(x) }}</span
-    >
     <div
       v-for="y in snapLines.horizontal"
       :key="`h-${y}`"
       class="snap-line snap-h"
       :style="{ top: overlayY(y) + 'px' }"
-    />
-    <span
-      v-for="y in snapLines.horizontal"
-      :key="`h-label-${y}`"
-      class="snap-line-label snap-h-label"
-      :style="{ top: overlayY(y) - 16 + 'px' }"
-      >{{ formatMm(y) }}</span
     /> 
 
     <!-- 右键菜单 -->
@@ -1806,16 +1789,7 @@ watch(
   background: #69c0ff;
   color: #fff;
 }
-.snap-v-label {
-  top: 18px;
-  background: #ff4d4f;
-  color: #fff;
-}
-.snap-h-label {
-  left: 18px;
-  background: #ff4d4f;
-  color: #fff;
-}
+/* 吸附命中线不需要 label(用户不需要冗余 mm 显示) */
 
 /* ========== Resize / Rotate handles ==========
    handle 视觉与元素边框融合:
