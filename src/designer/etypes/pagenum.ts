@@ -3,6 +3,7 @@
  * 基础 = format(支持 {page} / {total} 占位符);样式 = 字号/字体/颜色/对齐。
  */
 
+import { FONT_WEIGHT_OPTIONS } from './base'
 import type { SectionDef } from '../core/fieldSchema'
 
 export const PAGENUM_SECTIONS: SectionDef[] = [
@@ -24,10 +25,7 @@ export const PAGENUM_SECTIONS: SectionDef[] = [
         key: 'fontWeight',
         label: '粗细',
         kind: 'select',
-        options: [
-          { value: 'normal', label: '正常' },
-          { value: 'bold', label: '粗体' },
-        ],
+        options: FONT_WEIGHT_OPTIONS,
       },
       { key: 'color', label: '颜色', kind: 'color' },
       {

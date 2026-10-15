@@ -3,6 +3,7 @@
  * 基础 = 内容;样式 = 字号/字体/颜色/对齐/换行/装饰/背景/层级;无高级。
  */
 
+import { FONT_WEIGHT_OPTIONS } from './base'
 import type { SectionDef } from '../core/fieldSchema'
 
 export const TEXT_SECTIONS: SectionDef[] = [
@@ -26,15 +27,7 @@ export const TEXT_SECTIONS: SectionDef[] = [
         key: 'fontWeight',
         label: '粗细',
         kind: 'select',
-        options: [
-          { value: 'normal', label: '正常' },
-          { value: 'bold', label: '粗体' },
-          { value: '100', label: '100(细)' },
-          { value: '300', label: '300' },
-          { value: '500', label: '500' },
-          { value: '700', label: '700' },
-          { value: '900', label: '900(粗)' },
-        ],
+        options: FONT_WEIGHT_OPTIONS,
       },
       {
         key: 'align',

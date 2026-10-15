@@ -25,6 +25,17 @@ export const BORDER_STYLE_OPTIONS: FieldOption[] = [
   { value: 'dashed', label: '虚线' },
 ]
 
+/** 字体粗细:7 档(对应 core/types.FontWeight),所有有 fontWeight 的 element 共用 */
+export const FONT_WEIGHT_OPTIONS: FieldOption[] = [
+  { value: 'normal', label: '正常' },
+  { value: 'bold', label: '粗体' },
+  { value: '100', label: '100(细)' },
+  { value: '300', label: '300' },
+  { value: '500', label: '500' },
+  { value: '700', label: '700' },
+  { value: '900', label: '900(粗)' },
+]
+
 /** 内边距固定值(mm,1 档默认 + 27 档,0.25 起步 0.5 步进到 10mm) */
 const PADDING_VALUES: number[] = [
   0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10,
