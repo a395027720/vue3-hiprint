@@ -186,11 +186,7 @@
       class="snap-line-label snap-h-label"
       :style="{ top: overlayY(y) - 16 + 'px' }"
       >{{ formatMm(y) }}</span
-    />
-
-    <!-- 标尺已搬到 PrintDesigner 顶部/左侧浮层(Ruler.vue,Canvas 2D) -->
-
-    <!-- 标尺已搬到 PrintDesigner 顶部/左侧浮层(Ruler.vue,Canvas 2D) -->
+    /> 
 
     <!-- 右键菜单 -->
     <ContextMenu
@@ -1799,14 +1795,14 @@ watch(
      inline left = overlayX(x),transform 根据 v-for idx 区分:
        idx=0 (元素左 x):translateX(-100%) 让 chip 右沿贴虚线
        idx=1 (元素右 x):none 让 chip 左沿贴虚线 */
-  top: 18px;
+  top: 32px;
   background: #69c0ff;
   color: #fff;
 }
 .self-h-label {
   /* chip 底部对齐 self-h 端点(虚线上方):
      inline top = overlayY(y) - 16(让 chip 底部贴虚线顶部) */
-  left: 18px;
+  left: 32px;
   background: #69c0ff;
   color: #fff;
 }
