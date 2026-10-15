@@ -121,6 +121,7 @@ import {
 } from "vue";
 import type { Element, ElementType, Template } from "../../core/types";
 import { mmToPx } from "../../core/render";
+import { allElements, findElementGlobal } from "../../core/schema";
 import { useCanvasDrag } from "../../composables/useCanvasDrag";
 import ElementRenderer from "../elements/ElementRenderer.vue";
 import ContextMenu from "../floating/ContextMenu.vue";
@@ -220,11 +221,6 @@ const SNAP_THRESHOLD_MM = 1;
 const RULER_SIZE = 32;
 
 const zoomValue = computed(() => props.zoom ?? 1);
-
-/** mm → 画布 px(已应用 zoom) */
-function mmToPxScaled(mm: number): number {
-  return mmToPx(mm) * zoomValue.value;
-}
 
 /** 5mm 网格背景:横竖各画一道浅灰 1px 线,间距 5mm。showGrid=false 时透明 */
 const gridStyle = computed(() => {
@@ -516,11 +512,6 @@ function onWrapContextMenu(e: MouseEvent) {
   ctxMenu.onElement = false;
   ctxMenu.pos = { x: e.clientX, y: e.clientY };
   lastCtxClient.value = { x: e.clientX, y: e.clientY };
-}
-
-function closeCtxMenu() {
-  ctxMenu.open = false;
-  ctxMenu.onElement = false;
 }
 
 /** 把屏幕 client 坐标转 canvas-mm(给 paste 用) */
