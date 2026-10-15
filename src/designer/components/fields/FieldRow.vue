@@ -1,6 +1,8 @@
 <template>
   <label class="field-row" :class="`kind-${field.kind}`">
-    <span v-if="field.kind !== 'checkbox'" class="field-label">{{ field.label }}</span>
+    <span v-if="field.kind !== 'checkbox'" class="field-label">{{
+      field.label
+    }}</span>
     <input
       v-if="field.kind === 'text'"
       type="text"
@@ -27,13 +29,18 @@
       :value="displayValue"
       @change="$emit('change', $event)"
     >
-      <option v-for="opt in field.options ?? []" :key="opt.value" :value="opt.value">
+      <option
+        v-for="opt in field.options ?? []"
+        :key="opt.value"
+        :value="opt.value"
+      >
         {{ opt.label }}
       </option>
     </select>
     <ColorPicker
       v-else-if="field.kind === 'color'"
       :model-value="(displayValue as string) || ''"
+      :allowTransparent="true"
       @update:model-value="onColorChange"
     />
     <label v-else-if="field.kind === 'checkbox'" class="checkbox-wrap">
@@ -48,45 +55,49 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { Element } from '../../core/types'
-import type { FieldDef } from '../../core/fieldSchema'
-import ColorPicker from '../common/ColorPicker.vue'
+import { computed } from "vue";
+import type { Element } from "../../core/types";
+import type { FieldDef } from "../../core/fieldSchema";
+import ColorPicker from "../common/ColorPicker.vue";
 
 const props = defineProps<{
-  field: FieldDef
-  element: Element
-}>()
+  field: FieldDef;
+  element: Element;
+}>();
 
-defineEmits<{
-  change: [e: Event]
-}>()
+const emit = defineEmits<{
+  change: [e: Event];
+}>();
 
 /** ColorPicker 发的是颜色字符串,PropertyPanel 的 onFieldChange 要 Event;
  *  这里包成一个伪 input 事件(只取 target.value),保持上游不变。 */
 function onColorChange(color: string | undefined) {
-  const input = document.createElement('input')
-  input.type = 'color'
-  input.value = color || ''
+  const input = document.createElement("input");
+  input.type = "color";
+  input.value = color || "";
   // PropertyPanel 读 target.value + target.type === 'color' → raw = target.value
-  emit('change', { target: input } as unknown as Event)
+  emit("change", { target: input } as unknown as Event);
 }
 
 const displayValue = computed(() => {
-  const v = (props.element as Record<string, unknown>)[props.field.key]
-  if (v == null) return ''
-  if (props.field.kind === 'checkbox') {
+  const v = (props.element as Record<string, unknown>)[props.field.key];
+  if (v == null) return "";
+  if (props.field.kind === "checkbox") {
     // 约定:fontWeight 字段用 'bold' / 'normal',rowBreak 用 'row' / 'auto',其它 checkbox 用 boolean
-    if (props.field.key === 'fontWeight') return v === 'bold'
-    if (props.field.key === 'rowBreak') return v === 'row'
-    return !!v
+    if (props.field.key === "fontWeight") return v === "bold";
+    if (props.field.key === "rowBreak") return v === "row";
+    return !!v;
   }
   // number + precision 字段:固定小数位显示(如 X/Y/W/H 显示 "10.50")
-  if (props.field.kind === 'number' && typeof v === 'number' && props.field.precision != null) {
-    return v.toFixed(props.field.precision)
+  if (
+    props.field.kind === "number" &&
+    typeof v === "number" &&
+    props.field.precision != null
+  ) {
+    return v.toFixed(props.field.precision);
   }
-  return v
-})
+  return v;
+});
 </script>
 
 <style scoped>
@@ -111,7 +122,9 @@ textarea {
   font-size: 13px;
   font-family: inherit;
 }
-textarea { resize: vertical; }
+textarea {
+  resize: vertical;
+}
 .checkbox-wrap {
   display: flex;
   align-items: center;
@@ -119,6 +132,13 @@ textarea { resize: vertical; }
   cursor: pointer;
   margin: 0;
 }
-.checkbox-wrap input { width: auto; margin: 0; }
-.kind-checkbox { display: flex; align-items: center; margin-bottom: 8px; }
+.checkbox-wrap input {
+  width: auto;
+  margin: 0;
+}
+.kind-checkbox {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
 </style>
