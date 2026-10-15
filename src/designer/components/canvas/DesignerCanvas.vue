@@ -836,6 +836,10 @@ watch(
 }
 .canvas-wrap.pan-mode {
   cursor: grab;
+  /* pan 模式(空格 / 手型按钮)用拖动代替滚动:禁用 wrap 自身 overflow,
+   * 否则浏览器会把 mousedown 后的 mousemove 路由给 wrap 的滚动条,
+   * 事件不冒泡到 document,useCanvasDrag 的 onMove 不触发,pan 失效 */
+  overflow: hidden;
 }
 .canvas-wrap.pan-mode:active {
   cursor: grabbing;

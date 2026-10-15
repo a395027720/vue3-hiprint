@@ -470,6 +470,7 @@ function onKeyDown(e: KeyboardEvent) {
     // 仅在非输入控件聚焦时响应
     const tag = (e.target as HTMLElement | null)?.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    e.preventDefault(); // 阻止浏览器默认的 Space 滚动页面行为
     spaceHeld.value = true;
   }
   if (e.code === "Delete" || e.code === "Backspace") {
