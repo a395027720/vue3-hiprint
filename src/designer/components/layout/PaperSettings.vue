@@ -95,10 +95,11 @@
             :allow-transparent="true"
             @update:model-value="onBgColorChange"
           >
-            <template #trigger="{ onClick, onMousedown }">
+            <template #trigger="{ onClick, onMousedown, isOpen }">
               <button
                 type="button"
                 class="ps-bg-swatch"
+                :class="{ 'is-open': isOpen }"
                 title="画布背景色"
                 @click="onClick"
                 @mousedown="onMousedown"
@@ -183,99 +184,32 @@
           </button>
         </div>
 
-        <div class="ps-section-title">页眉/页脚分隔线</div>
-        <div class="ps-toggle-row ps-toggle-row-tight">
-          <span class="ps-toggle-label">启用分隔线渲染</span>
-          <button
-            type="button"
-            class="ps-switch"
-            :class="{ 'is-on': enableHeaderFooterLineRendering }"
-            :disabled="!enableHeaderFooterLineRendering && false"
-            @click="$emit('toggleEnableHeaderFooterLineRendering')"
-            :aria-pressed="enableHeaderFooterLineRendering"
-          >
-            <span class="ps-switch-thumb" />
-          </button>
-        </div>
-
+        <div class="ps-section-title">页眉/页脚</div>
         <div
           class="ps-line-block"
           :class="{ 'is-disabled': !enableHeaderFooterLineRendering }"
         >
-          <div class="ps-line-title">表头</div>
-          <div class="ps-line-row">
-            <button
-              type="button"
-              class="ps-mini-switch"
-              :class="{ 'is-on': showHeaderLine }"
-              @click="$emit('toggleShowHeaderLine')"
-              :aria-pressed="showHeaderLine"
-              title="显示表头分隔线"
-            />
-            <ColorPicker
-              :model-value="headerLineColor"
-              @update:model-value="onHeaderColorChange"
-            >
-              <template #trigger="{ onClick, onMousedown }">
-                <button
-                  type="button"
-                  class="ps-color-swatch"
-                  title="表头颜色"
-                  @click="onClick"
-                  @mousedown="onMousedown"
-                >
-                  <span
-                    class="ps-swatch-fill"
-                    :style="{ backgroundColor: headerLineColor }"
-                  />
-                </button>
-              </template>
-            </ColorPicker>
-            <input
-              type="number"
-              class="ps-input ps-input-num"
-              min="0"
-              :value="headerLineWidth"
-              @input="onHeaderWidthInput(($event.target as HTMLInputElement).value)"
-              title="宽度 (mm)"
-            />
-            <select
-              class="ps-select"
-              :value="headerLineStyle"
-              @change="onHeaderStyleChange(($event.target as HTMLSelectElement).value)"
-              title="样式"
-            >
-              <option value="solid">实线</option>
-              <option value="dashed">虚线</option>
-              <option value="dotted">点线</option>
-            </select>
-            <input
-              type="number"
-              class="ps-input ps-input-num"
-              min="0"
-              :value="headerLineSpan"
-              @input="onHeaderSpanInput(($event.target as HTMLInputElement).value)"
-              title="水平宽度"
-            />
-            <select
-              class="ps-select ps-select-tight"
-              :value="headerLineSpanMode"
-              @change="onHeaderSpanModeChange(($event.target as HTMLSelectElement).value)"
-              title="水平宽度模式"
-            >
-              <option value="percent">%</option>
-              <option value="value">mm</option>
-            </select>
-          </div>
-          <div class="ps-line-row">
-            <span class="ps-field-label">表头高度 (mm)</span>
-            <input
-              type="number"
-              class="ps-input ps-input-num"
-              min="0"
-              :value="headerHeight"
-              @input="onHeaderHeightInput(($event.target as HTMLInputElement).value)"
-            />
+          <div class="ps-line-row ps-line-row-between">
+            <div class="ps-line-row-left">
+              <button
+                type="button"
+                class="ps-mini-switch"
+                :class="{ 'is-on': showHeaderLine }"
+                @click="$emit('toggleShowHeaderLine')"
+                :aria-pressed="showHeaderLine"
+              />
+              <span class="ps-field-label">表头</span>
+            </div>
+            <div class="ps-line-row-right">
+              <input
+                type="number"
+                class="ps-input ps-input-num"
+                min="0"
+                :value="headerHeight"
+                @input="onHeaderHeightInput(($event.target as HTMLInputElement).value)"
+              />
+              <span class="ps-unit-label">mm</span>
+            </div>
           </div>
         </div>
 
@@ -283,80 +217,27 @@
           class="ps-line-block"
           :class="{ 'is-disabled': !enableHeaderFooterLineRendering }"
         >
-          <div class="ps-line-title">页脚</div>
-          <div class="ps-line-row">
-            <button
-              type="button"
-              class="ps-mini-switch"
-              :class="{ 'is-on': showFooterLine }"
-              @click="$emit('toggleShowFooterLine')"
-              :aria-pressed="showFooterLine"
-              title="显示页脚分隔线"
-            />
-            <ColorPicker
-              :model-value="footerLineColor"
-              @update:model-value="onFooterColorChange"
-            >
-              <template #trigger="{ onClick, onMousedown }">
-                <button
-                  type="button"
-                  class="ps-color-swatch"
-                  title="页脚颜色"
-                  @click="onClick"
-                  @mousedown="onMousedown"
-                >
-                  <span
-                    class="ps-swatch-fill"
-                    :style="{ backgroundColor: footerLineColor }"
-                  />
-                </button>
-              </template>
-            </ColorPicker>
-            <input
-              type="number"
-              class="ps-input ps-input-num"
-              min="0"
-              :value="footerLineWidth"
-              @input="onFooterWidthInput(($event.target as HTMLInputElement).value)"
-              title="宽度 (mm)"
-            />
-            <select
-              class="ps-select"
-              :value="footerLineStyle"
-              @change="onFooterStyleChange(($event.target as HTMLSelectElement).value)"
-              title="样式"
-            >
-              <option value="solid">实线</option>
-              <option value="dashed">虚线</option>
-              <option value="dotted">点线</option>
-            </select>
-            <input
-              type="number"
-              class="ps-input ps-input-num"
-              min="0"
-              :value="footerLineSpan"
-              @input="onFooterSpanInput(($event.target as HTMLInputElement).value)"
-              title="水平宽度"
-            />
-            <select
-              class="ps-select ps-select-tight"
-              :value="footerLineSpanMode"
-              @change="onFooterSpanModeChange(($event.target as HTMLSelectElement).value)"
-              title="水平宽度模式"
-            >
-              <option value="percent">%</option>
-              <option value="value">mm</option>
-            </select>
-          </div>
-          <div class="ps-line-row">
-            <span class="ps-field-label">页脚高度 (mm)</span>
-            <input
-              type="number"
-              class="ps-input ps-input-num"
-              min="0"
-              :value="footerHeight"
-              @input="onFooterHeightInput(($event.target as HTMLInputElement).value)"
-            />
+          <div class="ps-line-row ps-line-row-between">
+            <div class="ps-line-row-left">
+              <button
+                type="button"
+                class="ps-mini-switch"
+                :class="{ 'is-on': showFooterLine }"
+                @click="$emit('toggleShowFooterLine')"
+                :aria-pressed="showFooterLine"
+              />
+              <span class="ps-field-label">页脚</span>
+            </div>
+            <div class="ps-line-row-right">
+              <input
+                type="number"
+                class="ps-input ps-input-num"
+                min="0"
+                :value="footerHeight"
+                @input="onFooterHeightInput(($event.target as HTMLInputElement).value)"
+              />
+              <span class="ps-unit-label">mm</span>
+            </div>
           </div>
         </div>
       </div>
@@ -760,7 +641,7 @@ onBeforeUnmount(() => {
 }
 .ps-bg-swatch {
   position: relative;
-  width: 36px;
+  width: 32px;
   height: 24px;
   padding: 0;
   border: 1px solid #d9d9d9;
@@ -769,9 +650,14 @@ onBeforeUnmount(() => {
   overflow: hidden;
   background: white;
   flex: 0 0 auto;
+  transition: border-color 120ms, box-shadow 120ms;
 }
 .ps-bg-swatch:hover {
   border-color: #1677ff;
+}
+.ps-bg-swatch.is-open {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
 }
 .ps-swatch-checker {
   position: absolute;
@@ -798,7 +684,7 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 1px;
   background: #ff4d4f;
-  transform: rotate(-45deg) scale(1.5);
+  transform: rotate(45deg);
 }
 .ps-link-btn {
   padding: 2px 8px;
@@ -888,6 +774,24 @@ onBeforeUnmount(() => {
 }
 .ps-line-row > .ps-field-label {
   flex: 1;
+}
+.ps-line-row-between {
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+.ps-line-row-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ps-line-row-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ps-unit-label {
+  color: #8c8c8c;
+  font-size: 11px;
 }
 .ps-mini-switch {
   width: 20px;
