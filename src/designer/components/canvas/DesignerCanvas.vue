@@ -128,6 +128,13 @@
           bottom: -wrapScrollTop + 'px',
         }"
       />
+      <span
+        v-for="x in selfLines.v"
+        :key="`self-v-label-${x}`"
+        class="self-line-label self-v-label"
+        :style="{ left: overlayX(x) + 'px' }"
+        >{{ formatMm(x) }}</span
+      >
       <div
         v-for="y in selfLines.h"
         :key="`self-h-${y}`"
@@ -138,6 +145,13 @@
           right: -wrapScrollLeft + 'px',
         }"
       />
+      <span
+        v-for="y in selfLines.h"
+        :key="`self-h-label-${y}`"
+        class="self-line-label self-h-label"
+        :style="{ top: overlayY(y) + 'px' }"
+        >{{ formatMm(y) }}</span
+      >
     </template>
 
     <!-- 吸附命中红线:跨整个 .canvas-wrap -->
@@ -147,11 +161,25 @@
       class="snap-line snap-v"
       :style="{ left: overlayX(x) + 'px' }"
     />
+    <span
+      v-for="x in snapLines.vertical"
+      :key="`v-label-${x}`"
+      class="snap-line-label snap-v-label"
+      :style="{ left: overlayX(x) + 'px' }"
+      >{{ formatMm(x) }}</span
+    >
     <div
       v-for="y in snapLines.horizontal"
       :key="`h-${y}`"
       class="snap-line snap-h"
       :style="{ top: overlayY(y) + 'px' }"
+    />
+    <span
+      v-for="y in snapLines.horizontal"
+      :key="`h-label-${y}`"
+      class="snap-line-label snap-h-label"
+      :style="{ top: overlayY(y) + 'px' }"
+      >{{ formatMm(y) }}</span
     />
 
     <!-- 标尺已搬到 PrintDesigner 顶部/左侧浮层(Ruler.vue,Canvas 2D) -->
@@ -1738,6 +1766,50 @@ watch(
   right: 0;
   height: 1px;
   transform: translateY(-0.5px);
+}
+
+/* 延长线 mm 数字 chip:贴 ruler 区域显示当前 mm(z-index 7 > ruler 5 / self 6)
+   self-v-label 贴 ruler-h 底部(wrap 顶 0);self-h-label 贴 ruler-v 右侧(wrap 左 0) */
+.self-line-label,
+.snap-line-label {
+  position: absolute;
+  display: inline-block; /* span + absolute 也需要 block 才能正确撑宽 */
+  pointer-events: none;
+  z-index: 7;
+  min-width: 22px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  line-height: 14px;
+  border-radius: 2px;
+  white-space: nowrap;
+  text-align: center;
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+.self-v-label {
+  /* chip 贴 ruler-h 内底部(避开 ruler 主刻度文字 0~16px 区域,落在 18px 处),
+     左对齐 self-v 端点(取消 -50% 避免贴 ruler 0 时 chip 一半被裁) */
+  top: 18px;
+  background: #69c0ff;
+  color: #fff;
+}
+.self-h-label {
+  /* chip 贴 ruler-v 内右侧,顶对齐 self-h 端点 */
+  left: 18px;
+  background: #69c0ff;
+  color: #fff;
+}
+.snap-v-label {
+  top: 18px;
+  background: #ff4d4f;
+  color: #fff;
+}
+.snap-h-label {
+  left: 18px;
+  background: #ff4d4f;
+  color: #fff;
 }
 
 /* ========== Resize / Rotate handles ==========
