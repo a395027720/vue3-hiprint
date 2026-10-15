@@ -500,9 +500,9 @@ export function renderInner(
   const paperH = mmToPx(tpl.paper.height);
   const mh = mmToPx(pageMarginHorizontal);
   const mv = mmToPx(pageMarginVertical);
-  const pages = tpl.pages;
+  // 打印时按 paper 边界 + table.pageBreakBefore 自动分页,跟设计器 tpl.pages 是两个维度
+  const pages = paginate(tpl);
   const lastIdx = pages.length - 1;
-  console.log(pages);
 
   return pages
     .map((elements: any, i) => {
@@ -516,7 +516,7 @@ export function renderInner(
       "><div class="paper-content" style="
         position:absolute;
         left:${mh}px;top:${mv}px;right:${mh}px;bottom:${mv}px;
-      ">${elements.elements.map((el) => renderElement(el, data)).join("\n")}</div></section>`;
+      ">${elements.map((el) => renderElement(el, data)).join("\n")}</div></section>`;
     })
     .join("\n");
 }
