@@ -123,8 +123,7 @@ import {
 } from "vue";
 import type { Element, ElementType, Template } from "../../core/types";
 import { mmToPx } from "../../core/render";
-import { allElements, findElementGlobal } from "../../core/schema";
-import { snapValue } from "../../utils/snap";
+import { useCanvasDrag } from "../../composables/useCanvasDrag";
 import ElementRenderer from "../elements/ElementRenderer.vue";
 import ContextMenu from "../floating/ContextMenu.vue";
 import ElementOverlayHandles from "./ElementOverlayHandles.vue";
@@ -229,99 +228,6 @@ function mmToPxScaled(mm: number): number {
   return mmToPx(mm) * zoomValue.value;
 }
 
-/** 屏幕像素 → mm(用于框选时把屏幕距离转 mm) */
-const pxPerMmScreen = computed(() => mmToPx(1) * zoomValue.value);
-
-// ========== 框选 / 多选 ==========
-
-/** 框选矩形(屏幕像素坐标),null = 不在框选 */
-const marquee = ref<{
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
-  w: number;
-  h: number;
-  wMm: number;
-  hMm: number;
-} | null>(null);
-
-/** 框选过程中实时命中的元素 id(用于实时高亮) */
-const marqueeHits = ref<Set<string>>(new Set());
-
-/** 框选启动瞬间的标志:防止 onDocMouseDown 同帧把多选清空 */
-const marqueeStarting = ref(false);
-
-/** 当前 multi 集合(含主选) */
-const multiIds = computed<Set<string>>(
-  () => new Set(props.multiSelectedIds ?? []),
-);
-
-function isMultiSelected(id: string): boolean {
-  return multiIds.value.has(id);
-}
-
-/** 把 mm 数保留 1 位小数 */
-function formatMm(mm: number): string {
-  return mm.toFixed(1).replace(/\.0$/, "");
-}
-
-/** 框选矩形的渲染样式:.marquee-rect 是 .canvas 的子元素,
- *  left/top 用 canvas 内的相对像素(屏幕 clientX - canvas.left) */
-const marqueeStyle = computed(() => {
-  const m = marquee.value;
-  if (!m) return {};
-  const canvas = document.querySelector(".canvas") as HTMLElement | null;
-  if (!canvas) return {};
-  const cr = canvas.getBoundingClientRect();
-  return {
-    left: m.x1 - cr.left + "px",
-    top: m.y1 - cr.top + "px",
-    width: m.w + "px",
-    height: m.h + "px",
-  };
-});
-
-/** 元素在屏幕坐标系下的 AABB(已应用 zoom,未考虑 rotate——旋转元素的 AABB 会偏大,框选命中范围更宽容,可接受) */
-function elScreenRect(
-  el: Element,
-): { left: number; top: number; right: number; bottom: number } | null {
-  const canvas = document.querySelector(".canvas") as HTMLElement | null;
-  if (!canvas) return null;
-  const cr = canvas.getBoundingClientRect();
-  const px = mmToPxScaled(el.w);
-  const py = mmToPxScaled(el.h);
-  return {
-    left: cr.left + mmToPxScaled(el.x),
-    top: cr.top + mmToPxScaled(el.y),
-    right: cr.left + mmToPxScaled(el.x) + px,
-    bottom: cr.top + mmToPxScaled(el.y) + py,
-  };
-}
-
-/** 框选过程中实时算命中元素(每帧更新 marqueeHits,用于实时高亮) */
-watch(marquee, (m) => {
-  if (!m) {
-    marqueeHits.value = new Set();
-    return;
-  }
-  const hits = new Set<string>();
-  for (const el of allElements(props.template)) {
-    if (el.locked) continue;
-    const r = elScreenRect(el);
-    if (!r) continue;
-    if (
-      m.x1 <= r.right &&
-      m.x2 >= r.left &&
-      m.y1 <= r.bottom &&
-      m.y2 >= r.top
-    ) {
-      hits.add(el.id);
-    }
-  }
-  marqueeHits.value = hits;
-});
-
 /** 5mm 网格背景:横竖各画一道浅灰 1px 线,间距 5mm。showGrid=false 时透明 */
 const gridStyle = computed(() => {
   if (!props.showGrid) return { image: "none", size: "" };
@@ -415,34 +321,6 @@ function overlayY(valMm: number): number {
   );
 }
 
-/** 把 selfLines (mm 数组) 转成 SnapAndSelfLinesOverlay 需要的 OverlayLine 数组(mm + px) */
-const selfLinesOverlay = computed<
-  { v: OverlayLine[]; h: OverlayLine[] } | null
->(() => {
-  if (!selfLines.value) return null;
-  return {
-    v: selfLines.value.v.map((mm, i) => ({ id: i, mm, px: overlayX(mm) })),
-    h: selfLines.value.h.map((mm, i) => ({ id: i, mm, px: overlayY(mm) })),
-  };
-});
-
-/** 把 snapLines (mm 数组) 转成 OverlayLine 数组 */
-const snapLinesOverlay = computed<{
-  vertical: OverlayLine[];
-  horizontal: OverlayLine[];
-}>(() => ({
-  vertical: snapLines.vertical.map((mm, i) => ({
-    id: i,
-    mm,
-    px: overlayX(mm),
-  })),
-  horizontal: snapLines.horizontal.map((mm, i) => ({
-    id: i,
-    mm,
-    px: overlayY(mm),
-  })),
-}));
-
 /** 画布整体框(标尺已搬到 PrintDesigner 顶部浮层,这里 frame 只装画布 + 自线) */
 const frameStyle = computed(() => {
   const w = mmToPx(props.template.paper.width);
@@ -471,135 +349,11 @@ const scaleStyle = computed(() => ({
   width: "fit-content",
 }));
 
-/** 画布 wrap 上的 mousedown:
- *  - panMode 时启动平移拖动
- *  - 否则在 .canvas 空白处启动框选(非元素 / 非 handle)
- *  注意:shift 按下时走元素自己的 toggle 分支(元素 mousedown 自行处理),
- *  不在这里启动框选。 */
-function onWrapMouseDown(e: MouseEvent) {
-  const target = e.target as HTMLElement | null;
-  if (!target) return;
-  if (e.shiftKey) return;
-  // 落在 ctx 菜单内:交给菜单自己处理(它的 onDocMouseDown 监听会兜底关)
-  if (target.closest(".ctx-menu")) return;
-  // 画布任意 mousedown:右键菜单开着就先关掉(避免 stopPropagation 阻断 document 监听)
-  if (ctxMenu.open) {
-    ctxMenu.open = false;
-    ctxMenu.onElement = false;
-  }
-  // panMode:启动平移
-  if (props.panMode) {
-    if (target.closest(".canvas-element")) return;
-    e.preventDefault();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const baseX = props.panX ?? 0;
-    const baseY = props.panY ?? 0;
-    function onMove(ev: MouseEvent) {
-      emit(
-        "pan",
-        baseX + (ev.clientX - startX) - (props.panX ?? 0),
-        baseY + (ev.clientY - startY) - (props.panY ?? 0),
-      );
-    }
-    function onUp() {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-    }
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-    return;
-  }
-  // 元素 / handle 上不启动框选
-  if (target.closest(".canvas-element")) return;
-  // 框选必须落在画布纸上(.canvas),ruler / frame 留白处不启动(避免误框)
-  if (!target.closest(".canvas") && !target.classList.contains("canvas"))
-    return;
-
-  e.preventDefault();
-  e.stopPropagation(); // 阻止冒泡到 document 触发 onDocMouseDown 把多选清空
-  // 启动时清掉单选/多选(进入"全新框选"模式)
-  if (
-    props.selectedId ||
-    (props.multiSelectedIds && props.multiSelectedIds.length > 0)
-  ) {
-    emit("selectMany", []);
-  }
-  marqueeStarting.value = true;
-  queueMicrotask(() => {
-    marqueeStarting.value = false;
-  });
-  const startX = e.clientX;
-  const startY = e.clientY;
-
-  function onMove(ev: MouseEvent) {
-    const x1 = Math.min(startX, ev.clientX);
-    const y1 = Math.min(startY, ev.clientY);
-    const x2 = Math.max(startX, ev.clientX);
-    const y2 = Math.max(startY, ev.clientY);
-    const ppm = pxPerMmScreen.value;
-    marquee.value = {
-      x1,
-      y1,
-      x2,
-      y2,
-      w: x2 - x1,
-      h: y2 - y1,
-      wMm: (x2 - x1) / ppm,
-      hMm: (y2 - y1) / ppm,
-    };
-  }
-  function onUp(ev: MouseEvent) {
-    document.removeEventListener("mousemove", onMove);
-    document.removeEventListener("mouseup", onUp);
-    const m = marquee.value;
-    if (!m) return;
-    // 鼠标没动:当作"点空白处"→ 清选中
-    if (m.w < 3 && m.h < 3) {
-      marquee.value = null;
-      marqueeHits.value = new Set();
-      return;
-    }
-    // 收集命中的元素 id(屏幕坐标相交,锁定元素除外)
-    const hits: string[] = [];
-    for (const el of allElements(props.template)) {
-      if (el.locked) continue;
-      const r = elScreenRect(el);
-      if (!r) continue;
-      if (
-        m.x1 <= r.right &&
-        m.x2 >= r.left &&
-        m.y1 <= r.bottom &&
-        m.y2 >= r.top
-      ) {
-        hits.push(el.id);
-      }
-    }
-    marquee.value = null;
-    marqueeHits.value = new Set();
-    emit("selectMany", hits);
-    void ev;
-  }
-  document.addEventListener("mousemove", onMove);
-  document.addEventListener("mouseup", onUp);
-}
-
-const snapLines = reactive<{ vertical: number[]; horizontal: number[] }>({
-  vertical: [],
-  horizontal: [],
-});
-
 /** 当前选中元素(handle 层需要) */
 const selectedEl = computed<Element | null>(() => {
   if (!props.selectedId) return null;
   return findElementGlobal(props.template, props.selectedId)?.el ?? null;
 });
-
-/** 拖动中"延长线":从元素/组的 4 边出发画虚线(贯穿画布到 ruler)。
- *  null = 不在拖动。跟 snapLines(吸附命中红线)叠加:吸附时红线盖在虚线上表示"已对齐"。 */
-const selfLines = ref<{ v: number[]; h: number[] } | null>(null);
-
-// ========== 标尺:已搬到 .canvas-frame 内(跟画布走),不再用 viewport overlay ==========
 
 // ========== 标尺:鼠标游标 + 选中元素位置标记 ==========
 
@@ -621,22 +375,6 @@ const hasSelection = computed(
     !!props.selectedId ||
     (props.multiSelectedIds && props.multiSelectedIds.length > 0),
 );
-
-/** 拖动中延长线围成的矩形(选区浅蓝填充),从 selfLines 算出 */
-const selfFillStyle = computed(() => {
-  const sl = selfLines.value;
-  if (!sl) return {};
-  const x1 = Math.min(...sl.v);
-  const x2 = Math.max(...sl.v);
-  const y1 = Math.min(...sl.h);
-  const y2 = Math.max(...sl.h);
-  return {
-    left: overlayX(x1) + "px",
-    top: overlayY(y1) + "px",
-    width: mmToPx(x2 - x1) * zoomValue.value + "px",
-    height: mmToPx(y2 - y1) * zoomValue.value + "px",
-  };
-});
 
 /** 鼠标游标 chip 位置(ruler 跟 canvas 走,viewBox 0 = canvas 0mm,直接用 mousePos.xPx) */
 function cursorChipX(): number {
@@ -729,390 +467,6 @@ function onCanvasMouseLeave() {
   mousePos.value = null;
 }
 
-/**
- * 收集某个轴上的 snap 候选:画布 0/边界 + 其它元素的 4 条边
- */
-function collectCandidates(axis: "x" | "y", excludeId: string): number[] {
-  const tpl = props.template;
-  const list: number[] =
-    axis === "x" ? [0, tpl.paper.width] : [0, tpl.paper.height];
-  for (const e of allElements(tpl)) {
-    if (e.id === excludeId) continue;
-    if (axis === "x") {
-      list.push(e.x, e.x + e.w);
-    } else {
-      list.push(e.y, e.y + e.h);
-    }
-  }
-  return list;
-}
-
-function onElementMouseDown(e: MouseEvent, id: string) {
-  const el = findElementGlobal(props.template, id)?.el;
-  if (!el) return;
-  // Shift+点击:在多选里 toggle,不发 selectMany(只是 toggle 1 个)
-  if (e.shiftKey) {
-    e.preventDefault();
-    emit("selectToggle", id);
-    return;
-  }
-  // 多选组拖动:如果点中的元素在多选集合里,整组一起平移
-  if (
-    props.multiSelectedIds &&
-    props.multiSelectedIds.length > 1 &&
-    props.multiSelectedIds.includes(id)
-  ) {
-    startGroupDrag(e, id);
-    return;
-  }
-  // 普通:单选(也清空多选)
-  emit("select", id);
-  if (el.locked) return;
-  startElementDrag(e, id);
-}
-
-/** 单元素拖动(原 onElementMouseDown 主体) */
-function startElementDrag(e: MouseEvent, id: string) {
-  const el = findElementGlobal(props.template, id)?.el;
-  if (!el) return;
-  const startX = e.clientX;
-  const startY = e.clientY;
-  const origX = el.x;
-  const origY = el.y;
-  const pxPerMmLocal = mmToPx(1) * zoomValue.value;
-  const vCandidates = collectCandidates("x", id);
-  const hCandidates = collectCandidates("y", id);
-  // 启动时设延长线
-  selfLines.value = {
-    v: [origX, origX + el.w],
-    h: [origY, origY + el.h],
-  };
-
-  function onMove(ev: MouseEvent) {
-    const dx = (ev.clientX - startX) / pxPerMmLocal;
-    const dy = (ev.clientY - startY) / pxPerMmLocal;
-    let newX = Math.max(0, origX + dx);
-    let newY = Math.max(0, origY + dy);
-    const newRight = newX + el.w;
-    const newBottom = newY + el.h;
-
-    const sxLeft = snapValue(newX, vCandidates, SNAP_THRESHOLD_MM);
-    const sxRight = snapValue(newRight, vCandidates, SNAP_THRESHOLD_MM);
-    const syTop = snapValue(newY, hCandidates, SNAP_THRESHOLD_MM);
-    const syBottom = snapValue(newBottom, hCandidates, SNAP_THRESHOLD_MM);
-
-    if (sxLeft.lineAt !== null) newX = sxLeft.value;
-    else if (sxRight.lineAt !== null) newX = sxRight.value - el.w;
-    if (syTop.lineAt !== null) newY = syTop.value;
-    else if (syBottom.lineAt !== null) newY = syBottom.value - el.h;
-
-    const vLines = [sxLeft.lineAt, sxRight.lineAt].filter(
-      (v): v is number => v !== null,
-    );
-    const hLines = [syTop.lineAt, syBottom.lineAt].filter(
-      (v): v is number => v !== null,
-    );
-    snapLines.vertical = vLines;
-    snapLines.horizontal = hLines;
-    // 延长线跟随
-    if (selfLines.value) {
-      selfLines.value = {
-        v: [newX, newX + el.w],
-        h: [newY, newY + el.h],
-      };
-    }
-
-    emit("move", id, newX, newY);
-  }
-  function onUp() {
-    document.removeEventListener("mousemove", onMove);
-    document.removeEventListener("mouseup", onUp);
-    snapLines.vertical = [];
-    snapLines.horizontal = [];
-    selfLines.value = null;
-  }
-  document.addEventListener("mousemove", onMove);
-  document.addEventListener("mouseup", onUp);
-}
-
-/** 多选组拖动:点中元素如果在多选集合里,所有选中元素(锁定除外)一起平移,保持相对位置 */
-function startGroupDrag(e: MouseEvent, primaryId: string) {
-  const ids = (props.multiSelectedIds ?? []).filter((x) => x !== primaryId);
-  ids.unshift(primaryId); // 主选放第一个(让吸附候选收集时排除自己)
-  // 收集每个元素的起始位置
-  const origs = ids
-    .map((id) => {
-      const el = findElementGlobal(props.template, id)?.el;
-      return el ? { id, x: el.x, y: el.y, locked: !!el.locked } : null;
-    })
-    .filter(
-      (x): x is { id: string; x: number; y: number; locked: boolean } =>
-        x !== null,
-    );
-  const draggables = origs.filter((o) => !o.locked);
-  if (draggables.length === 0) return;
-  const startX = e.clientX;
-  const startY = e.clientY;
-  const pxPerMmLocal = mmToPx(1) * zoomValue.value;
-  // 吸附候选:组 4 边作为"自己",跟其它元素(非组内)+ 画布边界做吸附
-  // 组内元素互不吸附(组已经是一个整体)
-  const groupX = origs.reduce((acc, o) => Math.min(acc, o.x), Infinity);
-  const groupY = origs.reduce((acc, o) => Math.min(acc, o.y), Infinity);
-  const primaryEl = draggables[0]
-    ? findElementGlobal(props.template, draggables[0].id)?.el
-    : null;
-  const groupRight =
-    origs.reduce((acc, o) => Math.max(acc, o.x), -Infinity) +
-    (primaryEl?.w ?? 0);
-  const groupBottom =
-    origs.reduce((acc, o) => Math.max(acc, o.y), -Infinity) +
-    (primaryEl?.h ?? 0);
-  // 用组原始 w/h(拖动过程中变化),这里 groupRight - groupX = 组原始宽
-  const groupW = groupRight - groupX;
-  const groupH = groupBottom - groupY;
-  // 其它元素的边(排除组内全部 id)
-  const vCandidates = collectCandidatesForGroup(
-    "x",
-    new Set(origs.map((o) => o.id)),
-  );
-  const hCandidates = collectCandidatesForGroup(
-    "y",
-    new Set(origs.map((o) => o.id)),
-  );
-  // 启动时设延长线(组 4 边)
-  selfLines.value = {
-    v: [groupX, groupRight],
-    h: [groupY, groupBottom],
-  };
-
-  function onMove(ev: MouseEvent) {
-    const dx = (ev.clientX - startX) / pxPerMmLocal;
-    const dy = (ev.clientY - startY) / pxPerMmLocal;
-    let newX = Math.max(0, groupX + dx);
-    let newY = Math.max(0, groupY + dy);
-    const newRight = newX + groupW;
-    const newBottom = newY + groupH;
-    const sxLeft = snapValue(newX, vCandidates, SNAP_THRESHOLD_MM);
-    const sxRight = snapValue(newRight, vCandidates, SNAP_THRESHOLD_MM);
-    const syTop = snapValue(newY, hCandidates, SNAP_THRESHOLD_MM);
-    const syBottom = snapValue(newBottom, hCandidates, SNAP_THRESHOLD_MM);
-    if (sxLeft.lineAt !== null) newX = sxLeft.value;
-    else if (sxRight.lineAt !== null) newX = sxRight.value - groupW;
-    if (syTop.lineAt !== null) newY = syTop.value;
-    else if (syBottom.lineAt !== null) newY = syBottom.value - groupH;
-
-    const vLines = [sxLeft.lineAt, sxRight.lineAt].filter(
-      (v): v is number => v !== null,
-    );
-    const hLines = [syTop.lineAt, syBottom.lineAt].filter(
-      (v): v is number => v !== null,
-    );
-    snapLines.vertical = vLines;
-    snapLines.horizontal = hLines;
-    // 延长线跟随
-    if (selfLines.value) {
-      selfLines.value = {
-        v: [newX, newRight],
-        h: [newY, newBottom],
-      };
-    }
-
-    const finalDx = newX - groupX;
-    const finalDy = newY - groupY;
-    const updates = draggables.map((o) => ({
-      id: o.id,
-      x: o.x + finalDx,
-      y: o.y + finalDy,
-    }));
-    emit("moveMany", updates);
-  }
-  function onUp() {
-    document.removeEventListener("mousemove", onMove);
-    document.removeEventListener("mouseup", onUp);
-    snapLines.vertical = [];
-    snapLines.horizontal = [];
-    selfLines.value = null;
-  }
-  document.addEventListener("mousemove", onMove);
-  document.addEventListener("mouseup", onUp);
-}
-
-/** 类似 collectCandidates,但可以排除一组 id(组拖动用) */
-function collectCandidatesForGroup(
-  axis: "x" | "y",
-  excludeIds: Set<string>,
-): number[] {
-  const tpl = props.template;
-  const list: number[] =
-    axis === "x" ? [0, tpl.paper.width] : [0, tpl.paper.height];
-  for (const e of allElements(tpl)) {
-    if (excludeIds.has(e.id)) continue;
-    if (axis === "x") list.push(e.x, e.x + e.w);
-    else list.push(e.y, e.y + e.h);
-  }
-  return list;
-}
-
-// ========== Resize / Rotate ==========
-
-type ResizeDir = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
-const MIN_SIZE_MM = 4;
-
-/**
- * 启动 resize 拖拽。
- * 用元素盒的屏幕坐标 + 鼠标增量来反推新 x/y/w/h(保证 zoom 下视觉一致),
- * mouseup 提交最终值。Shift 修饰键在角 handle 上保持等比。
- */
-function onResizeStart(e: MouseEvent, id: string, dir: ResizeDir) {
-  e.preventDefault();
-  const found = findElementGlobal(props.template, id);
-  if (!found) return;
-  const el = found.el;
-  if (el.locked) return; // 锁定后不允许 resize
-  const startMouseX = e.clientX;
-  const startMouseY = e.clientY;
-  const origX = el.x;
-  const origY = el.y;
-  const origW = el.w;
-  const origH = el.h;
-  const pxPerMmLocal = mmToPx(1) * zoomValue.value;
-  const ratio = origW / origH;
-  const isCorner = dir === "nw" || dir === "ne" || dir === "sw" || dir === "se";
-  const vCandidates = collectCandidates("x", id);
-  const hCandidates = collectCandidates("y", id);
-  // 启动时设延长线(用元素当前 4 边)
-  selfLines.value = {
-    v: [origX, origX + el.w],
-    h: [origY, origY + el.h],
-  };
-
-  function onMove(ev: MouseEvent) {
-    const dxMm = (ev.clientX - startMouseX) / pxPerMmLocal;
-    const dyMm = (ev.clientY - startMouseY) / pxPerMmLocal;
-    const shift = ev.shiftKey && isCorner;
-    let x = origX;
-    let y = origY;
-    let w = origW;
-    let h = origH;
-    // 横向(对 w / x 起作用的方向)
-    if (dir === "nw" || dir === "w" || dir === "sw") {
-      w = Math.max(MIN_SIZE_MM, origW - dxMm);
-      x = origX + (origW - w);
-    } else if (dir === "ne" || dir === "e" || dir === "se") {
-      w = Math.max(MIN_SIZE_MM, origW + dxMm);
-    }
-    // 纵向(对 h / y 起作用的方向)
-    if (dir === "nw" || dir === "n" || dir === "ne") {
-      h = Math.max(MIN_SIZE_MM, origH - dyMm);
-      y = origY + (origH - h);
-    } else if (dir === "sw" || dir === "s" || dir === "se") {
-      h = Math.max(MIN_SIZE_MM, origH + dyMm);
-    }
-    // Shift 等比
-    if (shift) {
-      if (dir === "nw" || dir === "ne" || dir === "se" || dir === "sw") {
-        const newH = w / ratio;
-        if (dir === "nw" || dir === "ne") y = origY + (origH - newH);
-        h = newH;
-      }
-    }
-    // resize 也画延长线 + snap 命中(跟移动一致,只是 4 边都参与)
-    const newRight = x + w;
-    const newBottom = y + h;
-    const sxLeft = snapValue(x, vCandidates, SNAP_THRESHOLD_MM);
-    const sxRight = snapValue(newRight, vCandidates, SNAP_THRESHOLD_MM);
-    const syTop = snapValue(y, hCandidates, SNAP_THRESHOLD_MM);
-    const syBottom = snapValue(newBottom, hCandidates, SNAP_THRESHOLD_MM);
-    if (sxLeft.lineAt !== null) {
-      const delta = sxLeft.value - x;
-      x = sxLeft.value;
-      w = Math.max(MIN_SIZE_MM, w - delta);
-    } else if (sxRight.lineAt !== null) {
-      w = Math.max(MIN_SIZE_MM, sxRight.value - x);
-    }
-    if (syTop.lineAt !== null) {
-      const delta = syTop.value - y;
-      y = syTop.value;
-      h = Math.max(MIN_SIZE_MM, h - delta);
-    } else if (syBottom.lineAt !== null) {
-      h = Math.max(MIN_SIZE_MM, syBottom.value - y);
-    }
-    snapLines.vertical = [sxLeft.lineAt, sxRight.lineAt].filter(
-      (v): v is number => v !== null,
-    );
-    snapLines.horizontal = [syTop.lineAt, syBottom.lineAt].filter(
-      (v): v is number => v !== null,
-    );
-    if (selfLines.value) {
-      selfLines.value = {
-        v: [x, x + w],
-        h: [y, y + h],
-      };
-    }
-    emit("resize", id, { x, y, w, h });
-  }
-  function onUp() {
-    document.removeEventListener("mousemove", onMove);
-    document.removeEventListener("mouseup", onUp);
-    snapLines.vertical = [];
-    snapLines.horizontal = [];
-    selfLines.value = null;
-  }
-  document.addEventListener("mousemove", onMove);
-  document.addEventListener("mouseup", onUp);
-}
-
-/**
- * 启动旋转拖拽。
- * 用元素在未旋转时的几何中心(由 x/y/w/h 算出)作为旋转中心,
- * 计算鼠标相对中心的 atan2 → 度数。+90° 偏移让"拖柄朝正上方"对应 0°。
- *
- * 用 canvas 的实际 bounding rect 把元素中心转屏幕坐标,这样不受 wrap padding /
- * pan / scroll 影响。
- */
-function onRotateStart(e: MouseEvent, id: string) {
-  e.preventDefault();
-  const found = findElementGlobal(props.template, id);
-  if (!found) return;
-  const el = found.el;
-  if (el.locked) return; // 锁定后不允许旋转
-  // 用 .canvas 的实际 bounding rect(已含 scale + pan)算元素中心屏幕坐标
-  const canvas = (e.currentTarget as HTMLElement).closest(
-    ".canvas",
-  ) as HTMLElement | null;
-  if (!canvas) return;
-  const cr = canvas.getBoundingClientRect();
-  const z = zoomValue.value;
-  // 元素未旋转中心(屏幕坐标) = canvas left + (x + w/2) * pxPerMm * zoom
-  const cx = cr.left + mmToPx(el.x + el.w / 2) * z;
-  const cy = cr.top + mmToPx(el.y + el.h / 2) * z;
-  // 用"相对角度"避免一碰就跳:mousedown 时记下起始鼠标角度和元素当前旋转,
-  // mousemove 时元素旋转 = 起始旋转 + (当前鼠标角度 - 起始鼠标角度),
-  // 元素只跟鼠标"环绕中心"的相对位移走,不会因 mousedown 位置不同而跳到绝对角度
-  const startRot = el.rotate ?? 0;
-  const startAngle =
-    Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI) + 90;
-
-  function onMove(ev: MouseEvent) {
-    const dx = ev.clientX - cx;
-    const dy = ev.clientY - cy;
-    const angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
-    const rawDeg = startRot + (angle - startAngle);
-    // 旋转接近 0 度(±3 度阈值)时吸附到 0,提供"贴回水平"的吸附感
-    const rounded = Math.round(rawDeg);
-    const normalized = ((rounded % 360) + 360) % 360;
-    const distToZero = Math.min(normalized, 360 - normalized);
-    const finalDeg = distToZero < 3 ? 0 : rounded;
-    emit("rotate", id, finalDeg);
-  }
-  function onUp() {
-    document.removeEventListener("mousemove", onMove);
-    document.removeEventListener("mouseup", onUp);
-  }
-  document.addEventListener("mousemove", onMove);
-  document.addEventListener("mouseup", onUp);
-}
-
 // ========== Context Menu ==========
 
 const ctxMenu = reactive<{
@@ -1121,6 +475,94 @@ const ctxMenu = reactive<{
   /** 仅记录"是不是在元素上右键打开的菜单";具体 element 用 computedMenuEl 实时查 */
   onElement: boolean;
 }>({ open: false, pos: { x: 0, y: 0 }, onElement: false });
+
+function closeCtxMenu() {
+  ctxMenu.open = false;
+  ctxMenu.onElement = false;
+}
+
+// ========== 拖动 / 框选 / Resize / Rotate ==========
+// 全部交给 useCanvasDrag composable,父级只透传 props 和事件 emit
+const {
+  marquee,
+  marqueeHits,
+  marqueeStarting,
+  selfLines,
+  snapLines,
+  marqueeStyle,
+  isMultiSelected,
+  onWrapMouseDown,
+  onElementMouseDown,
+  onResizeStart,
+  onRotateStart,
+} = useCanvasDrag({
+  template: () => props.template,
+  getSelectedId: () => props.selectedId,
+  getMultiSelectedIds: () => props.multiSelectedIds ?? [],
+  getPanMode: () => props.panMode ?? false,
+  getZoom: () => props.zoom ?? 1,
+  getPanX: () => props.panX ?? 0,
+  getPanY: () => props.panY ?? 0,
+  isCtxMenuOpen: () => ctxMenu.open,
+  onCloseCtx: closeCtxMenu,
+  onSelect: (id) => emit("select", id),
+  onSelectMany: (ids) => emit("selectMany", ids),
+  onSelectToggle: (id) => emit("selectToggle", id),
+  onMove: (id, x, y) => emit("move", id, x, y),
+  onMoveMany: (updates) => emit("moveMany", updates),
+  onResize: (id, patch) => emit("resize", id, patch),
+  onRotate: (id, deg) => emit("rotate", id, deg),
+  onPan: (dx, dy) => emit("pan", dx, dy),
+});
+
+/** 框选 mm chip 显示:保留 1 位小数 */
+function formatMm(mm: number): string {
+  return mm.toFixed(1).replace(/\.0$/, "");
+}
+
+/** 把 selfLines (mm 数组) 转成 SnapAndSelfLinesOverlay 需要的 OverlayLine 数组(mm + px) */
+const selfLinesOverlay = computed<
+  { v: OverlayLine[]; h: OverlayLine[] } | null
+>(() => {
+  if (!selfLines.value) return null;
+  return {
+    v: selfLines.value.v.map((mm, i) => ({ id: i, mm, px: overlayX(mm) })),
+    h: selfLines.value.h.map((mm, i) => ({ id: i, mm, px: overlayY(mm) })),
+  };
+});
+
+/** 把 snapLines (mm 数组) 转成 OverlayLine 数组 */
+const snapLinesOverlay = computed<{
+  vertical: OverlayLine[];
+  horizontal: OverlayLine[];
+}>(() => ({
+  vertical: snapLines.vertical.map((mm, i) => ({
+    id: i,
+    mm,
+    px: overlayX(mm),
+  })),
+  horizontal: snapLines.horizontal.map((mm, i) => ({
+    id: i,
+    mm,
+    px: overlayY(mm),
+  })),
+}));
+
+/** 拖动中延长线围成的矩形(选区浅蓝填充),从 selfLines 算出 */
+const selfFillStyle = computed(() => {
+  const sl = selfLines.value;
+  if (!sl) return {};
+  const x1 = Math.min(...sl.v);
+  const x2 = Math.max(...sl.v);
+  const y1 = Math.min(...sl.h);
+  const y2 = Math.max(...sl.h);
+  return {
+    left: overlayX(x1) + "px",
+    top: overlayY(y1) + "px",
+    width: mmToPx(x2 - x1) * zoomValue.value + "px",
+    height: mmToPx(y2 - y1) * zoomValue.value + "px",
+  };
+});
 
 /** 菜单要展示/操作的元素 = 选中元素。响应式跟随 template + selectedId 变化,
  *  避免右键打开后元素状态变更时菜单的 label (锁定/取消锁定) 失真。 */
