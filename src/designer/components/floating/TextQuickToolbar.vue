@@ -26,13 +26,11 @@
           title="字体"
           @change="onFontFamily"
         >
-          <option
-            v-for="o in fontGroups"
-            :key="o.value"
-            :value="o.value"
-          >
-            {{ o.label }}
-          </option>
+          <optgroup v-for="g in fontGroups" :key="g.label" :label="g.label">
+            <option v-for="o in g.options" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </option>
+          </optgroup>
         </select>
 
         <span class="tqt-sep" />
@@ -184,9 +182,9 @@ import {
   type Ref,
 } from "vue";
 import type { TextElement } from "../../core/types";
-import { FONT_FAMILY_OPTIONS } from "../../etypes/base";
+import { FONT_FAMILY_GROUPS } from "../../etypes/base";
 
-const fontGroups = FONT_FAMILY_OPTIONS;
+const fontGroups = FONT_FAMILY_GROUPS;
 
 const props = defineProps<{
   /** 当前选中的文本元素(必须 type === 'text') */
