@@ -525,7 +525,7 @@ export function renderInner(
 function paperCss(tpl: Template): string {
   return `
   .paper { position:relative; background:#fff;  }
-  .el-table { font-size:11px; }
+  .el-table { font-size:11px; background:#ffffff; }
   .el-table table { width:100%; border-collapse:collapse; table-layout:fixed; }
   .el-table th, .el-table td { border:1px solid #d0d0d0; padding:2px 4px; }
   .el-table th { background:#f5f5f5; font-weight:bold; }
