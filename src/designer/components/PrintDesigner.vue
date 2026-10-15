@@ -35,7 +35,7 @@
       :page-margin-horizontal="designer.pageMarginHorizontal.value"
       :page-margin-vertical="designer.pageMarginVertical.value"
       :allow-drag-outside-canvas="designer.allowDragOutsideCanvas.value"
-            :header-line-color="designer.headerLineColor.value"
+      :header-line-color="designer.headerLineColor.value"
       :header-line-width="designer.headerLineWidth.value"
       :header-line-style="designer.headerLineStyle.value"
       :header-line-span="designer.headerLineSpan.value"
@@ -86,8 +86,10 @@
       @set-canvas-background="onSetCanvasBackground"
       @set-page-margin-horizontal="(mm) => designer.setPageMarginHorizontal(mm)"
       @set-page-margin-vertical="(mm) => designer.setPageMarginVertical(mm)"
-      @set-allow-drag-outside-canvas="(b) => designer.setAllowDragOutsideCanvas(b)"
-            @set-header-line-color="(c) => designer.setHeaderLineColor(c)"
+      @set-allow-drag-outside-canvas="
+        (b) => designer.setAllowDragOutsideCanvas(b)
+      "
+      @set-header-line-color="(c) => designer.setHeaderLineColor(c)"
       @set-header-line-width="(mm) => designer.setHeaderLineWidth(mm)"
       @set-header-line-style="(s) => designer.setHeaderLineStyle(s)"
       @set-header-line-span="(v) => designer.setHeaderLineSpan(v)"
@@ -289,7 +291,7 @@ import { useDesigner } from "../api/useDesigner";
 import { createTemplate } from "../core/schema";
 import { printTemplate } from "../utils/print";
 import { renderInner } from "../core/render";
-import { exportPdf } from "../utils/pdf";
+import { exportHtml, exportImage, exportPdf } from "../utils/export";
 import TopBar from "./layout/TopBar.vue";
 import HeaderToolbar from "./layout/HeaderToolbar.vue";
 import DesignerCanvas from "./canvas/DesignerCanvas.vue";
@@ -894,12 +896,28 @@ function onSaveAs() {
   emit("notice", "另存为模板(预留,后续接入模板中心)", "info");
 }
 
-function onExportHtml() {
-  emit("notice", "导出 HTML(预留,后续接入)", "info");
+async function onExportHtml() {
+  emit("notice", "正在生成 HTML...", "info");
+  const ok = await exportHtml(
+    designer.template.value,
+    props.printData,
+    designer.pageMarginHorizontal.value,
+    designer.pageMarginVertical.value,
+  );
+  if (ok) emit("notice", "HTML 已下载", "success");
+  else emit("notice", "HTML 生成失败", "error");
 }
 
-function onExportImages() {
-  emit("notice", "导出图片(预留,后续接入 html2canvas)", "info");
+async function onExportImages() {
+  emit("notice", "正在生成图片...", "info");
+  const ok = await exportImage(
+    designer.template.value,
+    props.printData,
+    designer.pageMarginHorizontal.value,
+    designer.pageMarginVertical.value,
+  );
+  if (ok) emit("notice", "图片 已下载", "success");
+  else emit("notice", "图片 生成失败", "error");
 }
 
 function onToolbarReorder() {
