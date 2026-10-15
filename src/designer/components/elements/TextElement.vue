@@ -52,6 +52,9 @@ const style = computed(() => {
     flexDirection: 'column',
     justifyContent: justifyV,
     alignItems: alignH,
+    ...(e.writingMode && e.writingMode !== 'horizontal-tb'
+      ? { writingMode: e.writingMode, textOrientation: 'mixed' }
+      : {}),
     ...wrapStyle[tw],
     ...applyBoxStyle(e),
   }

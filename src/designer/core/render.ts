@@ -162,6 +162,9 @@ function textStyle(el: Extract<Element, { type: "text" }>): string {
     el.borderRadius ? `border-radius:${el.borderRadius}mm` : "",
     paddingCss4Sides(el),
     `display:flex;flex-direction:column;justify-content:${justifyV};align-items:${alignH};`,
+    el.writingMode && el.writingMode !== "horizontal-tb"
+      ? `writing-mode:${el.writingMode};text-orientation:mixed;`
+      : "",
     wrapCss[tw],
     el.rotate
       ? `transform:rotate(${el.rotate}deg);transform-origin:center;`

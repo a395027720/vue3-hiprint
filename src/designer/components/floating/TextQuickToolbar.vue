@@ -331,7 +331,11 @@ const italicActive = computed(
 const underlineActive = computed(
   () => (props.element as TextElement | null)?.textDecoration === "underline",
 );
-const isVertical = computed(() => false); // 当前数据模型未支持竖排 writingMode
+const writingMode = computed(
+  () =>
+    (props.element as TextElement | null)?.writingMode ?? "horizontal-tb",
+);
+const isVertical = computed(() => writingMode.value !== "horizontal-tb");
 
 function setTextAlign(family: "left" | "center" | "right") {
   emit("patch", { align: textAlign.value === family ? "left" : family });
@@ -351,7 +355,10 @@ function toggleUnderline() {
   });
 }
 function toggleVertical() {
-  // 当前数据模型无 writingMode 字段,直接 no-op;后续可扩展
+  emit("patch", {
+    writingMode:
+      writingMode.value === "horizontal-tb" ? "vertical-lr" : "horizontal-tb",
+  });
 }
 
 function onFontFamily(e: Event) {
@@ -377,7 +384,7 @@ const sw = 1.5;
 const alignLeftIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>`;
 const alignCenterHIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>`;
 const alignRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>`;
-const verticalTextIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M4 7l3-3 3 3M17 4v16M14 7l3-3 3 3"/></svg>`;
+const verticalTextIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6v12M5 8l2-2 2 2M5 16l2 2 2-2M17 6v12M15 8l2-2 2 2M15 16l2 2 2-2"/></svg>`;
 </script>
 
 <style scoped>
@@ -446,6 +453,11 @@ const verticalTextIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="
 .tqt-tb :deep(.anticon) {
   font-size: 16px;
   line-height: 1;
+}
+.tqt-tb :deep(svg) {
+  /* inline SVG 默认 vertical-align: baseline,会跟 inline-flex 居中冲突,
+   * 显示偏上 ~3px;改 block 让 flex 容器按几何中心对齐 */
+  display: block;
 }
 .tqt-step:hover:not(:disabled),
 .tqt-tb:hover:not(:disabled) {

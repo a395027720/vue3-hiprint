@@ -51,6 +51,16 @@ export const TEXT_SECTIONS: SectionDef[] = [
         ],
       },
       {
+        key: 'writingMode',
+        label: '文字方向',
+        kind: 'select',
+        options: [
+          { value: 'horizontal-tb', label: '横排' },
+          { value: 'vertical-rl', label: '竖排(右到左)' },
+          { value: 'vertical-lr', label: '竖排(左到右)' },
+        ],
+      },
+      {
         key: 'textWrap',
         label: '文本换行',
         kind: 'select',

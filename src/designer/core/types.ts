@@ -55,6 +55,9 @@ export type VerticalAlign = 'top' | 'middle' | 'bottom'
 /** 文本换行策略 */
 export type TextWrap = 'normal' | 'nowrap' | 'break-word' | 'ellipsis'
 
+/** 文字方向:CSS writing-mode 三态 */
+export type WritingMode = 'horizontal-tb' | 'vertical-rl' | 'vertical-lr'
+
 export interface TextElement extends BaseElement {
   type: 'text'
   text: string
@@ -81,6 +84,8 @@ export interface TextElement extends BaseElement {
   textWrap?: TextWrap
   /** 列表模式:none / ul / ol,为列表时 text 按 \n 拆成 <li> 渲染 */
   listType?: 'none' | 'ul' | 'ol'
+  /** 文字方向(默认 horizontal-tb);vertical-rl = 中文竖排从右到左 */
+  writingMode?: WritingMode
 }
 
 // ========== Image ==========
