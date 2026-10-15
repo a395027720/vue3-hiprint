@@ -86,63 +86,14 @@
       />
     </template>
 
-    <!-- 拖动中的"延长线 + 选区填充":跨整个 .canvas-wrap(viewport 高度),
-         在 ruler 区域(顶部 0~32 / 左侧 0~32)也能看到浅蓝短截(z-index > ruler)。
-         坐标公式 = overlayX/Y(wrap 内画布 mm 位置,已含 scale,扣 pan) -->
-    <template v-if="selfLines">
-      <div class="self-fill" :style="selfFillStyle" />
-      <div
-        v-for="x in selfLines.v"
-        :key="`self-v-${x}`"
-        class="self-line self-v"
-        :style="{
-          left: overlayX(x) + 'px',
-          top: -wrapScrollTop + 'px',
-          bottom: -wrapScrollTop + 'px',
-        }"
-      />
-      <span
-        v-for="(x, idx) in selfLines.v"
-        :key="`self-v-label-${x}`"
-        class="self-line-label self-v-label"
-        :style="{
-          left: overlayX(x) + 'px',
-          transform: idx === 0 ? 'translateX(-100%)' : 'none',
-        }"
-        >{{ formatMm(x) }}</span
-      >
-      <div
-        v-for="y in selfLines.h"
-        :key="`self-h-${y}`"
-        class="self-line self-h"
-        :style="{
-          top: overlayY(y) + 'px',
-          left: -wrapScrollLeft + 'px',
-          right: -wrapScrollLeft + 'px',
-        }"
-      />
-      <span
-        v-for="(y, idx) in selfLines.h"
-        :key="`self-h-label-${y}`"
-        class="self-line-label self-h-label"
-        :style="{ top: idx === 0 ? overlayY(y) - 16 + 'px' : overlayY(y) + 'px' }"
-        >{{ formatMm(y) }}</span
-      >
-    </template>
-
-    <!-- 吸附命中红线:跨整个 .canvas-wrap -->
-    <div
-      v-for="x in snapLines.vertical"
-      :key="`v-${x}`"
-      class="snap-line snap-v"
-      :style="{ left: overlayX(x) + 'px' }"
+    <!-- 拖动中的"延长线 + 选区填充" + 吸附命中红线浮层(由 SnapAndSelfLinesOverlay 渲染) -->
+    <SnapAndSelfLinesOverlay
+      :self-lines="selfLinesOverlay"
+      :snap-lines="snapLinesOverlay"
+      :self-fill-style="selfFillStyle"
+      :wrap-scroll-top="wrapScrollTop"
+      :wrap-scroll-left="wrapScrollLeft"
     />
-    <div
-      v-for="y in snapLines.horizontal"
-      :key="`h-${y}`"
-      class="snap-line snap-h"
-      :style="{ top: overlayY(y) + 'px' }"
-    /> 
 
     <!-- 右键菜单 -->
     <ContextMenu
@@ -190,6 +141,9 @@ import { snapValue } from "../../utils/snap";
 import ElementRenderer from "../elements/ElementRenderer.vue";
 import ContextMenu from "../floating/ContextMenu.vue";
 import ElementOverlayHandles from "./ElementOverlayHandles.vue";
+import SnapAndSelfLinesOverlay, {
+  type OverlayLine,
+} from "./SnapAndSelfLinesOverlay.vue";
 
 /** 多页之间的纵向间距(mm)。S2 暂用 0(单页行为不变),S3 接 pageSpacingX/Y。 */
 const PAGE_SPACING_MM = 20;
@@ -472,6 +426,34 @@ function overlayY(valMm: number): number {
     (props.panY ?? 0)
   );
 }
+
+/** 把 selfLines (mm 数组) 转成 SnapAndSelfLinesOverlay 需要的 OverlayLine 数组(mm + px) */
+const selfLinesOverlay = computed<
+  { v: OverlayLine[]; h: OverlayLine[] } | null
+>(() => {
+  if (!selfLines.value) return null;
+  return {
+    v: selfLines.value.v.map((mm, i) => ({ id: i, mm, px: overlayX(mm) })),
+    h: selfLines.value.h.map((mm, i) => ({ id: i, mm, px: overlayY(mm) })),
+  };
+});
+
+/** 把 snapLines (mm 数组) 转成 OverlayLine 数组 */
+const snapLinesOverlay = computed<{
+  vertical: OverlayLine[];
+  horizontal: OverlayLine[];
+}>(() => ({
+  vertical: snapLines.vertical.map((mm, i) => ({
+    id: i,
+    mm,
+    px: overlayX(mm),
+  })),
+  horizontal: snapLines.horizontal.map((mm, i) => ({
+    id: i,
+    mm,
+    px: overlayY(mm),
+  })),
+}));
 
 /** 画布整体框(标尺已搬到 PrintDesigner 顶部浮层,这里 frame 只装画布 + 自线) */
 const frameStyle = computed(() => {
@@ -1391,14 +1373,7 @@ watch(
   box-shadow: 0 0 0 1px rgba(64, 150, 255, 0.3);
 }
 
-/* 拖动中延长线围成的范围浅蓝半透明填充(z-index 1,被 self-line 虚线盖住) */
-.self-fill {
-  position: absolute;
-  pointer-events: none;
-  z-index: 1;
-  background: rgba(24, 144, 255, 0.08);
-  transition: opacity 80ms;
-}
+/* 拖动中延长线围成的范围浅蓝半透明填充已搬到 SnapAndSelfLinesOverlay.vue */
 .canvas {
   position: absolute;
   top: 0;
@@ -1436,92 +1411,9 @@ watch(
   border-color: #faad14 !important;
   cursor: not-allowed !important;
 }
-/* 拖动中的延长线(从元素/组 4 边出发,跨整个 .main viewport,延伸到 ruler 区域):浅蓝虚线
-   提到 .ruler-overlay 内是为了在 ruler 区域内也能看到浅蓝短截,坐标公式用 canvasOffsetX/Y */
-.self-line {
-  position: absolute;
-  pointer-events: none;
-  z-index: 6; /* > ruler(5),在 ruler 区域自线可见 */
-  transition: opacity 80ms;
-}
-.self-v {
-  top: 0;
-  bottom: 0;
-  width: 0;
-  border-left: 1px dashed #69c0ff;
-  opacity: 0.7;
-  transform: translateX(-0.5px);
-}
-.self-h {
-  left: 0;
-  right: 0;
-  height: 0;
-  border-top: 1px dashed #69c0ff;
-  opacity: 0.7;
-  transform: translateY(-0.5px);
-}
-
-/* 吸附辅助线:跨整个 .main viewport,在 ruler 区域内也能看到红色短截(表示对齐) */
-.snap-line {
-  position: absolute;
-  background: #ff4d4f;
-  pointer-events: none;
-  z-index: 7; /* > ruler(5) 和 self-line(6) */
-  /* 拖动时显示/隐藏,平滑过渡 */
-  transition: opacity 100ms;
-}
-.snap-v {
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  transform: translateX(-0.5px);
-}
-.snap-h {
-  left: 0;
-  right: 0;
-  height: 1px;
-  transform: translateY(-0.5px);
-}
-
-/* 延长线 mm 数字 chip:贴 ruler 区域显示当前 mm(z-index 7 > ruler 5 / self 6)
-   self-v-label 贴 ruler-h 底部(wrap 顶 0);self-h-label 贴 ruler-v 右侧(wrap 左 0) */
-.self-line-label,
-.snap-line-label {
-  position: absolute;
-  display: inline-block; /* span + absolute 也需要 block 才能正确撑宽 */
-  pointer-events: none;
-  z-index: 7;
-  min-width: 22px;
-  padding: 1px 5px;
-  font-size: 10px;
-  font-weight: 600;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  line-height: 14px;
-  border-radius: 2px;
-  white-space: nowrap;
-  text-align: center;
-  user-select: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-}
-.self-v-label {
-  /* chip 贴 ruler-h 区域底部:
-     inline left = overlayX(x),transform 根据 v-for idx 区分:
-       idx=0 (元素左 x):translateX(-100%) 让 chip 右沿贴虚线
-       idx=1 (元素右 x):none 让 chip 左沿贴虚线 */
-  top: 32px;
-  background: #69c0ff;
-  color: #fff;
-}
-.self-h-label {
-  /* chip 底部对齐 self-h 端点(虚线上方):
-     inline top = overlayY(y) - 16(让 chip 底部贴虚线顶部) */
-  left: 32px;
-  background: #69c0ff;
-  color: #fff;
-}
-/* 吸附命中线不需要 label(用户不需要冗余 mm 显示) */
 
 /* ========== Resize / Rotate handles 已搬到 ElementOverlayHandles.vue ========== */
+/* ========== 延长线 / 吸附线 / mm chip 已搬到 SnapAndSelfLinesOverlay.vue ========== */
 
 /* ========== 框选 / 多选 ========== */
 .marquee-rect {
