@@ -122,13 +122,21 @@
         v-for="x in selfLines.v"
         :key="`self-v-${x}`"
         class="self-line self-v"
-        :style="{ left: overlayX(x) + 'px' }"
+        :style="{
+          left: overlayX(x) + 'px',
+          top: -wrapScrollTop + 'px',
+          bottom: -wrapScrollTop + 'px',
+        }"
       />
       <div
         v-for="y in selfLines.h"
         :key="`self-h-${y}`"
         class="self-line self-h"
-        :style="{ top: overlayY(y) + 'px' }"
+        :style="{
+          top: overlayY(y) + 'px',
+          left: -wrapScrollLeft + 'px',
+          right: -wrapScrollLeft + 'px',
+        }"
       />
     </template>
 
@@ -417,14 +425,23 @@ function pageStyle(_pageIndex: number) {
 /** 画布在 .canvas-wrap 内的 0mm 偏移(wrap 内居中布局,wrap 高度 = viewport 高度) */
 const wrapRef = ref<HTMLElement | null>(null);
 const wrapSize = ref({ w: 0, h: 0 });
+/** wrap 滚动距离:self-v / self-h 用它修正 top/bottom/left/right,
+ *  让延长线在 wrap 可视区内跨满(否则 wrap scrollTop > 0 时 self-v 顶部被滚出可视区) */
+const wrapScrollTop = ref(0);
+const wrapScrollLeft = ref(0);
 function measureWrap() {
   const w = wrapRef.value;
   if (!w) return;
   wrapSize.value = { w: w.clientWidth, h: w.clientHeight };
+  wrapScrollTop.value = w.scrollTop;
+  wrapScrollLeft.value = w.scrollLeft;
   // 通知父级重算 ruler offset(wrap size 变化,canvas 居中位置变)
   emit("viewportChange");
 }
 function onWrapScroll() {
+  if (!wrapRef.value) return;
+  wrapScrollTop.value = wrapRef.value.scrollTop;
+  wrapScrollLeft.value = wrapRef.value.scrollLeft;
   // wrap 滚动改变 canvas 视觉位置,触发 ruler 重算
   emit("viewportChange");
 }
