@@ -426,18 +426,15 @@
     <div class="vtb-content">
       <!-- paper 组 -->
       <div class="vtb-pill">
-        <select
-          class="vtb-select"
-          :value="paperKey"
-          title="纸张"
-          @change="
-            $emit('setPaper', ($event.target as HTMLSelectElement).value)
-          "
-        >
-          <option v-for="p in PAPER_OPTIONS" :key="p.key" :value="p.key">
-            {{ p.label }}
-          </option>
-        </select>
+        <PaperSettings
+          :paper-width="paperWidth"
+          :paper-height="paperHeight"
+          :canvas-background="canvasBackground"
+          :show-grid="showGrid"
+          @set-paper="onSetPaper"
+          @set-canvas-background="onSetCanvasBackground"
+          @toggle-grid="onToggleGrid"
+        />
       </div>
 
       <span class="vtb-group-sep" />
@@ -548,6 +545,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import ColorPicker from "../common/ColorPicker.vue";
+import PaperSettings from "./PaperSettings.vue";
 
 interface FontOption {
   value: string;
@@ -599,17 +597,6 @@ const FONT_GROUPS: FontGroup[] = [
 ];
 const fontGroups = FONT_GROUPS;
 
-interface PaperOption {
-  key: string;
-  label: string;
-}
-const PAPER_OPTIONS: PaperOption[] = [
-  { key: "A4", label: "A4 (210×297mm)" },
-  { key: "A5", label: "A5 (148×210mm)" },
-  { key: "A3", label: "A3 (297×420mm)" },
-  { key: "Letter", label: "Letter (216×279mm)" },
-];
-
 const props = defineProps<{
   canUndo: boolean;
   canRedo: boolean;
@@ -634,8 +621,12 @@ const props = defineProps<{
   italicActive: boolean;
   underlineActive: boolean;
   strikeActive: boolean;
-  /** 纸张 key */
-  paperKey: string;
+  /** 纸张宽 (mm) */
+  paperWidth: number;
+  /** 纸张高 (mm) */
+  paperHeight: number;
+  /** 画布背景色 */
+  canvasBackground: string;
   /** 缩放比例(1 = 100%) */
   zoom: number;
   /** 手型模式 */
@@ -678,7 +669,9 @@ const emit = defineEmits<{
   toggleStrike: [];
   clearFormat: [];
   resetRotation: [];
-  setPaper: [key: string];
+  setPaper: [paper: { width: number; height: number }];
+  setCanvasBackground: [color: string];
+  toggleGrid: [];
   setZoom: [z: number];
   resetZoom: [];
   exportPdf: [];
@@ -737,6 +730,16 @@ function onTextColorPicker(color: string | undefined) {
 }
 function onBgColorPicker(color: string | undefined) {
   emit("onBgColor", color ?? "");
+}
+
+function onSetPaper(paper: { width: number; height: number }) {
+  emit("setPaper", paper);
+}
+function onSetCanvasBackground(color: string) {
+  emit("setCanvasBackground", color);
+}
+function onToggleGrid() {
+  emit("toggleGrid");
 }
 
 onMounted(() => {

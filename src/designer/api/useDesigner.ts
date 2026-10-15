@@ -146,6 +146,10 @@ export interface UseDesignerReturn {
   showGrid: Ref<boolean>
   /** 切换网格显示 */
   toggleGrid: () => void
+  /** 画布背景色(CSS 颜色,默认 #ffffff) */
+  canvasBackground: Ref<string>
+  /** 设置画布背景色(不入 history,UI 视觉设置) */
+  setCanvasBackground: (color: string) => void
   /** 全部 guides(用户自定义参考线) */
   guides: Ref<Guide[]>
   /** 当前高亮的 guide(hover) */
@@ -189,6 +193,7 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
 
   const zoom = ref(1)
   const showGrid = ref(false)
+  const canvasBackground = ref("#ffffff")
 
   // 用户自定义参考线(独立 ref,不入 history;后续可迁移到 Template.guides)
   const guides = ref<Guide[]>([])
@@ -617,6 +622,10 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     showGrid.value = !showGrid.value
   }
 
+  function setCanvasBackground(color: string): void {
+    canvasBackground.value = color
+  }
+
   return {
     template,
     currentPageIndex,
@@ -663,6 +672,8 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     setZoom,
     showGrid,
     toggleGrid,
+    canvasBackground,
+    setCanvasBackground,
     guides,
     highlightedGuideId,
     addGuide,

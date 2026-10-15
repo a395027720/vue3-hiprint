@@ -29,7 +29,9 @@
       :italic-active="italicActive"
       :underline-active="underlineActive"
       :strike-active="strikeActive"
-      :paper-key="paperKey"
+      :paper-width="designer.template.value.paper.width"
+      :paper-height="designer.template.value.paper.height"
+      :canvas-background="designer.canvasBackground.value"
       :zoom="designer.zoom.value"
       :pan-mode="panModeActive"
       :theme="theme"
@@ -64,6 +66,7 @@
       @clear-format="onClearFormat"
       @reset-rotation="onResetRotation"
       @set-paper="onSetPaper"
+      @set-canvas-background="onSetCanvasBackground"
       @set-zoom="onSetZoom"
       @reset-zoom="onResetZoom"
       @export-pdf="onExportPdf"
@@ -477,16 +480,6 @@ const strikeActive = computed(
   () => selectedText.value?.textDecoration === "line-through",
 );
 
-// 派生:当前 paper key(用于 HeaderToolbar 选中态)
-const paperKey = computed(() => {
-  const { width, height } = designer.template.value.paper;
-  if (width === 210 && height === 297) return "A4";
-  if (width === 148 && height === 210) return "A5";
-  if (width === 297 && height === 420) return "A3";
-  if (width === 216 && height === 279) return "Letter";
-  return "A4";
-});
-
 function onAdd(type: ElementType, position?: { x: number; y: number }) {
   designer.add(type, undefined, position);
 }
@@ -653,15 +646,16 @@ function onTextPatch(patch: Partial<TextElement>) {
   designer.update(t.id, patch);
 }
 
-function onSetPaper(key: string) {
-  const presets: Record<string, { width: number; height: number }> = {
-    A4: { width: 210, height: 297 },
-    A5: { width: 148, height: 210 },
-    A3: { width: 297, height: 420 },
-    Letter: { width: 216, height: 279 },
-  };
-  const p = presets[key] ?? presets.A4;
-  designer.setPaper(p);
+function onSetPaper(paper: { width: number; height: number }) {
+  designer.setPaper(paper);
+}
+
+function onSetCanvasBackground(color: string) {
+  designer.setCanvasBackground(color);
+}
+
+function onToggleGrid() {
+  designer.toggleGrid();
 }
 
 function onFontSizeStep(delta: number) {
