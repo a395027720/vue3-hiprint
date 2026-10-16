@@ -12,6 +12,7 @@
       @toolbar-reorder="onToolbarReorder"
       @help="onHelp"
       @settings="onSettings"
+      @add="onAdd"
     />
     <HeaderToolbar
       :can-undo="designer.canUndo.value"

@@ -11,7 +11,8 @@
     </div>
 
     <div class="middle">
-      <!-- 中部留空:元素按钮在 ElementsPanel 左侧,格式化按钮在下方 FormatToolbar 行 -->
+      <!-- 顶栏水平元素按钮条(S5):点击 / 拖拽到画布,与左侧 ElementsPanel 共用 palette 数据 -->
+      <HeaderElementsBar @add="(type) => $emit('add', type)" />
     </div>
 
     <div class="actions">
@@ -64,6 +65,8 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
+import type { ElementType } from "../../core/types";
+import HeaderElementsBar from "./HeaderElementsBar.vue";
 
 const props = defineProps<{
   /** 当前模板是否有未保存修改(决定保存按钮是否可用) */
@@ -81,6 +84,8 @@ const emit = defineEmits<{
   toolbarReorder: [];
   help: [];
   settings: [];
+  /** HeaderElementsBar 触发的新增元素(透传到 PrintDesigner.onAdd) */
+  add: [type: ElementType];
 }>();
 
 const saveMenuOpen = ref(false);
