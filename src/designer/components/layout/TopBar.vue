@@ -12,7 +12,10 @@
 
     <div class="middle">
       <!-- 顶栏水平元素按钮条(S5):点击 / 拖拽到画布,与左侧 ElementsPanel 共用 palette 数据 -->
-      <HeaderElementsBar @add="(type) => $emit('add', type)" />
+      <HeaderElementsBar
+        :custom-elements="props.customElements ?? []"
+        @add="(type, pageIndex, position, payload) => $emit('add', type, pageIndex, position, payload)"
+      />
     </div>
 
     <div class="actions">
@@ -65,12 +68,15 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
-import type { ElementType } from "../../core/types";
+import type { Element, ElementType } from "../../core/types";
+import type { CustomElementTemplate } from "../../api/useDesigner";
 import HeaderElementsBar from "./HeaderElementsBar.vue";
 
 const props = defineProps<{
   /** 当前模板是否有未保存修改(决定保存按钮是否可用) */
   dirty?: boolean;
+  /** 自定义元素列表(PrintDesigner 透传,接 useDesigner.customElements) */
+  customElements?: CustomElementTemplate[];
 }>();
 
 const emit = defineEmits<{
@@ -85,7 +91,12 @@ const emit = defineEmits<{
   help: [];
   settings: [];
   /** HeaderElementsBar 触发的新增元素(透传到 PrintDesigner.onAdd) */
-  add: [type: ElementType];
+  add: [
+    type: ElementType,
+    pageIndex?: number,
+    position?: { x: number; y: number },
+    payload?: Partial<Element>,
+  ];
 }>();
 
 const saveMenuOpen = ref(false);

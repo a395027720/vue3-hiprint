@@ -51,7 +51,7 @@
             class="heb-item"
             :title="item.label"
             draggable="true"
-            @dragstart="onDragStart($event, item.type)"
+            @dragstart="onStandardDragStart($event, item.type)"
             @click="$emit('add', item.type)"
           >
             <span class="heb-icon" v-html="item.icon" />
@@ -60,7 +60,23 @@
         </template>
       </div>
 
-      <div v-else class="heb-empty">暂无自定义元素</div>
+      <div v-else-if="customElements.length === 0" class="heb-empty">暂无自定义元素</div>
+
+      <div v-else class="heb-content">
+        <button
+          v-for="t in customElements"
+          :key="t.id"
+          type="button"
+          class="heb-item"
+          :title="t.name"
+          draggable="true"
+          @dragstart="onCustomDragStart($event, t)"
+          @click="onCustomClick(t)"
+        >
+          <span class="heb-icon" v-html="customIcon(t)" />
+          <span class="heb-label">{{ t.name }}</span>
+        </button>
+      </div>
     </div>
 
     <button
@@ -79,20 +95,32 @@
 <script setup lang="ts">
 /**
  * HeaderElementsBar 内部状态:
- * - activeList: 'standard' | 'custom'(目前 custom 永远无数据)
+ * - activeList: 'standard' | 'custom'(有自定义数据时切换按钮才显示)
  * - isOverflow + canScrollLeft/Right:窄屏(<1360px)且内容宽度超出容器时,显示左右翻页箭头
  *
- * 数据来源:PALETTE_ITEMS(groupByPalette 已按 general/dataCodes/shapes 分桶)。
- * 自定义元素暂不开放:hasCustomElements 永远是 false(等 S5 store.customElements 接入后
- * 再从这里读,目前 ElementsPanel 也是同样的占位处理)。
+ * 数据来源:
+ * - 标准:PALETTE_ITEMS(groupByPalette 已按 general/dataCodes/shapes 分桶)
+ * - 自定义:props.customElements(由 TopBar 从 PrintDesigner 透传)
+ *
+ * 拖拽协议:与 ElementsPanel 共享 — application/x-designer-element 携带 JSON {type, payload}
  */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import type { ElementType } from "../../core/types";
+import type { Element, ElementType } from "../../core/types";
+import type { CustomElementTemplate } from "../../api/useDesigner";
 import { PALETTE_ITEMS, groupByPalette } from "../../core/palette";
 
-defineEmits<{
-  /** 点击 / 拖入元素(由 HeaderToolbar 透传到 PrintDesigner.onAdd) */
-  add: [type: ElementType];
+const props = defineProps<{
+  customElements?: CustomElementTemplate[];
+}>();
+
+const emit = defineEmits<{
+  /** 点击 / 拖入元素(由 TopBar 透传到 PrintDesigner.onAdd) */
+  add: [
+    type: ElementType,
+    pageIndex?: number,
+    position?: { x: number; y: number },
+    payload?: Partial<Element>,
+  ];
 }>();
 
 const SMALL_SCREEN_BREAKPOINT = 1360;
@@ -100,9 +128,9 @@ const SMALL_SCREEN_BREAKPOINT = 1360;
 const activeList = ref<"standard" | "custom">("standard");
 const isCustom = computed(() => activeList.value === "custom");
 
-/** 自定义元素列表(S5 之前没有数据源,固定为 []) */
-const customElements: ReadonlyArray<{ id: string; type: ElementType }> = [];
-const hasCustomElements = computed(() => customElements.length > 0);
+/** 自定义元素列表(由父组件透传,无数据时为空数组) */
+const customElements = computed(() => props.customElements ?? []);
+const hasCustomElements = computed(() => customElements.value.length > 0);
 
 const buckets = computed(() => groupByPalette([...PALETTE_ITEMS]));
 /** 标准元素按 group 顺序展开成 [group, group, group] 三组 */
@@ -112,15 +140,32 @@ const standardGroups = computed(() => [
   buckets.value.shapes,
 ]);
 
+/** 自定义图标 fallback:t.icon > PALETTE_ITEMS[type].icon > 空 */
+function customIcon(t: CustomElementTemplate): string {
+  if (t.icon) return t.icon;
+  return PALETTE_ITEMS.find((p) => p.type === t.type)?.icon ?? "";
+}
+
 function toggleList() {
   activeList.value = isCustom.value ? "standard" : "custom";
 }
 
-function onDragStart(e: DragEvent, type: ElementType) {
-  // 与 ElementsPanel 协议相同:'application/x-designer-element' 优先,'text/plain' 兜底
+function onStandardDragStart(e: DragEvent, type: ElementType) {
+  // 与 ElementsPanel 协议相同:'application/x-designer-element' 携带 JSON,
+  // text/plain 兜底(老代码兼容)
+  const json = JSON.stringify({ type, payload: undefined });
+  e.dataTransfer?.setData("application/x-designer-element", json);
   e.dataTransfer?.setData("text/plain", type);
-  e.dataTransfer?.setData("application/x-designer-element", type);
   if (e.dataTransfer) e.dataTransfer.effectAllowed = "copy";
+}
+function onCustomDragStart(e: DragEvent, t: CustomElementTemplate) {
+  const json = JSON.stringify({ type: t.type, payload: t.element });
+  e.dataTransfer?.setData("application/x-designer-element", json);
+  e.dataTransfer?.setData("text/plain", t.type);
+  if (e.dataTransfer) e.dataTransfer.effectAllowed = "copy";
+}
+function onCustomClick(t: CustomElementTemplate) {
+  emit("add", t.type, undefined, undefined, t.element);
 }
 
 // ===== 窄屏溢出检测 =====

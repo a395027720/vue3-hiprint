@@ -68,6 +68,15 @@
                 />
               </div>
             </template>
+            <div class="prop-divider" />
+            <button
+              type="button"
+              class="prop-custom-add"
+              title="将当前元素的全部字段保存为自定义元素模板"
+              @click="emit('saveAsCustomElement', element.id)"
+            >
+              + 保存为自定义元素
+            </button>
           </div>
           <div v-if="element.type === 'table'" v-show="activeKey === 'columns'" class="prop-tab-pane">
             <div v-for="(c, i) in element.columns" :key="i" class="col-row">
@@ -119,6 +128,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   update: [id: string, patch: Partial<Element>]
+  /** 高级 tab「保存为自定义元素」按钮触发;由 PrintDesigner 弹 InputModal 收名字 */
+  saveAsCustomElement: [id: string]
 }>()
 
 const groups = computed(() => {
@@ -128,29 +139,32 @@ const groups = computed(() => {
   return groupByCategory(getSections(props.element))
 })
 
-/** 计算当前元素实际可用的 category 列表(基础一定有,其他按 section 是否非空) */
+/** 计算当前元素实际可用的 category 列表。
+ * 基础/样式/边框 按 section 是否非空决定;advanced 始终放最末位(内含"保存为自定义元素"按钮);
+ * table 元素的 columns 排在 advanced 前(分页相关配置在高级,列编辑更常用) */
 const availableCategories = computed<Category[]>(() => {
   const list: Category[] = []
   if (groups.value.base.length) list.push('base')
   if (groups.value.style.length) list.push('style')
   if (groups.value.border.length) list.push('border')
-  if (groups.value.advanced.length) list.push('advanced')
   if (props.element?.type === 'table') list.push('columns')
+  list.push('advanced') // 始终显示,固定在最末位
   return list
 })
 
 const activeKey = ref<Category>('base')
 
-/** 当前元素可见 tab 列表(带 label),供模板渲染按钮组 */
+/** 当前元素可见 tab 列表(带 label),供模板渲染按钮组。
+ * advanced 始终在最末位(承载「保存为自定义元素」入口,即使该元素无 advanced section) */
 const availableTabs = computed<{ key: Category; label: string }[]>(() => {
   const list: { key: Category; label: string }[] = []
   if (groups.value.base.length) list.push({ key: 'base', label: '基础' })
   if (groups.value.style.length) list.push({ key: 'style', label: '样式' })
   if (groups.value.border.length) list.push({ key: 'border', label: '边框' })
-  if (groups.value.advanced.length) list.push({ key: 'advanced', label: '高级' })
   if (props.element?.type === 'table') {
     list.push({ key: 'columns', label: `列 (${props.element.columns.length})` })
   }
+  list.push({ key: 'advanced', label: '高级' })
   return list
 })
 
@@ -337,5 +351,33 @@ function addColumn() {
   border-radius: 2px;
   cursor: pointer;
   font-size: 12px;
+}
+
+/* 「保存为自定义元素」按钮(高级 tab 底部) */
+.prop-divider {
+  margin: 16px 0 8px;
+  height: 1px;
+  background: #f0f0f0;
+}
+.prop-custom-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1677ff;
+  background: #fff;
+  border: 1px solid #91caff;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+.prop-custom-add:hover {
+  background: #e6f4ff;
+  border-color: #1677ff;
+  color: #0958d9;
 }
 </style>

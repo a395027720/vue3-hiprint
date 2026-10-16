@@ -2,6 +2,7 @@
   <div ref="rootRef" class="print-designer">
     <TopBar
       :dirty="designer.dirty.value"
+      :custom-elements="designer.customElements.value"
       @save="onSave"
       @save-as="onSaveAs"
       @preview="onPreview"
@@ -154,8 +155,11 @@
         <!-- 左侧元素面板(浮层,默认展开,紧贴左/上标尺右侧) -->
         <ElementsPanel
           :open="leftPanelOpen"
+          :designer="designer"
           @add="onAdd"
           @toggle-panel="onToggleLeftPanel"
+          @close="onCloseLeftPanel"
+          @start-custom-element-edit="onStartCustomElementEdit"
         />
         <DesignerCanvas
           :template="designer.template.value"
@@ -217,6 +221,7 @@
         :open="propertyPanelOpen"
         :element="designer.selected.value"
         @update="onUpdate"
+        @save-as-custom-element="onSaveAsCustomElement"
       />
     </div>
 
@@ -273,6 +278,16 @@
       style="display: none"
       @change="onImportFileChange"
     />
+
+    <!-- 保存为自定义元素:复用 InputModal -->
+    <InputModal
+      :show="saveAsCustomModal.open"
+      title="保存为自定义元素"
+      :initial-value="saveAsCustomModal.initial"
+      placeholder="请输入自定义元素名称"
+      @update:show="(v) => (saveAsCustomModal.open = v)"
+      @save="onConfirmSaveAsCustom"
+    />
   </div>
 </template>
 
@@ -301,6 +316,7 @@ import TopBar from "./layout/TopBar.vue";
 import HeaderToolbar from "./layout/HeaderToolbar.vue";
 import DesignerCanvas from "./canvas/DesignerCanvas.vue";
 import PropertyPanel from "./layout/PropertyPanel.vue";
+import InputModal from "./common/InputModal.vue";
 import Ruler from "./layout/Ruler.vue";
 import ElementsPanel from "./layout/ElementsPanel.vue";
 import StatusBar from "./layout/StatusBar.vue";
@@ -332,6 +348,10 @@ const designer = useDesigner({ template: props.initialTemplate });
 const rootRef = ref<HTMLElement | null>(null);
 provide("designer-root", rootRef);
 
+// modal container(provide 给 ElementsPanel 的 InputModal/CodeEditorModal teleport 用;
+// fallback 到 document.body 防止 bodyRef 尚未挂载时被读)
+provide("modal-container", computed(() => bodyRef.value ?? document.body));
+
 // 画布拖动模式(手型 / 空格键)
 const panOffset = ref({ x: 0, y: 0 });
 
@@ -345,6 +365,18 @@ const panModeActive = computed(() => togglePan.value || spaceHeld.value);
 const leftPanelOpen = ref(true);
 function onToggleLeftPanel() {
   leftPanelOpen.value = !leftPanelOpen.value;
+}
+function onCloseLeftPanel() {
+  leftPanelOpen.value = false;
+}
+/** 自定义元素进入编辑模式(本轮 = console.info 占位,后续接画布编辑面板) */
+function onStartCustomElementEdit(id: string) {
+  designer.startCustomElementEdit(id);
+  emit(
+    "notice",
+    `自定义元素已进入编辑模式:${id}(本轮未联动画布)`,
+    "info",
+  );
 }
 
 /** 右侧属性面板开/关(HeaderToolbar panel 按钮可以触发) */
@@ -598,8 +630,13 @@ const strikeActive = computed(
   () => selectedText.value?.textDecoration === "line-through",
 );
 
-function onAdd(type: ElementType, pageIndex?: number, position?: { x: number; y: number }) {
-  designer.add(type, pageIndex, position);
+function onAdd(
+  type: ElementType,
+  pageIndex?: number,
+  position?: { x: number; y: number },
+  payload?: Partial<Element>,
+) {
+  designer.add(type, pageIndex, position, payload);
 }
 
 function onMove(id: string, x: number, y: number) {
@@ -670,6 +707,44 @@ function onCtxAction(
 
 function onUpdate(id: string, patch: Partial<Element>) {
   designer.update(id, patch);
+}
+
+/** 属性面板高级 tab「保存为自定义元素」:弹 InputModal 收名字,记录当前元素快照 */
+const saveAsCustomModal = ref<{ open: boolean; elementId: string | null; initial: string }>({
+  open: false,
+  elementId: null,
+  initial: "",
+});
+
+function onSaveAsCustomElement(elementId: string) {
+  const el = designer.selected.value;
+  if (!el || el.id !== elementId) return;
+  // 默认名 = type + id 末尾 4 位,用户可在弹窗里改
+  saveAsCustomModal.value = {
+    open: true,
+    elementId,
+    initial: `${el.type}-${el.id.slice(-4)}`,
+  };
+}
+
+function onConfirmSaveAsCustom(name: string) {
+  const el = designer.selected.value;
+  const elementId = saveAsCustomModal.value.elementId;
+  if (!el || !elementId || el.id !== elementId) {
+    saveAsCustomModal.value.open = false;
+    return;
+  }
+  // element 快照:拷贝当前元素的 type + 所有非 id 字段作为新自定义元素的覆盖
+  const { id: _dropId, ...snapshot } = el;
+  designer.addCustomElement({
+    name,
+    type: el.type,
+    icon: undefined,
+    element: snapshot as Partial<Element>,
+    group: "custom",
+  });
+  saveAsCustomModal.value.open = false;
+  emit("notice", `已保存为自定义元素:${name}`, "success");
 }
 
 function onRemove(id: string) {

@@ -38,6 +38,25 @@ import {
 import { History } from '../core/history'
 import { nextId as createId } from '../core/id'
 import { alignHorizontal, alignVertical } from '../core/align'
+import { CUSTOM_ITEMS_KEY } from '../core/palette'
+
+/** 自定义元素模板:用户从标准元素衍生 + 设置 element 字段覆盖 + 测试数据 */
+export interface CustomElementTemplate {
+  id: string
+  name: string
+  type: ElementType
+  /** 自定义图标 SVG 字符串;为空 fallback 到 PALETTE_ITEMS[type].icon */
+  icon?: string
+  /** 拖入画布时 createElement(type, element) 合并覆盖字段 */
+  element: Partial<Element>
+  /** 「测试数据」编辑器输出;留口给后续 print 时覆盖 printData */
+  testData?: Record<string, unknown>
+  /** 业务分组(预留);新元素默认 'custom' */
+  group: 'general' | 'dataCodes' | 'shapes' | 'custom'
+  schemaVersion: 1
+  createdAt: number
+  updatedAt: number
+}
 
 /** 用户自定义参考线 */
 export interface Guide {
@@ -242,6 +261,37 @@ export interface UseDesignerReturn {
   showFooterLine: Ref<boolean>
   /** 切换页脚分隔线显示 */
   toggleShowFooterLine: () => void
+  // ===== 自定义元素(localStorage 持久化,S5 引入)=====
+  /** 自定义元素列表(从 localStorage 初始化,每次 CRUD 自动持久化) */
+  customElements: Ref<CustomElementTemplate[]>
+  /** 当前正在编辑的自定义元素 id(预留,本轮不接画布交互) */
+  editingCustomElementId: Ref<string | null>
+  /** 新增自定义元素,返回新 id */
+  addCustomElement: (
+    tpl: Omit<CustomElementTemplate, 'id' | 'schemaVersion' | 'createdAt' | 'updatedAt'>,
+  ) => string
+  /** 编辑自定义元素(局部 patch,带 updatedAt 时间戳) */
+  editCustomElement: (
+    id: string,
+    patch: Partial<
+      Pick<
+        CustomElementTemplate,
+        'name' | 'element' | 'testData' | 'icon' | 'group'
+      >
+    >,
+  ) => void
+  /** 复制自定义元素,可选 name 覆盖,返回新 id */
+  copyCustomElement: (id: string, overrides?: { name?: string }) => string
+  /** 删除自定义元素(同步清理 editingCustomElementId) */
+  removeCustomElement: (id: string) => void
+  /** 手动触发持久化(默认每次 CRUD 自动写,本方法暴露给调试) */
+  persistCustomElements: () => void
+  /** 进入自定义元素编辑模式(预留,本轮不接画布) */
+  startCustomElementEdit: (id: string) => void
+  /** 退出自定义元素编辑模式 */
+  cancelCustomElementEdit: () => void
+  /** 自定义元素右键菜单事件总线(本轮 = console.debug 替代;后续 watcher 可订阅) */
+  emitContextMenuEvent: (eventName: string, detail?: unknown) => void
 }
 
 export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn {
@@ -439,6 +489,7 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     type: ElementType,
     pageIndex?: number,
     position?: { x: number; y: number },
+    payload?: Partial<Element>,
   ): Element {
     const tpl = template.value
     const pi = pageIndex ?? currentPageIndex.value
@@ -451,10 +502,121 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     const y = position
       ? Math.max(0, Math.min(tpl.paper.height - 4, position.y))
       : fallbackY
-    const el = createElement(type, { x, y })
+    // 鼠标位置 x/y 优先于 payload:自定义元素快照可能包含原 x/y,
+    // 但拖入时应当落到用户松手的坐标,而不是"上次保存时的位置"
+    const overrides: Partial<Element> = { ...(payload ?? {}), x, y }
+    const el = createElement(type, overrides)
     commit(addEl(tpl, pi, el))
     selectedId.value = el.id
     return el
+  }
+
+  // ===== 自定义元素(localStorage 持久化)=====
+
+  /**
+   * 从 localStorage 读取已保存的自定义元素。
+   * 容错:解析失败 / 字段缺失 → 跳过该条(不污染 store),console.warn 但不抛错。
+   */
+  function loadCustomElements(): CustomElementTemplate[] {
+    if (typeof localStorage === 'undefined') return []
+    const raw = localStorage.getItem(CUSTOM_ITEMS_KEY)
+    if (!raw) return []
+    try {
+      const parsed = JSON.parse(raw)
+      if (!Array.isArray(parsed)) return []
+      return parsed.filter((x): x is CustomElementTemplate => {
+        return (
+          x &&
+          typeof x.id === 'string' &&
+          typeof x.name === 'string' &&
+          typeof x.type === 'string' &&
+          x.element &&
+          typeof x.element === 'object'
+        )
+      })
+    } catch (err) {
+      console.warn('[useDesigner] 读取自定义元素失败,使用空列表', err)
+      return []
+    }
+  }
+
+  const customElements = ref<CustomElementTemplate[]>(loadCustomElements())
+  const editingCustomElementId = ref<string | null>(null)
+
+  /** 写入 localStorage;QuotaExceededError 时降级为 console.warn */
+  function persistCustomElements(): void {
+    if (typeof localStorage === 'undefined') return
+    try {
+      localStorage.setItem(CUSTOM_ITEMS_KEY, JSON.stringify(customElements.value))
+    } catch (err) {
+      console.warn('[useDesigner] 持久化自定义元素失败', err)
+    }
+  }
+
+  function addCustomElement(
+    input: Omit<CustomElementTemplate, 'id' | 'schemaVersion' | 'createdAt' | 'updatedAt'>,
+  ): string {
+    const now = Date.now()
+    const tpl: CustomElementTemplate = {
+      ...input,
+      id: createId(),
+      schemaVersion: 1,
+      createdAt: now,
+      updatedAt: now,
+    }
+    customElements.value = [...customElements.value, tpl]
+    persistCustomElements()
+    return tpl.id
+  }
+
+  function editCustomElement(
+    id: string,
+    patch: Partial<
+      Pick<CustomElementTemplate, 'name' | 'element' | 'testData' | 'icon' | 'group'>
+    >,
+  ): void {
+    let changed = false
+    customElements.value = customElements.value.map((x) => {
+      if (x.id !== id) return x
+      changed = true
+      return { ...x, ...patch, updatedAt: Date.now() }
+    })
+    if (changed) persistCustomElements()
+  }
+
+  function copyCustomElement(id: string, overrides?: { name?: string }): string {
+    const src = customElements.value.find((x) => x.id === id)
+    if (!src) return ''
+    const now = Date.now()
+    const tpl: CustomElementTemplate = {
+      ...src,
+      id: createId(),
+      name: overrides?.name?.trim() || `${src.name} 副本`,
+      schemaVersion: 1,
+      createdAt: now,
+      updatedAt: now,
+    }
+    customElements.value = [...customElements.value, tpl]
+    persistCustomElements()
+    return tpl.id
+  }
+
+  function removeCustomElement(id: string): void {
+    customElements.value = customElements.value.filter((x) => x.id !== id)
+    if (editingCustomElementId.value === id) editingCustomElementId.value = null
+    persistCustomElements()
+  }
+
+  function startCustomElementEdit(id: string): void {
+    editingCustomElementId.value = id
+  }
+  function cancelCustomElementEdit(): void {
+    editingCustomElementId.value = null
+  }
+
+  /** 右键菜单事件总线:本轮 console.debug 占位,后续 PrintDesigner 可注入 watcher */
+  function emitContextMenuEvent(eventName: string, detail?: unknown): void {
+    console.debug('[useDesigner] ctx-menu-event', eventName, detail)
   }
 
   function update(id: string, patch: Partial<Element>, pageIndex?: number): void {
@@ -941,5 +1103,16 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     updateGuide,
     removeGuide,
     setHighlightedGuide,
+    // 自定义元素
+    customElements,
+    editingCustomElementId,
+    addCustomElement,
+    editCustomElement,
+    copyCustomElement,
+    removeCustomElement,
+    persistCustomElements,
+    startCustomElementEdit,
+    cancelCustomElementEdit,
+    emitContextMenuEvent,
   }
 }

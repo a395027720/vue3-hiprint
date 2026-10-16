@@ -352,11 +352,12 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  /** palette 拖入或点击 add。拖入时携带鼠标 mm 坐标(松开位置) */
+  /** palette 拖入或点击 add。拖入时携带鼠标 mm 坐标(松开位置);payload 仅自定义元素使用,合并到 createElement */
   add: [
     type: ElementType,
     pageIndex?: number,
     position?: { x: number; y: number },
+    payload?: Partial<Element>,
   ];
   /** 选中元素 id(传 null 取消选中) */
   select: [id: string | null];
@@ -712,8 +713,40 @@ function onRemovePageConfirm() {
 }
 
 function onDrop(e: DragEvent) {
-  const type = e.dataTransfer?.getData("text/plain") as ElementType;
+  const dt = e.dataTransfer;
+  if (!dt) return;
+
+  // 1. 优先读 application/x-designer-element:
+  //    - 可能是 JSON {type, payload}(自定义元素)
+  //    - 也可能是裸 type 字符串(标准元素,沿用旧协议)
+  let type: ElementType | "" = "";
+  let payload: Partial<Element> | undefined;
+  const raw = dt.getData("application/x-designer-element");
+  if (raw) {
+    if (raw.trimStart().startsWith("{")) {
+      try {
+        const parsed = JSON.parse(raw) as {
+          type?: ElementType;
+          payload?: Partial<Element>;
+        };
+        if (parsed.type) type = parsed.type;
+        if (parsed.payload && typeof parsed.payload === "object") {
+          payload = parsed.payload;
+        }
+      } catch {
+        /* JSON 解析失败 → fallback 到 text/plain */
+      }
+    } else {
+      type = raw as ElementType;
+    }
+  }
+  // 2. fallback text/plain(其他来源拖入,如 ElementsPanel 标准元素老路径)
+  if (!type) {
+    const t = dt.getData("text/plain");
+    if (t) type = t as ElementType;
+  }
   if (!type) return;
+
   // 从 .canvas 的 data-page-index 读出"鼠标在哪个 page 上"(currentTarget = .canvas)
   const canvas = (e.currentTarget as HTMLElement).classList.contains("canvas")
     ? (e.currentTarget as HTMLElement)
@@ -723,20 +756,20 @@ function onDrop(e: DragEvent) {
   const pageIndexAttr = (e.currentTarget as HTMLElement).dataset.pageIndex;
   const pageIndex = pageIndexAttr != null ? Number(pageIndexAttr) : 0;
   if (!canvas) {
-    emit("add", type, pageIndex);
+    emit("add", type, pageIndex, undefined, payload);
     return;
   }
   const cr = canvas.getBoundingClientRect();
   const localX = e.clientX - cr.left;
   const localY = e.clientY - cr.top;
   if (localX < 0 || localY < 0) {
-    emit("add", type, pageIndex);
+    emit("add", type, pageIndex, undefined, payload);
     return;
   }
   const z = zoomValue.value;
   const x = localX / (mmToPx(1) * z);
   const y = localY / (mmToPx(1) * z);
-  emit("add", type, pageIndex, { x, y });
+  emit("add", type, pageIndex, { x, y }, payload);
 }
 
 function onWrapDragOver(e: DragEvent) {
