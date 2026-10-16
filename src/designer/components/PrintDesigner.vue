@@ -488,13 +488,13 @@ const rulerRangeV = computed(() => {
     color: RANGE_COLOR,
   };
 });
-/** 选中元素的 mm 数字 chip(在 Ruler 内部 canvas 上画,跟 ruler 浮层生命周期一致,scroll 时不滚走) */
+/** 选中元素的 mm 数字 chip(在 Ruler.vue 浮层画,chip 按 side 决定偏移方向避让 indicator 短线) */
 const rulerLabelsH = computed(() => {
   const el = designer.selected.value;
   if (!el) return [];
   return [
-    { mm: el.x, text: formatSelectedMm(el.x), color: "#69c0ff" },
-    { mm: el.x + el.w, text: formatSelectedMm(el.x + el.w), color: "#69c0ff" },
+    { mm: el.x, text: formatSelectedMm(el.x), color: "#69c0ff", side: "left" as const },
+    { mm: el.x + el.w, text: formatSelectedMm(el.x + el.w), color: "#69c0ff", side: "right" as const },
   ];
 });
 const rulerLabelsV = computed(() => {
@@ -506,11 +506,13 @@ const rulerLabelsV = computed(() => {
       mm: el.y + pageOffsetMm,
       text: formatSelectedMm(el.y + pageOffsetMm),
       color: "#69c0ff",
+      side: "top" as const,
     },
     {
       mm: el.y + el.h + pageOffsetMm,
       text: formatSelectedMm(el.y + el.h + pageOffsetMm),
       color: "#69c0ff",
+      side: "bottom" as const,
     },
   ];
 });
