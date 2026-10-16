@@ -5,137 +5,139 @@
         class="side-btn"
         title="添加元素"
         @click="$emit('addElement')"
-      ><plus-outlined /></button>
+      >
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
+          <line x1="8" y1="3" x2="8" y2="13" />
+          <line x1="3" y1="8" x2="13" y2="8" />
+        </svg>
+      </button>
       <button
         class="side-btn"
         :disabled="!element"
         title="复制元素"
         @click="$emit('duplicate')"
-      ><copy-outlined /></button>
+      >
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="5" y="5" width="8" height="8" rx="1" />
+          <path d="M3 11V4a1 1 0 0 1 1-1h7" />
+        </svg>
+      </button>
       <button
         class="side-btn"
         :disabled="!element"
         title="上移一层"
         @click="$emit('moveUp')"
-      ><arrow-up-outlined /></button>
+      >
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
+          <line x1="8" y1="13" x2="8" y2="3" />
+          <polyline points="4,7 8,3 12,7" />
+        </svg>
+      </button>
       <button
         class="side-btn"
         :disabled="!element"
         title="下移一层"
         @click="$emit('moveDown')"
-      ><arrow-down-outlined /></button>
+      >
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
+          <line x1="8" y1="3" x2="8" y2="13" />
+          <polyline points="4,9 8,13 12,9" />
+        </svg>
+      </button>
     </div>
     <aside class="prop-panel">
       <div class="prop-body">
         <div v-if="!element" class="empty">未选中元素</div>
         <template v-else>
-          <a-tabs v-model:active-key="activeKey" class="prop-tabs">
-            <a-tab-pane
-              v-if="groups.base.length"
-              key="base"
-              tab="基础"
-            >
-              <template v-for="section in groups.base" :key="section.title">
-                <div class="section-title">{{ section.title }}</div>
-                <div class="fields" :class="`cols-${section.columns ?? 1}`">
-                  <FieldRow
-                    v-for="f in section.fields"
-                    :key="f.key"
-                    :field="f"
-                    :element="element"
-                    @change="onFieldChange(f, $event)"
-                  />
-                </div>
-              </template>
-            </a-tab-pane>
-
-            <a-tab-pane
-              v-if="groups.style.length"
-              key="style"
-              tab="样式"
-            >
-              <template v-for="section in groups.style" :key="section.title">
-                <div class="section-title">{{ section.title }}</div>
-                <div class="fields" :class="`cols-${section.columns ?? 1}`">
-                  <FieldRow
-                    v-for="f in section.fields"
-                    :key="f.key"
-                    :field="f"
-                    :element="element"
-                    @change="onFieldChange(f, $event)"
-                  />
-                </div>
-              </template>
-            </a-tab-pane>
-
-            <a-tab-pane
-              v-if="groups.border.length"
-              key="border"
-              tab="边框"
-            >
-              <template v-for="section in groups.border" :key="section.title">
-                <div class="section-title">{{ section.title }}</div>
-                <div class="fields" :class="`cols-${section.columns ?? 1}`">
-                  <FieldRow
-                    v-for="f in section.fields"
-                    :key="f.key"
-                    :field="f"
-                    :element="element"
-                    @change="onFieldChange(f, $event)"
-                  />
-                </div>
-              </template>
-              <!-- 4 边独立(已由 BORDER_SECTION 字段渲染) -->
-            </a-tab-pane>
-
-            <a-tab-pane
-              v-if="groups.advanced.length"
-              key="advanced"
-              tab="高级"
-            >
-              <template v-for="section in groups.advanced" :key="section.title">
-                <div class="section-title">{{ section.title }}</div>
-                <div class="fields" :class="`cols-${section.columns ?? 1}`">
-                  <FieldRow
-                    v-for="f in section.fields"
-                    :key="f.key"
-                    :field="f"
-                    :element="element"
-                    @change="onFieldChange(f, $event)"
-                  />
-                </div>
-              </template>
-            </a-tab-pane>
-
-            <a-tab-pane
-              v-if="element.type === 'table'"
-              key="columns"
-              :tab="`列 (${element.columns.length})`"
-            >
-              <div v-for="(c, i) in element.columns" :key="i" class="col-row">
-                <input
-                  type="text"
-                  :value="c.field"
-                  placeholder="field"
-                  @input="patchColumn(i, 'field', $event)"
+          <div class="prop-tabs">
+            <button
+              v-for="tab in availableTabs"
+              :key="tab.key"
+              class="prop-tab-btn"
+              :class="{ active: activeKey === tab.key }"
+              @click="activeKey = tab.key"
+            >{{ tab.label }}</button>
+          </div>
+          <div v-show="activeKey === 'base'" class="prop-tab-pane">
+            <template v-for="section in groups.base" :key="section.title">
+              <div class="section-title">{{ section.title }}</div>
+              <div class="fields" :class="`cols-${section.columns ?? 1}`">
+                <FieldRow
+                  v-for="f in section.fields"
+                  :key="f.key"
+                  :field="f"
+                  :element="element"
+                  @change="onFieldChange(f, $event)"
                 />
-                <input
-                  type="text"
-                  :value="c.title"
-                  placeholder="标题"
-                  @input="patchColumn(i, 'title', $event)"
-                />
-                <input
-                  type="number"
-                  :value="c.width"
-                  placeholder="宽"
-                  @input="patchColumn(i, 'width', $event)"
-                />
-                <button class="col-del" @click="removeColumn(i)">×</button>
               </div>
-              <button class="col-add" @click="addColumn">+ 添加列</button>
-            </a-tab-pane>
-          </a-tabs>
+            </template>
+          </div>
+          <div v-show="activeKey === 'style'" class="prop-tab-pane">
+            <template v-for="section in groups.style" :key="section.title">
+              <div class="section-title">{{ section.title }}</div>
+              <div class="fields" :class="`cols-${section.columns ?? 1}`">
+                <FieldRow
+                  v-for="f in section.fields"
+                  :key="f.key"
+                  :field="f"
+                  :element="element"
+                  @change="onFieldChange(f, $event)"
+                />
+              </div>
+            </template>
+          </div>
+          <div v-show="activeKey === 'border'" class="prop-tab-pane">
+            <template v-for="section in groups.border" :key="section.title">
+              <div class="section-title">{{ section.title }}</div>
+              <div class="fields" :class="`cols-${section.columns ?? 1}`">
+                <FieldRow
+                  v-for="f in section.fields"
+                  :key="f.key"
+                  :field="f"
+                  :element="element"
+                  @change="onFieldChange(f, $event)"
+                />
+              </div>
+            </template>
+          </div>
+          <div v-show="activeKey === 'advanced'" class="prop-tab-pane">
+            <template v-for="section in groups.advanced" :key="section.title">
+              <div class="section-title">{{ section.title }}</div>
+              <div class="fields" :class="`cols-${section.columns ?? 1}`">
+                <FieldRow
+                  v-for="f in section.fields"
+                  :key="f.key"
+                  :field="f"
+                  :element="element"
+                  @change="onFieldChange(f, $event)"
+                />
+              </div>
+            </template>
+          </div>
+          <div v-if="element.type === 'table'" v-show="activeKey === 'columns'" class="prop-tab-pane">
+            <div v-for="(c, i) in element.columns" :key="i" class="col-row">
+              <input
+                type="text"
+                :value="c.field"
+                placeholder="field"
+                @input="patchColumn(i, 'field', $event)"
+              />
+              <input
+                type="text"
+                :value="c.title"
+                placeholder="标题"
+                @input="patchColumn(i, 'title', $event)"
+              />
+              <input
+                type="number"
+                :value="c.width"
+                placeholder="宽"
+                @input="patchColumn(i, 'width', $event)"
+              />
+              <button class="col-del" @click="removeColumn(i)">×</button>
+            </div>
+            <button class="col-add" @click="addColumn">+ 添加列</button>
+          </div>
         </template>
       </div>
     </aside>
@@ -187,6 +189,19 @@ const availableCategories = computed<Category[]>(() => {
 })
 
 const activeKey = ref<Category>('base')
+
+/** 当前元素可见 tab 列表(带 label),供模板渲染按钮组 */
+const availableTabs = computed<{ key: Category; label: string }[]>(() => {
+  const list: { key: Category; label: string }[] = []
+  if (groups.value.base.length) list.push({ key: 'base', label: '基础' })
+  if (groups.value.style.length) list.push({ key: 'style', label: '样式' })
+  if (groups.value.border.length) list.push({ key: 'border', label: '边框' })
+  if (groups.value.advanced.length) list.push({ key: 'advanced', label: '高级' })
+  if (props.element?.type === 'table') {
+    list.push({ key: 'columns', label: `列 (${props.element.columns.length})` })
+  }
+  return list
+})
 
 // 选中元素变化时,重置到第一个可用的 tab
 watch(availableCategories, (list) => {
@@ -327,6 +342,34 @@ function addColumn() {
 .prop-tabs :deep(.ant-tabs-tab) {
   padding: 6px 12px;
   font-size: 13px;
+}
+/* 自绘 tab 按钮(替代 a-tabs) */
+.prop-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.prop-tab-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #555;
+  cursor: pointer;
+  margin-bottom: -1px;
+  transition: color 120ms, border-color 120ms;
+}
+.prop-tab-btn:hover {
+  color: #1677ff;
+}
+.prop-tab-btn.active {
+  color: #1677ff;
+  border-bottom-color: #1677ff;
+}
+.prop-tab-pane {
+  /* 与 a-tab-pane 视觉一致,无 padding */
 }
 .section-title {
   font-weight: 600;

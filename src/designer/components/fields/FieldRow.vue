@@ -44,6 +44,15 @@
       :hideEmptyStrike="field.key === 'backgroundColor'"
       @update:model-value="onColorChange"
     />
+    <label v-else-if="field.kind === 'switch'" class="switch-wrap">
+      <input
+        type="checkbox"
+        class="switch-native"
+        :checked="!!displayValue"
+        @change="onSwitchChange"
+      />
+      <span class="switch-track" aria-hidden="true"><span class="switch-thumb" /></span>
+    </label>
     <label v-else-if="field.kind === 'checkbox'" class="checkbox-wrap">
       <input
         type="checkbox"
@@ -75,6 +84,13 @@ const emit = defineEmits<{
  *  字符串静默清空。改成 fake target,PropertyPanel 只读 target.value,不受影响。 */
 function onColorChange(color: string | undefined) {
   const target = { type: "color", value: color ?? "" };
+  emit("change", { target } as unknown as Event);
+}
+
+/** a-switch 的 change 直接给 boolean,PropertyPanel.onFieldChange 要 Event。
+ *  转成 fake target 让 onFieldChange 走 checkbox 同样的 target.checked 分支 */
+function onSwitchChange(checked: boolean | string | number) {
+  const target = { type: "checkbox", checked: !!checked };
   emit("change", { target } as unknown as Event);
 }
 
@@ -144,6 +160,59 @@ textarea {
   display: flex;
   align-items: center;
   margin-bottom: 8px;
+}
+/* switch:label 左、switch 右两端对齐 */
+.field-row.kind-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.field-row.kind-switch .field-label {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+/* 自绘 switch(复现 antd 小尺寸外观):checkbox 隐藏,样式全在 track/thumb 上 */
+.switch-wrap {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.switch-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+.switch-track {
+  position: relative;
+  display: inline-block;
+  width: 28px;
+  height: 16px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 16px;
+  transition: background 200ms;
+}
+.switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: left 200ms;
+}
+.switch-native:checked + .switch-track {
+  background: #1890ff;
+}
+.switch-native:checked + .switch-track .switch-thumb {
+  left: 14px;
 }
 /* color 字段:label 在左,ColorPicker 触发器在右(参考 Vue-Print-Designer) */
 .field-row.kind-color {
