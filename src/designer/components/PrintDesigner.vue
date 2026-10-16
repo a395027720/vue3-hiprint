@@ -205,6 +205,10 @@
           @change-header-height="(mm) => designer.setHeaderHeight(mm)"
           @change-footer-height="(mm) => designer.setFooterHeight(mm)"
           @set-zoom="onSetZoom"
+          @page-add="designer.addPage"
+          @page-copy="(i) => designer.copyPage(i)"
+          @page-move="(from, to) => designer.movePage(from, to)"
+          @page-remove="(i) => designer.removePage(i)"
         />
       </div>
       <PropertyPanel
@@ -544,12 +548,27 @@ const strikeActive = computed(
   () => selectedText.value?.textDecoration === "line-through",
 );
 
-function onAdd(type: ElementType, position?: { x: number; y: number }) {
-  designer.add(type, undefined, position);
+function onAdd(type: ElementType, pageIndex?: number, position?: { x: number; y: number }) {
+  designer.add(type, pageIndex, position);
 }
 
 function onAddDefault() {
   designer.add("text");
+}
+
+function onDuplicate() {
+  const id = designer.selectedId.value;
+  if (id) designer.duplicate(id);
+}
+
+function onMoveUp() {
+  const id = designer.selectedId.value;
+  if (id) designer.moveUp(id);
+}
+
+function onMoveDown() {
+  const id = designer.selectedId.value;
+  if (id) designer.moveDown(id);
 }
 
 function onMove(id: string, x: number, y: number) {
@@ -628,21 +647,6 @@ function onRemove(id: string) {
 
 function onSelectMany(ids: string[]) {
   designer.selectMany(ids);
-}
-
-function onDuplicate() {
-  const id = designer.selectedId.value;
-  if (id) designer.duplicate(id);
-}
-
-function onMoveUp() {
-  const id = designer.selectedId.value;
-  if (id) designer.moveUp(id);
-}
-
-function onMoveDown() {
-  const id = designer.selectedId.value;
-  if (id) designer.moveDown(id);
 }
 
 function onAlignAll(

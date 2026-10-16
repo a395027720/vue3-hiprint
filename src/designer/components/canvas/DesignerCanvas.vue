@@ -16,9 +16,76 @@
           class="print-page"
           :style="pageStyle(pageIndex)"
         >
+          <!-- 每页右上角浮动操作按钮组(添加/复制/粘贴/↑/页码/↓),跟随 zoom 反向缩放保持视觉尺寸 -->
+          <div class="page-actions" :style="pageActionsStyle">
+            <button
+              class="pa-btn"
+              title="添加页(末尾)"
+              @click="emit('pageAdd')"
+            >
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+                <line x1="8" y1="3" x2="8" y2="13" />
+                <line x1="3" y1="8" x2="13" y2="8" />
+              </svg>
+            </button>
+            <button
+              class="pa-btn"
+              title="复制此页"
+              @click="emit('pageCopy', pageIndex)"
+            >
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="5" y="5" width="8" height="8" rx="1" />
+                <path d="M3 11V4a1 1 0 0 1 1-1h7" />
+              </svg>
+            </button>
+            <button
+              class="pa-btn"
+              :disabled="pageIndex === 0"
+              title="上移一页"
+              @click="emit('pageMove', pageIndex, pageIndex - 1)"
+            >
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+                <line x1="8" y1="13" x2="8" y2="3" />
+                <polyline points="4,7 8,3 12,7" />
+              </svg>
+            </button>
+            <input
+              class="pa-page-no"
+              type="number"
+              :min="1"
+              :max="template.pages.length"
+              :value="pageIndex + 1"
+              :title="`当前第 ${pageIndex + 1} / ${template.pages.length} 页`"
+              @change="onPageNoInput(pageIndex, $event)"
+            />
+            <button
+              class="pa-btn"
+              :disabled="pageIndex >= template.pages.length - 1"
+              title="下移一页"
+              @click="emit('pageMove', pageIndex, pageIndex + 1)"
+            >
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+                <line x1="8" y1="3" x2="8" y2="13" />
+                <polyline points="4,9 8,13 12,9" />
+              </svg>
+            </button>
+            <button
+              class="pa-btn pa-btn-danger"
+              :disabled="pageIndex === 0"
+              title="删除此页"
+              @click="onPageRemove(pageIndex)"
+            >
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+                <line x1="3" y1="4" x2="13" y2="4" />
+                <path d="M5 4V2.5A1.5 1.5 0 0 1 6.5 1h3A1.5 1.5 0 0 1 11 2.5V4" />
+                <path d="M4 4l1 9.5A1.5 1.5 0 0 0 6.5 15h3a1.5 1.5 0 0 0 1.5-1.5L12 4" />
+              </svg>
+            </button>
+          </div>
           <div
             class="canvas"
             :style="canvasStyle"
+            :data-page-index="pageIndex"
             @dragover.prevent
             @drop.stop="onDrop"
           >
@@ -234,7 +301,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   /** palette 拖入或点击 add。拖入时携带鼠标 mm 坐标(松开位置) */
-  add: [type: ElementType, position?: { x: number; y: number }];
+  add: [type: ElementType, pageIndex?: number, position?: { x: number; y: number }];
   /** 选中元素 id(传 null 取消选中) */
   select: [id: string | null];
   /** 框选结束:批量选中 */
@@ -282,6 +349,11 @@ const emit = defineEmits<{
   changeFooterHeight: [mm: number];
   /** ctrl/cmd + 滚轮触发缩放,父级走 designer.setZoom */
   setZoom: [z: number];
+  /** 每页卡片右上角浮动按钮组(按源 Vue-Print-Designer Canvas.vue 仿) */
+  pageAdd: [];
+  pageCopy: [pageIndex: number];
+  pageMove: [from: number, to: number];
+  pageRemove: [pageIndex: number];
 }>();
 
 // 吸附阈值(单位:mm,4px / 3.78 ≈ 1mm,这里取 1mm 适中)
@@ -312,6 +384,12 @@ const canvasStyle = computed(() => ({
   backgroundColor: props.canvasBackground || "#ffffff",
   backgroundImage: gridStyle.value.image,
   backgroundSize: gridStyle.value.size || undefined,
+}));
+
+/** 每页右上角浮动按钮组:反向 zoom 缩放保持视觉尺寸恒定(跟源 Vue-Print-Designer 一致) */
+const pageActionsStyle = computed(() => ({
+  transform: `scale(${1 / zoomValue.value})`,
+  transformOrigin: "top right",
 }));
 
 /** 可印刷区域框:水平/垂直边距都 > 0 才显示 */
@@ -543,31 +621,51 @@ function elBox(el: Element) {
   };
 }
 
+/** 页码输入框:输入目标序号(1-based)→ emit pageMove(from, to-1) */
+function onPageNoInput(fromIndex: number, ev: Event) {
+  const target = ev.target as HTMLInputElement
+  const order = Number.parseInt(target.value, 10)
+  if (!Number.isFinite(order)) return
+  const total = props.template.pages.length
+  const toIndex = Math.max(0, Math.min(total - 1, order - 1))
+  if (toIndex === fromIndex) return
+  emit("pageMove", fromIndex, toIndex)
+}
+
+/** 删除页:window.confirm 二次确认后 emit pageRemove(idx);useDesigner 那边会清 selectedId */
+function onPageRemove(pageIndex: number) {
+  if (pageIndex === 0) return
+  const ok = window.confirm(`确定删除第 ${pageIndex + 1} 页?`)
+  if (!ok) return
+  emit("pageRemove", pageIndex)
+}
+
 function onDrop(e: DragEvent) {
   const type = e.dataTransfer?.getData("text/plain") as ElementType;
   if (!type) return;
-  // 拖入时按松开位置放置:用 .canvas 自身的 rect 算局部 px
-  // (frame 包含 page 错开 + padding,直接用 frame 会把元素推到中间)
+  // 从 .canvas 的 data-page-index 读出"鼠标在哪个 page 上"(currentTarget = .canvas)
   const canvas = (e.currentTarget as HTMLElement).classList.contains("canvas")
     ? (e.currentTarget as HTMLElement)
     : ((e.currentTarget as HTMLElement).querySelector(
         ".canvas",
       ) as HTMLElement | null);
+  const pageIndexAttr = (e.currentTarget as HTMLElement).dataset.pageIndex;
+  const pageIndex = pageIndexAttr != null ? Number(pageIndexAttr) : 0;
   if (!canvas) {
-    emit("add", type);
+    emit("add", type, pageIndex);
     return;
   }
   const cr = canvas.getBoundingClientRect();
   const localX = e.clientX - cr.left;
   const localY = e.clientY - cr.top;
   if (localX < 0 || localY < 0) {
-    emit("add", type);
+    emit("add", type, pageIndex);
     return;
   }
   const z = zoomValue.value;
   const x = localX / (mmToPx(1) * z);
   const y = localY / (mmToPx(1) * z);
-  emit("add", type, { x, y });
+  emit("add", type, pageIndex, { x, y });
 }
 
 function onWrapDragOver(e: DragEvent) {
@@ -887,6 +985,65 @@ watch(
   position: relative;
   flex-shrink: 0;
   /* width / height 由 :style 注入 */
+}
+/* 每页右上角浮动操作按钮组:跟 .print-page 右上角对齐,反向 zoom 缩放保持视觉尺寸恒定 */
+.page-actions {
+  position: absolute;
+  top: -36px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  z-index: 6;
+  /* 跟元素选中样式保持一致的字号,12px 视觉尺寸下紧凑 */
+  font-size: 12px;
+}
+.pa-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: #555;
+  cursor: pointer;
+}
+.pa-btn:hover:not(:disabled) {
+  background: #e6f4ff;
+  color: #1677ff;
+}
+.pa-btn-danger:hover:not(:disabled) {
+  background: #fff1f0;
+  color: #ff4d4f;
+}
+.pa-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.pa-page-no {
+  width: 32px;
+  height: 22px;
+  padding: 0 4px;
+  text-align: center;
+  border: 1px solid #e0e0e0;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #333;
+  background: #fafafa;
+  -moz-appearance: textfield;
+}
+.pa-page-no::-webkit-outer-spin-button,
+.pa-page-no::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 /* 拖动中延长线围成的范围浅蓝半透明填充已搬到 SnapAndSelfLinesOverlay.vue */

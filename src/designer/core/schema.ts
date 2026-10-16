@@ -201,6 +201,27 @@ export function createTemplate(overrides: Partial<Template> = {}): Template {
   }
 }
 
+/** 单个 element 换新 id 深拷贝(只给 clonePageWithNewIds 内部用,不导出) */
+function cloneElementWithNewId(el: Element): Element {
+  // table.columns 是嵌套数组,需要单独深拷贝
+  if (el.type === 'table') {
+    return {
+      ...el,
+      id: nextId(),
+      columns: el.columns.map((c) => ({ ...c })),
+    } as Element
+  }
+  return { ...el, id: nextId() }
+}
+
+/** 深拷贝一页(新 page id,所有 element 换新 id) */
+export function clonePageWithNewIds(src: Page): Page {
+  return {
+    id: nextId(),
+    elements: src.elements.map(cloneElementWithNewId),
+  }
+}
+
 // ========== Immutable update ==========
 
 /**

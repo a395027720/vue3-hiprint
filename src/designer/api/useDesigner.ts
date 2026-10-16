@@ -26,7 +26,9 @@ import type { Element, ElementType, Template } from '../core/types'
 import {
   addElement as addEl,
   allElements,
+  clonePageWithNewIds,
   createElement,
+  createPage,
   createTemplate,
   findElementGlobal,
   removeElement as removeEl,
@@ -104,6 +106,10 @@ export interface UseDesignerReturn {
   toggleLock: () => void
   /** 剪贴板是否非空 */
   hasClipboard: ComputedRef<boolean>
+  /** 复制指定页:idx+1 插入(入 history) */
+  copyPage: (pageIndex: number) => void
+  /** 删除指定页(入 history);删后清 selectedId 防止指向已删 page 的元素 */
+  removePage: (pageIndex: number) => void
   /** 当前页全选 */
   selectAllElements: () => void
   /** 多选对齐(单选时退化为单元素对齐) */
@@ -120,6 +126,12 @@ export interface UseDesignerReturn {
   clearElements: () => void
   /** 替换 paper(入 history) */
   setPaper: (paper: Template['paper']) => void
+  /** 添加新页(末尾追加,入 history) */
+  addPage: () => void
+  /** 复制指定页(深拷贝 elements + 换新 id,入 history) */
+  copyPage: (pageIndex: number) => void
+  /** 把 fromIndex 处的页移到 toIndex(支持上下移和跳页,入 history) */
+  movePage: (fromIndex: number, toIndex: number) => void
   /** 整体替换模板(用于 JSON 导入,入 history) */
   load: (tpl: Template) => void
   /** 导出 JSON 字符串 */
@@ -675,6 +687,50 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     commit(setPaperHelper(template.value, paper))
   }
 
+  function addPage(): void {
+    commit({
+      ...template.value,
+      pages: [...template.value.pages, createPage()],
+    })
+  }
+
+  function copyPage(pageIndex: number): void {
+    const src = template.value.pages[pageIndex]
+    if (!src) return
+    // 立即在 idx+1 插一份(换新 id)
+    const newPage = clonePageWithNewIds(src)
+    const pages = [...template.value.pages]
+    pages.splice(pageIndex + 1, 0, newPage)
+    commit({ ...template.value, pages })
+  }
+
+  function movePage(fromIndex: number, toIndex: number): void {
+    const pages = template.value.pages
+    if (
+      fromIndex < 0 ||
+      fromIndex >= pages.length ||
+      toIndex < 0 ||
+      toIndex >= pages.length ||
+      fromIndex === toIndex
+    ) {
+      return
+    }
+    const next = [...pages]
+    const [moved] = next.splice(fromIndex, 1)
+    next.splice(toIndex, 0, moved!)
+    commit({ ...template.value, pages: next })
+  }
+
+  function removePage(pageIndex: number): void {
+    const pages = template.value.pages
+    // 至少保留 1 页(第 1 页 idx=0 不能删)
+    if (pageIndex <= 0 || pageIndex >= pages.length) return
+    const next = pages.filter((_, i) => i !== pageIndex)
+    commit({ ...template.value, pages: next })
+    // 删后清掉可能指向已删 page 元素的选中态
+    clearSelection()
+  }
+
   function load(tpl: Template): void {
     commit(tpl)
     clearSelection()
@@ -826,6 +882,10 @@ export function useDesigner(options: UseDesignerOptions = {}): UseDesignerReturn
     deleteSelection,
     clearElements,
     setPaper,
+    addPage,
+    copyPage,
+    movePage,
+    removePage,
     load,
     toJson,
     loadJson,
