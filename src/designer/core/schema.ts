@@ -22,6 +22,7 @@ export function createText(overrides: Partial<ElementOfType<'text'>> = {}): Elem
     text: '文本',
     fontSize: DEFAULT_FONT_SIZE,
     showTitle: true,
+    print: true,
     ...overrides,
   }
 }

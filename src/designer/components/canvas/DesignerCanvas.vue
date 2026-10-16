@@ -59,6 +59,7 @@
                 selected: el.id === selectedId,
                 'is-image': el.type === 'image',
                 locked: el.locked,
+                'no-print': el.print === false,
                 'multi-selected':
                   isMultiSelected(el.id) && el.id !== selectedId,
                 'marquee-hit': marqueeHits.has(el.id),
@@ -149,7 +150,7 @@ import {
   watch,
 } from "vue";
 import type { Element, ElementType, Template } from "../../core/types";
-import { mmToPx } from "../../core/render";
+import { mmToPx, estimateTextHeight } from "../../core/render";
 import { allElements, findElementGlobal } from "../../core/schema";
 import { useCanvasDrag } from "../../composables/useCanvasDrag";
 import ElementRenderer from "../elements/ElementRenderer.vue";
@@ -527,11 +528,16 @@ function guideXStyle(positionMm: number): string {
 function elBox(el: Element) {
   // 元素用 raw mm→px 数值,父级 .canvas-scale 的 transform: scale(zoom) 视觉缩放
   // 这样跟 Vue-Print-Designer 的 Canvas.vue 一致:子节点不感知 zoom
+  let h = el.h;
+  if (el.type === "text" && el.autoHeight) {
+    const displayText = (el.title && el.showTitle !== false) ? `${el.title}: ${el.text}` : el.text;
+    h = Math.max(el.h, estimateTextHeight(displayText, el.w, el.fontSize, el.lineHeight ?? 1.2));
+  }
   return {
     left: mmToPx(el.x) + "px",
     top: mmToPx(el.y) + "px",
     width: mmToPx(el.w) + "px",
-    height: mmToPx(el.h) + "px",
+    height: mmToPx(h) + "px",
     transform: el.rotate ? `rotate(${el.rotate}deg)` : undefined,
     transformOrigin: "center",
   };
@@ -949,6 +955,11 @@ watch(
 .canvas-element.locked {
   border-color: #faad14 !important;
   cursor: not-allowed !important;
+}
+/* 不打印元素:2px 灰色虚线 + 半透灰底,跟默认 1px 浅灰、selected/hover 蓝边 都区分开 */
+.canvas-element.no-print {
+  border: 2px dashed #8c8c8c !important;
+  background: rgba(140, 140, 140, 0.06) !important;
 }
 
 /* ========== Resize / Rotate handles 已搬到 ElementOverlayHandles.vue ========== */

@@ -94,6 +94,26 @@ export function mmToPx(mm: number): number {
   return mm * pxPerMm;
 }
 
+/**
+ * 估算 text 元素所需高度(按 \n 拆行 + 软换行,fontSize * lineHeight * 行数)。
+ * 软换行阈值 = w / (fontSize * 0.6),粗略按 CJK 字符宽度算。
+ * 返回 mm。
+ */
+export function estimateTextHeight(
+  text: string,
+  w: number,
+  fontSize: number,
+  lineHeight: number,
+): number {
+  if (fontSize <= 0) return 0;
+  const estLineChars = Math.max(1, Math.floor(w / (fontSize * 0.6)));
+  const lines = text.split("\n").reduce(
+    (sum, line) => sum + Math.max(1, Math.ceil(line.length / estLineChars)),
+    0,
+  );
+  return +(lines * fontSize * lineHeight).toFixed(2);
+}
+
 /** 解析 data 路径,如 'rows' / 'a.b.c' / 'a[0].b'。MVP 暂只支持 'a.b' 点路径 */
 export function resolveDataPath(data: unknown, path: string): unknown {
   if (!path) return data;
@@ -200,12 +220,17 @@ function renderText(
           .split("\n")
           .map((line) => `<li>${escapeHtml(line)}</li>`)
           .join("")}</${listType}>`;
+  // 自适应高度:按 \n 拆 + 软换行估算(每行字数 ≈ w / (fontSize * 0.6))
+  const fontSize = el.fontSize;
+  const lineHeight = el.lineHeight ?? 1.2;
+  const estH = estimateTextHeight(finalText, el.w, fontSize, lineHeight);
+  const h = el.autoHeight ? Math.max(el.h, estH) : el.h;
   return `<div class="el-text" style="
     position:absolute;
     left:${mmToPx(el.x)}px;top:${mmToPx(el.y)}px;
-    width:${mmToPx(el.w)}px;height:${mmToPx(el.h)}px;
+    width:${mmToPx(el.w)}px;height:${mmToPx(h)}px;
     box-sizing:border-box;
-    line-height:${el.lineHeight ?? 1.2};
+    line-height:${lineHeight};
     ${textStyle(el)}
   ">${inner}</div>`;
 }
@@ -438,7 +463,10 @@ export function paginate(tpl: Template): Element[][] {
   const paperH = tpl.paper.height;
 
   // 跨所有 pages 收集元素(打印时按 paper 边界二次分页,跟编辑器 pages 是两个概念)
-  const all: Element[] = tpl.pages.flatMap((p) => p.elements);
+  // 过滤掉 print === false 的元素
+  const all: Element[] = tpl.pages
+    .flatMap((p) => p.elements)
+    .filter((el) => el.print !== false);
 
   for (const el of all) {
     let target = pages[pages.length - 1];
@@ -451,6 +479,16 @@ export function paginate(tpl: Template): Element[][] {
       pages.push(target);
     }
     target.push(el);
+  }
+
+  // 每页重复:把所有 repeatElement=true 的元素插到每个 page 顶部(放在该 page 原内容之前)
+  const repeatEls = all.filter(
+    (el) => (el as { repeatElement?: boolean }).repeatElement === true,
+  );
+  if (repeatEls.length > 0) {
+    for (let i = 0; i < pages.length; i++) {
+      pages[i] = [...repeatEls, ...pages[i]];
+    }
   }
 
   return pages.length === 0 ? [[]] : pages;

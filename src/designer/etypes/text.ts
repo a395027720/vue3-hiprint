@@ -98,4 +98,13 @@ export const TEXT_SECTIONS: SectionDef[] = [
       { key: 'backgroundColor', label: '背景颜色', kind: 'color' },
     ],
   },
+  {
+    title: '数据 & 行为',
+    category: 'base',
+    fields: [
+      { key: 'repeatElement', label: '每页重复', kind: 'switch' },
+      { key: 'autoHeight', label: '自适应高度', kind: 'switch' },
+      { key: 'print', label: '是否打印', kind: 'switch' },
+    ],
+  },
 ]

@@ -43,6 +43,7 @@ export type FieldKind =
   | 'number'
   | 'color'
   | 'checkbox'
+  | 'switch'
   | 'select'
 
 export type Category = 'base' | 'style' | 'border' | 'advanced' | 'columns'

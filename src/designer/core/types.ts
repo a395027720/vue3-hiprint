@@ -42,6 +42,8 @@ interface BaseElement {
   zIndex?: number
   /** 锁定:true 时画布不允许拖动/resize/旋转(右键菜单可解锁) */
   locked?: boolean
+  /** 是否参与打印/导出(默认 true);false 时画布仍可见,但 render 跳过 */
+  print?: boolean
 }
 
 // ========== Text ==========
@@ -93,6 +95,10 @@ export interface TextElement extends BaseElement {
   /** 数据字段名(支持点号路径,如 'name' / 'user.name');
    *  设置后,渲染时用 data[variable] 覆盖 text 静态内容(空值保留 text) */
   variable?: string
+  /** 每页重复:开启后,该元素会在打印/导出的每个 paper 顶部各出现一次(类似表头) */
+  repeatElement?: boolean
+  /** 自适应高度:开启后,h 自动按 text 行数 + fontSize + lineHeight 估算(取原 h 与估算值的较大者) */
+  autoHeight?: boolean
 }
 
 // ========== Image ==========
