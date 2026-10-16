@@ -117,13 +117,6 @@
       @settings="onSettings"
     />
     <div class="body" ref="bodyRef" :class="{ 'left-closed': !leftPanelOpen }">
-      <!-- 左侧元素面板(浮层,可关闭) -->
-      <ElementsPanel
-        :open="leftPanelOpen"
-        @add="onAdd"
-        @toggle-panel="onToggleLeftPanel"
-      />
-
       <div class="main" ref="mainRef">
         <!-- 顶部水平 Ruler(浮在 .main 顶 50,匹配 .canvas-pan padding-top,让 ruler 0 = 画布 0mm 屏幕) -->
         <div class="ruler-slot ruler-slot-h">
@@ -155,6 +148,12 @@
         </div>
         <!-- 角落 32x32 干净小方块,盖住 ruler-h/ruler-v 交汇处的双重刻度,保持 L 形边框连续 -->
         <div class="ruler-corner" :class="{ dark: darkMode }" />
+        <!-- 左侧元素面板(浮层,默认展开,紧贴左/上标尺右侧) -->
+        <ElementsPanel
+          :open="leftPanelOpen"
+          @add="onAdd"
+          @toggle-panel="onToggleLeftPanel"
+        />
         <DesignerCanvas
           :template="designer.template.value"
           :selected-id="designer.selectedId.value"
@@ -215,10 +214,6 @@
         :open="propertyPanelOpen"
         :element="designer.selected.value"
         @update="onUpdate"
-        @add-element="onAddDefault"
-        @duplicate="onDuplicate"
-        @move-up="onMoveUp"
-        @move-down="onMoveDown"
       />
     </div>
 
@@ -550,25 +545,6 @@ const strikeActive = computed(
 
 function onAdd(type: ElementType, pageIndex?: number, position?: { x: number; y: number }) {
   designer.add(type, pageIndex, position);
-}
-
-function onAddDefault() {
-  designer.add("text");
-}
-
-function onDuplicate() {
-  const id = designer.selectedId.value;
-  if (id) designer.duplicate(id);
-}
-
-function onMoveUp() {
-  const id = designer.selectedId.value;
-  if (id) designer.moveUp(id);
-}
-
-function onMoveDown() {
-  const id = designer.selectedId.value;
-  if (id) designer.moveDown(id);
 }
 
 function onMove(id: string, x: number, y: number) {
@@ -988,7 +964,7 @@ defineExpose({
  * panel 由 .main 自身 left 偏移避(panel 在 .body 内 .main 之前) */
 .ruler-slot {
   position: absolute;
-  z-index: 5;
+  z-index: 35; /* 高于 TextQuickToolbar(30),确保顶部/左侧标尺盖住文本快捷工具条 */
   pointer-events: none; /* 让下层 canvas 接收事件;Ruler 自己内部 pointer-events: auto */
 }
 .ruler-slot-h {
@@ -1012,7 +988,7 @@ defineExpose({
   left: 0;
   width: 32px;
   height: 32px;
-  z-index: 6; /* 高于 ruler-slot(5),把角落的双重内容遮住 */
+  z-index: 36; /* 高于 ruler-slot(35),把角落的双重内容遮住 */
   background: #f9fafb;
   border-right: 1px solid #d8d8de;
   border-bottom: 1px solid #d8d8de;

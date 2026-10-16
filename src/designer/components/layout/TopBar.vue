@@ -137,6 +137,8 @@ onBeforeUnmount(() =>
   background: #fff;
   border-bottom: 1px solid #f0f0f0;
   flex: 0 0 auto;
+  position: relative;
+  z-index: 45; /* 高于 TextQuickToolbar(30)+ HeaderToolbar(40),确保覆盖 */
 }
 .brand {
   display: flex;

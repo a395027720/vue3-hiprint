@@ -1,50 +1,5 @@
 <template>
   <div class="prop-col" :class="{ closed: !props.open }">
-    <div class="prop-side">
-      <button
-        class="side-btn"
-        title="添加元素"
-        @click="$emit('addElement')"
-      >
-        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
-          <line x1="8" y1="3" x2="8" y2="13" />
-          <line x1="3" y1="8" x2="13" y2="8" />
-        </svg>
-      </button>
-      <button
-        class="side-btn"
-        :disabled="!element"
-        title="复制元素"
-        @click="$emit('duplicate')"
-      >
-        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="5" y="5" width="8" height="8" rx="1" />
-          <path d="M3 11V4a1 1 0 0 1 1-1h7" />
-        </svg>
-      </button>
-      <button
-        class="side-btn"
-        :disabled="!element"
-        title="上移一层"
-        @click="$emit('moveUp')"
-      >
-        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
-          <line x1="8" y1="13" x2="8" y2="3" />
-          <polyline points="4,7 8,3 12,7" />
-        </svg>
-      </button>
-      <button
-        class="side-btn"
-        :disabled="!element"
-        title="下移一层"
-        @click="$emit('moveDown')"
-      >
-        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5">
-          <line x1="8" y1="3" x2="8" y2="13" />
-          <polyline points="4,9 8,13 12,9" />
-        </svg>
-      </button>
-    </div>
     <aside class="prop-panel">
       <div class="prop-body">
         <div v-if="!element" class="empty">未选中元素</div>
@@ -164,10 +119,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   update: [id: string, patch: Partial<Element>]
-  addElement: []
-  duplicate: []
-  moveUp: []
-  moveDown: []
 }>()
 
 const groups = computed(() => {
@@ -262,46 +213,13 @@ function addColumn() {
   border-left: 1px solid #f0f0f0;
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.04);
   transition: width 200ms;
-  width: 348px; /* prop-side(48) + prop-panel(300) */
+  width: 300px;
   overflow: hidden;
 }
 .prop-col.closed {
   width: 0;
   border-left: 0;
   box-shadow: none;
-}
-.prop-side {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 6px;
-  background: #ffffff;
-  border-left: 1px solid #f0f0f0;
-  flex: 0 0 auto;
-}
-.side-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  color: #555;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 120ms, border-color 120ms, color 120ms;
-}
-.side-btn:hover:not(:disabled) {
-  background: #e6f4ff;
-  border-color: #91caff;
-  color: #1677ff;
-}
-.side-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 .prop-panel {
   width: 300px;

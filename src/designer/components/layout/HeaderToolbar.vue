@@ -942,6 +942,8 @@ const questionIcon = `<svg viewBox="64 64 896 896" width="1em" height="1em" clas
   user-select: none;
   gap: 0;
   min-width: 0;
+  position: relative;
+  z-index: 40; /* 高于 TextQuickToolbar(30),确保工具条盖住浮动的文本快捷工具条 */
 }
 .vtb-editor-group {
   display: flex;

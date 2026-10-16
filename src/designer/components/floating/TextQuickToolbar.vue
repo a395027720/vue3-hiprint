@@ -348,7 +348,7 @@ const verticalTextIcon = `<svg viewBox="0 0 24 24" width="16" height="16" fill="
 
 <style scoped>
 .tqt-host {
-  z-index: 60;
+  z-index: 30;
   pointer-events: auto;
 }
 .tqt-bar {

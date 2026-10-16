@@ -131,15 +131,18 @@ function onDragStart(e: DragEvent, type: ElementType) {
 
 <style scoped>
 .elements-panel {
+  position: absolute;
+  top: 32px; /* 给顶部 ruler 让位 */
+  left: 32px; /* 给左侧 ruler 让位 */
+  bottom: 0;
+  width: 240px;
   display: flex;
   flex-direction: column;
-  width: 240px;
-  flex-shrink: 0;
   background: #fff;
   border-right: 1px solid #f0f0f0;
   overflow: hidden;
   transition: width 200ms;
-  z-index: 40;
+  z-index: 30; /* 高于画布(2) / 自延长线(2) / 吸附线(4) / ruler(5)、低于 corner(6) */
 }
 .elements-panel.closed {
   width: 0;

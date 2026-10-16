@@ -23,7 +23,14 @@
               title="添加页(末尾)"
               @click="emit('pageAdd')"
             >
-              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+              <svg
+                viewBox="0 0 16 16"
+                width="12"
+                height="12"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
                 <line x1="8" y1="3" x2="8" y2="13" />
                 <line x1="3" y1="8" x2="13" y2="8" />
               </svg>
@@ -33,7 +40,14 @@
               title="复制此页"
               @click="emit('pageCopy', pageIndex)"
             >
-              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+              <svg
+                viewBox="0 0 16 16"
+                width="12"
+                height="12"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
                 <rect x="5" y="5" width="8" height="8" rx="1" />
                 <path d="M3 11V4a1 1 0 0 1 1-1h7" />
               </svg>
@@ -44,7 +58,14 @@
               title="上移一页"
               @click="emit('pageMove', pageIndex, pageIndex - 1)"
             >
-              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+              <svg
+                viewBox="0 0 16 16"
+                width="12"
+                height="12"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
                 <line x1="8" y1="13" x2="8" y2="3" />
                 <polyline points="4,7 8,3 12,7" />
               </svg>
@@ -64,7 +85,14 @@
               title="下移一页"
               @click="emit('pageMove', pageIndex, pageIndex + 1)"
             >
-              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+              <svg
+                viewBox="0 0 16 16"
+                width="12"
+                height="12"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
                 <line x1="8" y1="3" x2="8" y2="13" />
                 <polyline points="4,9 8,13 12,9" />
               </svg>
@@ -75,10 +103,21 @@
               title="删除此页"
               @click="onPageRemove(pageIndex)"
             >
-              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5">
+              <svg
+                viewBox="0 0 16 16"
+                width="12"
+                height="12"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
                 <line x1="3" y1="4" x2="13" y2="4" />
-                <path d="M5 4V2.5A1.5 1.5 0 0 1 6.5 1h3A1.5 1.5 0 0 1 11 2.5V4" />
-                <path d="M4 4l1 9.5A1.5 1.5 0 0 0 6.5 15h3a1.5 1.5 0 0 0 1.5-1.5L12 4" />
+                <path
+                  d="M5 4V2.5A1.5 1.5 0 0 1 6.5 1h3A1.5 1.5 0 0 1 11 2.5V4"
+                />
+                <path
+                  d="M4 4l1 9.5A1.5 1.5 0 0 0 6.5 15h3a1.5 1.5 0 0 0 1.5-1.5L12 4"
+                />
               </svg>
             </button>
           </div>
@@ -301,7 +340,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   /** palette 拖入或点击 add。拖入时携带鼠标 mm 坐标(松开位置) */
-  add: [type: ElementType, pageIndex?: number, position?: { x: number; y: number }];
+  add: [
+    type: ElementType,
+    pageIndex?: number,
+    position?: { x: number; y: number },
+  ];
   /** 选中元素 id(传 null 取消选中) */
   select: [id: string | null];
   /** 框选结束:批量选中 */
@@ -608,8 +651,12 @@ function elBox(el: Element) {
   // 这样跟 Vue-Print-Designer 的 Canvas.vue 一致:子节点不感知 zoom
   let h = el.h;
   if (el.type === "text" && el.autoHeight) {
-    const displayText = (el.title && el.showTitle !== false) ? `${el.title}: ${el.text}` : el.text;
-    h = Math.max(el.h, estimateTextHeight(displayText, el.w, el.fontSize, el.lineHeight ?? 1.2));
+    const displayText =
+      el.title && el.showTitle !== false ? `${el.title}: ${el.text}` : el.text;
+    h = Math.max(
+      el.h,
+      estimateTextHeight(displayText, el.w, el.fontSize, el.lineHeight ?? 1.2),
+    );
   }
   return {
     left: mmToPx(el.x) + "px",
@@ -623,21 +670,21 @@ function elBox(el: Element) {
 
 /** 页码输入框:输入目标序号(1-based)→ emit pageMove(from, to-1) */
 function onPageNoInput(fromIndex: number, ev: Event) {
-  const target = ev.target as HTMLInputElement
-  const order = Number.parseInt(target.value, 10)
-  if (!Number.isFinite(order)) return
-  const total = props.template.pages.length
-  const toIndex = Math.max(0, Math.min(total - 1, order - 1))
-  if (toIndex === fromIndex) return
-  emit("pageMove", fromIndex, toIndex)
+  const target = ev.target as HTMLInputElement;
+  const order = Number.parseInt(target.value, 10);
+  if (!Number.isFinite(order)) return;
+  const total = props.template.pages.length;
+  const toIndex = Math.max(0, Math.min(total - 1, order - 1));
+  if (toIndex === fromIndex) return;
+  emit("pageMove", fromIndex, toIndex);
 }
 
 /** 删除页:window.confirm 二次确认后 emit pageRemove(idx);useDesigner 那边会清 selectedId */
 function onPageRemove(pageIndex: number) {
-  if (pageIndex === 0) return
-  const ok = window.confirm(`确定删除第 ${pageIndex + 1} 页?`)
-  if (!ok) return
-  emit("pageRemove", pageIndex)
+  if (pageIndex === 0) return;
+  const ok = window.confirm(`确定删除第 ${pageIndex + 1} 页?`);
+  if (!ok) return;
+  emit("pageRemove", pageIndex);
 }
 
 function onDrop(e: DragEvent) {
@@ -952,7 +999,7 @@ watch(
   min-width: 0;
   min-height: 0;
   position: relative; /* 自线 / 吸附线 / guide 浮层 absolute 相对 wrap 定位 */
-  padding: 50px 0;
+  padding: 50px;
 }
 .canvas-wrap.pan-mode {
   cursor: grab;
@@ -986,15 +1033,16 @@ watch(
   flex-shrink: 0;
   /* width / height 由 :style 注入 */
 }
-/* 每页右上角浮动操作按钮组:跟 .print-page 右上角对齐,反向 zoom 缩放保持视觉尺寸恒定 */
+/* 每页右上角浮动操作按钮组:竖排,贴在画布右上外侧(画布顶边线上、右侧外);反向 zoom 缩放保持视觉尺寸恒定 */
 .page-actions {
   position: absolute;
-  top: -36px;
-  right: 0;
+  top: 0;
+  right: -36px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 2px 4px;
+  padding: 2px;
   background: #ffffff;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
@@ -1029,9 +1077,9 @@ watch(
   cursor: not-allowed;
 }
 .pa-page-no {
-  width: 32px;
+  width: 24px;
   height: 22px;
-  padding: 0 4px;
+  padding: 0 2px;
   text-align: center;
   border: 1px solid #e0e0e0;
   border-radius: 3px;
