@@ -27,6 +27,10 @@ const props = defineProps<{
   indicators?: { position: number; color: string }[]
   /** 选中元素围成的范围,在 ruler 上画浅色填充(单位:mm) */
   range?: { start: number; end: number; color: string } | null
+  /** 选中 / 拖动时元素的 mm 数字 chip(横向 ruler 显示 2 个 mm,纵向 ruler 同)
+   *  side 决定画在 ruler 哪一侧: horizontal ruler → 'h'(贴下沿);
+   *                              vertical ruler → 'v'(贴右沿) */
+  positionLabels?: { mm: number; text: string; color: string }[]
   /** 显示单位(默认 mm) */
   unit?: Unit
   /** dark mode 配色 */
@@ -56,6 +60,7 @@ function draw() {
     type,
     indicators,
     range,
+    positionLabels,
     unit = 'mm',
     darkMode = false,
   } = props
@@ -108,6 +113,10 @@ function draw() {
       }
     }
   }
+
+  // positionLabels 改为 DOM chip(见 template):因 ruler canvas 高度固定 32px,
+  // chip 若用 canvas 绘制只能塞在 ruler 内,视觉上 chip 中心会跟 indicator 短线重合;
+  // 现改为 template 浮层,可伸出 ruler 之外(old .self-v-label / .self-h-label 语义)
 
   // 刻度
   ctx.strokeStyle = tickStroke
@@ -179,6 +188,45 @@ function formatUnitLabel(value: number, unit: Unit): string {
   return Number(value.toFixed(1)).toString()
 }
 
+/** mm → ruler 内 px(给 chip 用,跟 indicator 短线同一坐标系) */
+function mmToRulerPx(mm: number): number {
+  return Math.round(props.offset + mmToUnit(mm, props.unit ?? 'mm') * (UNIT_TO_PX[props.unit ?? 'mm'] * props.zoom) - props.scroll)
+}
+
+/** chip 样式:横向 ruler 紧贴 ruler 下沿(ruler 底下方),x 跟随 mm;纵向 ruler 紧贴右侧,y 跟随 mm */
+function chipStyle(label: { mm: number; color?: string }) {
+  const pos = mmToRulerPx(label.mm)
+  return {
+    background: label.color || '#69c0ff',
+    ...(props.type === 'horizontal'
+      ? { left: pos + 'px', top: '32px' }
+      : { top: pos + 'px', left: '32px' }),
+  }
+}
+
+/** 圆角矩形路径(独立成 path,fill 由调用方控制) */
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  const radius = Math.min(r, w / 2, h / 2)
+  ctx.beginPath()
+  ctx.moveTo(x + radius, y)
+  ctx.lineTo(x + w - radius, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius)
+  ctx.lineTo(x + w, y + h - radius)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h)
+  ctx.lineTo(x + radius, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius)
+  ctx.lineTo(x, y + radius)
+  ctx.quadraticCurveTo(x, y, x + radius, y)
+  ctx.closePath()
+}
+
 const resizeObserver = new ResizeObserver((entries) => {
   for (const entry of entries) {
     const canvas = canvasRef.value
@@ -210,7 +258,7 @@ function onMouseDown(e: MouseEvent) {
 }
 
 watch(
-  () => [props.zoom, props.scroll, props.offset, props.indicators, props.range, props.unit, props.darkMode],
+  () => [props.zoom, props.scroll, props.offset, props.indicators, props.range, props.positionLabels, props.unit, props.darkMode],
   () => draw(),
   { deep: true },
 )
@@ -219,6 +267,17 @@ watch(
 <template>
   <div class="designer-ruler" :class="type">
     <canvas ref="canvasRef" class="block" />
+    <!-- chip:横向 ruler 紧贴 ruler 下沿(ruler 底下方),x 跟随 pxPos(在 ruler 内 px);
+         纵向 ruler 紧贴 ruler 右沿(ruler 右侧外),y 跟随 pxPos。跟旧 .self-line-label 一致,
+         chip 不在 ruler 内而在 ruler 紧邻外缘(横向 ruler 下方 / 纵向 ruler 右侧) -->
+    <span
+      v-for="(label, idx) in positionLabels ?? []"
+      :key="`pos-label-${idx}`"
+      class="pos-label"
+      :class="type === 'horizontal' ? 'pos-label-h' : 'pos-label-v'"
+      :style="chipStyle(label)"
+      >{{ label.text }}</span
+    >
   </div>
 </template>
 
@@ -226,7 +285,9 @@ watch(
 .designer-ruler {
   position: relative;
   background: #f9fafb;
-  overflow: hidden;
+  /* overflow 改为 visible:chip 浮层在 ruler 紧邻外缘(ruler-h 下方 / ruler-v 右侧),
+   * 不能被 ruler 内部 overflow:hidden 裁剪 */
+  overflow: visible;
   user-select: none;
   pointer-events: auto; /* 接收 guide-drag-start */
 }
@@ -245,5 +306,29 @@ watch(
   width: 100%;
   height: 100%;
   pointer-events: none; /* 事件交给父 div 统一处理 */
+}
+/* chip:固定在 ruler 紧邻外缘(横向 ruler 下方 / 纵向 ruler 右侧),
+ * x 或 y 跟随 mm 位置。跟旧 .self-line-label 一致,不受 wrap scroll 影响 */
+.pos-label {
+  position: absolute;
+  display: inline-block;
+  pointer-events: none;
+  transform: translate(-50%, 0); /* horizontal:chip 中心对齐 pos */
+  min-width: 22px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  line-height: 14px;
+  border-radius: 2px;
+  white-space: nowrap;
+  text-align: center;
+  user-select: none;
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  z-index: 1;
+}
+.pos-label-v {
+  transform: translate(0, -50%); /* vertical:chip 中心对齐 pos(只 y 居中,x 由 left 固定) */
 }
 </style>

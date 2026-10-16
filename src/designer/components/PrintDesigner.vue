@@ -127,6 +127,7 @@
             :offset="rulerOffsetX"
             :indicators="rulerIndicatorsH"
             :range="rulerRangeH"
+            :position-labels="rulerLabelsH"
             :unit="unit"
             :dark-mode="darkMode"
             @guide-drag-start="(e) => onGuideDragStart(e, 'horizontal')"
@@ -141,6 +142,7 @@
             :offset="rulerOffsetY"
             :indicators="rulerIndicatorsV"
             :range="rulerRangeV"
+            :position-labels="rulerLabelsV"
             :unit="unit"
             :dark-mode="darkMode"
             @guide-drag-start="(e) => onGuideDragStart(e, 'vertical')"
@@ -290,7 +292,7 @@ import type {
   TextElement,
 } from "../core/types";
 import { useDesigner } from "../api/useDesigner";
-import { createTemplate } from "../core/schema";
+import { createTemplate, findElementGlobal } from "../core/schema";
 import { printTemplate } from "../utils/print";
 import { renderInner } from "../core/render";
 import { exportHtml, exportImage, exportPdf } from "../utils/export";
@@ -440,6 +442,20 @@ watch(
 const INDICATOR_COLOR = "rgba(22, 119, 255, 0.5)";
 const RANGE_COLOR = "rgba(22, 119, 255, 0.18)";
 
+/** 多页之间的纵向间距(mm)。跟 DesignerCanvas.vue / useCanvasDrag.ts 保持一致 */
+const PAGE_SPACING_MM = 10;
+
+/** 当前选中元素所在 page 的纵向 mm 偏移(ruler 的 y 坐标是全局的,
+ *  el.y / el.y+el.h 是 page-local mm,需要加 pageOffsetMm 才能正确映射到左侧 ruler)。
+ *  选不中元素时返回 0 */
+function selectedYOffsetMm(): number {
+  const id = designer.selectedId.value;
+  if (!id) return 0;
+  const tpl = designer.template.value;
+  const idx = findElementGlobal(tpl, id)?.pageIndex ?? 0;
+  return idx * (tpl.paper.height + PAGE_SPACING_MM);
+}
+
 const rulerIndicatorsH = computed(() => {
   const el = designer.selected.value;
   if (!el) return [];
@@ -451,9 +467,10 @@ const rulerIndicatorsH = computed(() => {
 const rulerIndicatorsV = computed(() => {
   const el = designer.selected.value;
   if (!el) return [];
+  const pageOffsetMm = selectedYOffsetMm();
   return [
-    { position: el.y, color: INDICATOR_COLOR },
-    { position: el.y + el.h, color: INDICATOR_COLOR },
+    { position: el.y + pageOffsetMm, color: INDICATOR_COLOR },
+    { position: el.y + el.h + pageOffsetMm, color: INDICATOR_COLOR },
   ];
 });
 const rulerRangeH = computed(() => {
@@ -464,8 +481,43 @@ const rulerRangeH = computed(() => {
 const rulerRangeV = computed(() => {
   const el = designer.selected.value;
   if (!el) return null;
-  return { start: el.y, end: el.y + el.h, color: RANGE_COLOR };
+  const pageOffsetMm = selectedYOffsetMm();
+  return {
+    start: el.y + pageOffsetMm,
+    end: el.y + el.h + pageOffsetMm,
+    color: RANGE_COLOR,
+  };
 });
+/** 选中元素的 mm 数字 chip(在 Ruler 内部 canvas 上画,跟 ruler 浮层生命周期一致,scroll 时不滚走) */
+const rulerLabelsH = computed(() => {
+  const el = designer.selected.value;
+  if (!el) return [];
+  return [
+    { mm: el.x, text: formatSelectedMm(el.x), color: "#69c0ff" },
+    { mm: el.x + el.w, text: formatSelectedMm(el.x + el.w), color: "#69c0ff" },
+  ];
+});
+const rulerLabelsV = computed(() => {
+  const el = designer.selected.value;
+  if (!el) return [];
+  const pageOffsetMm = selectedYOffsetMm();
+  return [
+    {
+      mm: el.y + pageOffsetMm,
+      text: formatSelectedMm(el.y + pageOffsetMm),
+      color: "#69c0ff",
+    },
+    {
+      mm: el.y + el.h + pageOffsetMm,
+      text: formatSelectedMm(el.y + el.h + pageOffsetMm),
+      color: "#69c0ff",
+    },
+  ];
+});
+/** mm → 显示文本(整数 mm,带 1 位小数;沿用 SnapAndSelfLinesOverlay.formatMm 语义) */
+function formatSelectedMm(mm: number): string {
+  return mm.toFixed(1).replace(/\.0$/, "");
+}
 
 function onKeyDown(e: KeyboardEvent) {
   if (e.code === "Space" && !spaceHeld.value) {

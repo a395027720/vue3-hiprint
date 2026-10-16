@@ -29,38 +29,6 @@ export async function exportHtml(
     // 解析成文档，方便注入导出专用样式
     const parsed = new DOMParser().parseFromString(raw, "text/html");
 
-    // 注入导出样式：去掉预览态的阴影/外边距，统一页边距,方便打印
-    const exportStyle = parsed.createElement("style");
-    exportStyle.textContent = `
-      /* ===== 导出专用样式(exportHtml 注入) ===== */
-      html, body {
-        margin: 0;
-        padding: 0;
-        background: #f0f0f0;
-      }
-      .paper {
-        box-shadow: none !important;
-        margin: 0 auto !important;
-        background: #fff;
-      }
-      @media print {
-        html, body {
-          background: #fff;
-        }
-        .paper {
-          margin: 0 !important;
-          page-break-after: always;
-          break-after: page;
-        }
-        /* 最后一页不要多余的分页 */
-        .paper:last-of-type {
-          page-break-after: auto;
-          break-after: auto;
-        }
-      }
-    `;
-    parsed.head.appendChild(exportStyle);
-
     // 确保有 doctype 和 utf-8
     const html = "<!doctype html>\n" + parsed.documentElement.outerHTML;
 
@@ -111,6 +79,7 @@ export async function exportPdf(
 
   // 用主文档里的隐藏容器挂载 HTML,而不是 iframe。
   // 关键:不能用 display:none(会丢失布局),用 fixed + 移出视口。
+  // 高度先按一页算,等渲染完知道有几页后再展开,避免多页被 overflow:hidden 裁掉。
   const host = document.createElement("div");
   host.setAttribute("aria-hidden", "true");
   host.style.cssText = [
@@ -157,29 +126,18 @@ export async function exportPdf(
     await new Promise<void>((r) => requestAnimationFrame(() => r()));
     await new Promise<void>((r) => setTimeout(r, 50));
 
-    const paperEl = host.querySelector(".paper") as HTMLElement | null;
-    if (!paperEl) {
+    const papers = Array.from(host.querySelectorAll<HTMLElement>(".paper"));
+    if (papers.length === 0) {
       console.error("[designer] exportPdf: .paper not found");
       return false;
     }
 
-    // 显式锁死截图区域,杜绝因布局取整多出零点几像素导致的多页空白。
-    const canvas = await html2canvas(paperEl, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      width: paperWpx,
-      height: paperHpx,
-      windowWidth: paperWpx,
-      windowHeight: paperHpx,
-      scrollX: 0,
-      scrollY: 0,
-      backgroundColor: "#ffffff",
-    });
+    // 展开 host 高度,让多页都能在容器内正常布局,避免被 overflow:hidden 裁掉。
+    host.style.height = `${paperHpx * papers.length}px`;
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    await new Promise<void>((r) => setTimeout(r, 50));
 
-    console.log("[designer] exportPdf canvas:", canvas.width, canvas.height);
-
-    // 用 canvas 直接出 PDF,一张图一页,不做任何自动分页。
+    // 用 canvas 直接出 PDF,每张 paper 对应 PDF 一页,不做任何自动分页。
     const pdf = new jsPDF({
       unit: "mm",
       format: [tpl.paper.width, tpl.paper.height],
@@ -187,17 +145,41 @@ export async function exportPdf(
         tpl.paper.width > tpl.paper.height ? "landscape" : "portrait",
     });
 
-    const imgData = canvas.toDataURL("image/jpeg", 0.95);
-    pdf.addImage(
-      imgData,
-      "JPEG",
-      0,
-      0,
-      tpl.paper.width,
-      tpl.paper.height,
-      undefined,
-      "FAST",
-    );
+    for (let i = 0; i < papers.length; i++) {
+      const paperEl = papers[i]!;
+      // 显式锁死截图区域,杜绝因布局取整多出零点几像素导致的多页空白。
+      const canvas = await html2canvas(paperEl, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        width: paperWpx,
+        height: paperHpx,
+        windowWidth: paperWpx,
+        windowHeight: paperHpx,
+        scrollX: 0,
+        scrollY: 0,
+        backgroundColor: "#ffffff",
+      });
+
+      if (i > 0) {
+        pdf.addPage(
+          [tpl.paper.width, tpl.paper.height],
+          tpl.paper.width > tpl.paper.height ? "landscape" : "portrait",
+        );
+      }
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      pdf.addImage(
+        imgData,
+        "JPEG",
+        0,
+        0,
+        tpl.paper.width,
+        tpl.paper.height,
+        undefined,
+        "FAST",
+      );
+    }
 
     pdf.save("template.pdf");
     return true;
@@ -219,7 +201,7 @@ export async function exportPdf(
  * @param options.format         "png" | "jpeg",默认 png
  * @param options.quality        jpeg 质量(0-1),默认 0.95
  * @param options.fileName       文件名,默认 template.png/jpg
- * @param options.mode           "first" 只导第一页 | "all" 所有页纵向拼接,默认 first
+ * @param options.mode           "first" 只导第一页 | "all" 所有页纵向拼接,默认 all
  */
 export async function exportImage(
   tpl: Template,
@@ -233,7 +215,7 @@ export async function exportImage(
     mode?: "first" | "all";
   } = {},
 ): Promise<boolean> {
-  const { format = "png", quality = 0.95, fileName, mode = "first" } = options;
+  const { format = "png", quality = 0.95, fileName, mode = "all" } = options;
 
   console.log(
     "[designer] exportImage",
@@ -251,6 +233,7 @@ export async function exportImage(
   const paperHpx = Math.round(mmToPx(tpl.paper.height));
 
   // 主文档隐藏容器(不能用 display:none,否则丢失布局)
+  // 高度先按一页算,等渲染完知道有几页后再展开,避免多页被 overflow:hidden 裁掉。
   const host = document.createElement("div");
   host.setAttribute("aria-hidden", "true");
   host.style.cssText = [
@@ -295,6 +278,11 @@ export async function exportImage(
       console.error("[designer] exportImage: .paper not found");
       return false;
     }
+
+    // 展开 host 高度,让多页都能在容器内正常布局。
+    host.style.height = `${paperHpx * papers.length}px`;
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    await new Promise<void>((r) => setTimeout(r, 50));
 
     // 选择要截的页面
     const targets = mode === "all" ? papers : [papers[0]];

@@ -107,10 +107,12 @@ export function estimateTextHeight(
 ): number {
   if (fontSize <= 0) return 0;
   const estLineChars = Math.max(1, Math.floor(w / (fontSize * 0.6)));
-  const lines = text.split("\n").reduce(
-    (sum, line) => sum + Math.max(1, Math.ceil(line.length / estLineChars)),
-    0,
-  );
+  const lines = text
+    .split("\n")
+    .reduce(
+      (sum, line) => sum + Math.max(1, Math.ceil(line.length / estLineChars)),
+      0,
+    );
   return +(lines * fontSize * lineHeight).toFixed(2);
 }
 
@@ -177,7 +179,9 @@ function textStyle(el: Extract<Element, { type: "text" }>): string {
     el.textDecoration && el.textDecoration !== "none"
       ? `text-decoration:${el.textDecoration}`
       : "",
-    el.backgroundColor ? `background-color:${el.backgroundColor}` : "background-color:transparent",
+    el.backgroundColor
+      ? `background-color:${el.backgroundColor}`
+      : "background-color:transparent",
     borderCss4Sides(el),
     el.borderRadius ? `border-radius:${el.borderRadius}mm` : "",
     paddingCss4Sides(el),
@@ -205,13 +209,12 @@ function renderText(
     el.variable && (data != null || el.variable.includes("."))
       ? resolveDataPath(data, el.variable)
       : undefined;
-  const text =
-    raw != null && raw !== ""
-      ? String(raw)
-      : el.text;
+  const text = raw != null && raw !== "" ? String(raw) : el.text;
   // 标题:非列表 + showTitle 未显式关闭 + title 非空 时拼接 "{title}: {text}"
   const useTitlePrefix =
-    listType === "none" && el.showTitle !== false && !!(el.title && el.title.length > 0);
+    listType === "none" &&
+    el.showTitle !== false &&
+    !!(el.title && el.title.length > 0);
   const finalText = useTitlePrefix ? `${el.title}: ${text}` : text;
   const inner =
     listType === "none"
@@ -470,7 +473,9 @@ export function paginate(tpl: Template): Element[][] {
   const repeatEls: Element[] = tpl.pages
     .flatMap((p) => p.elements)
     .filter(
-      (el) => el.print !== false && (el as { repeatElement?: boolean }).repeatElement === true,
+      (el) =>
+        el.print !== false &&
+        (el as { repeatElement?: boolean }).repeatElement === true,
     );
   if (repeatEls.length > 0) {
     for (let i = 0; i < pages.length; i++) {
@@ -501,13 +506,7 @@ export function renderTemplate(
   @page { size: ${tpl.paper.width}mm ${tpl.paper.height}mm; margin: 0; }
   html, body { margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-  .el-table-repeat-header thead { display: table-header-group; }
-  .el-table-rowbreak-row tr { page-break-inside: avoid; }
-  .el-table-rowbreak-auto tr { page-break-inside: auto; }
-  ${paperCss(tpl)}
-</style></head><body>${inner}</body></html>`;
-
-  console.log(html);
+  ${paperCss(tpl)}</style></head><body>${inner}</body></html>`;
   return html;
 }
 
@@ -539,7 +538,7 @@ export function renderInner(
       const breakAfter = isLast ? "auto" : "always";
       return `<section class="paper" style="
         position:relative;
-        width:${paperW}px;height:${paperH}px;
+        width:${paperW.toFixed(2)}px;height:${paperH.toFixed(2)}px;
         page-break-after:${breakAfter};
         overflow:hidden;
       "><div class="paper-content" style="
@@ -553,11 +552,8 @@ export function renderInner(
 /** PreviewModal 在父文档中需要补的 paper 样式(非 iframe 环境没有 @page / html,body 等)。 */
 function paperCss(tpl: Template): string {
   return `
-  .paper { position:relative; background:#fff;  }
-  .el-table { font-size:11px; background:#ffffff; }
-  .el-table table { width:100%; border-collapse:collapse; table-layout:fixed; }
-  .el-table th, .el-table td { border:1px solid #d0d0d0; padding:2px 4px; }
-  .el-table th { background:#f5f5f5; font-weight:bold; }
+  .paper { position:relative; page-break-after: always; break-after: page; } 
+  .paper:last-of-type { page-break-after: auto; break-after: auto; }
   .el-image img { width:100%; height:100%; display:block; }
   /* 不需要打印分页宽度变量,但保留 paper 尺寸参考 */
   /* paper: ${tpl.paper.width}mm x ${tpl.paper.height}mm */

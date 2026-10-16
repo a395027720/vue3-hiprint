@@ -620,11 +620,14 @@ const CANVAS_TOP_GAP = 50;
 function overlayX(valMm: number): number {
   return offsetX.value + mmToPx(valMm) * zoomValue.value + (props.panX ?? 0);
 }
-function overlayY(valMm: number): number {
+/** mm 位置 → overlay 屏幕 px。
+ *  pageOffsetMm(默认 0)用于把 page-local mm 加成"全局 mm",仅 h 方向需要,
+ *  v 方向多页堆叠不变;调用方按 selfLines.pageOffsetMm 传入。 */
+function overlayY(valMm: number, pageOffsetMm: number = 0): number {
   return (
     CANVAS_TOP_GAP +
     offsetY.value +
-    mmToPx(valMm) * zoomValue.value +
+    mmToPx(valMm + pageOffsetMm) * zoomValue.value +
     (props.panY ?? 0)
   );
 }
@@ -800,13 +803,20 @@ const selfLinesOverlay = computed<{
   h: OverlayLine[];
 } | null>(() => {
   if (!selfLines.value) return null;
+  const pageOffsetMm = selfLines.value.pageOffsetMm ?? 0;
   return {
     v: selfLines.value.v.map((mm, i) => ({ id: i, mm, px: overlayX(mm) })),
-    h: selfLines.value.h.map((mm, i) => ({ id: i, mm, px: overlayY(mm) })),
+    h: selfLines.value.h.map((mm, i) => ({
+      id: i,
+      mm,
+      px: overlayY(mm, pageOffsetMm),
+    })),
   };
 });
 
-/** 把 snapLines (mm 数组) 转成 OverlayLine 数组 */
+/** 把 snapLines (mm 数组) 转成 OverlayLine 数组。
+ *  horizontal 跟 selfLines 共享同一 pageOffsetMm(同一 drag 周期内,
+ *  snap 候选收集使用 page-local mm,但渲染位置需对齐元素所在 page) */
 const snapLinesOverlay = computed<{
   vertical: OverlayLine[];
   horizontal: OverlayLine[];
@@ -819,7 +829,7 @@ const snapLinesOverlay = computed<{
   horizontal: snapLines.horizontal.map((mm, i) => ({
     id: i,
     mm,
-    px: overlayY(mm),
+    px: overlayY(mm, selfLines.value?.pageOffsetMm ?? 0),
   })),
 }));
 
@@ -831,9 +841,10 @@ const selfFillStyle = computed(() => {
   const x2 = Math.max(...sl.v);
   const y1 = Math.min(...sl.h);
   const y2 = Math.max(...sl.h);
+  const pageOffsetMm = sl.pageOffsetMm ?? 0;
   return {
     left: overlayX(x1) + "px",
-    top: overlayY(y1) + "px",
+    top: overlayY(y1, pageOffsetMm) + "px",
     width: mmToPx(x2 - x1) * zoomValue.value + "px",
     height: mmToPx(y2 - y1) * zoomValue.value + "px",
   };

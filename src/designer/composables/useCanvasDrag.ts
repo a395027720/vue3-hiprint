@@ -24,7 +24,18 @@ const MIN_SIZE_MM = 4;
 /** 吸附阈值 1mm */
 const SNAP_THRESHOLD_MM = 1;
 
-export type SelfLines = { v: number[]; h: number[] };
+/** 多页之间的纵向间距(mm)。跟 DesignerCanvas.vue 的 PAGE_SPACING_MM 保持一致
+ * (CSS row-gap = mmToPx(PAGE_SPACING_MM)) */
+const PAGE_SPACING_MM = 10;
+
+export type SelfLines = {
+  v: number[];
+  h: number[];
+  /** 主元素所在 page 的纵向 mm 偏移 = pageIndex * (paperH + PAGE_SPACING_MM)。
+   * overlayY 加这个偏移,让水平延长虚线视觉穿过元素所在页(而非第 1 页)。
+   * 0 = 第 1 页(默认,保持单页时代码兼容) */
+  pageOffsetMm?: number;
+};
 export type SnapLines = { vertical: number[]; horizontal: number[] };
 
 export type CanvasDragOptions = {
@@ -292,9 +303,18 @@ export function useCanvasDrag(opts: CanvasDragOptions) {
     startElementDrag(e, id);
   }
 
+  /** 主元素所在 page 的纵向 mm 偏移 = pageIndex * (paperH + PAGE_SPACING_MM)。
+   * 拖动不换页,只在入口启动时算一次。 */
+  function pageOffsetMmFor(pageIndex: number | undefined): number {
+    if (!pageIndex) return 0;
+    const tpl = opts.template();
+    return pageIndex * (tpl.paper.height + PAGE_SPACING_MM);
+  }
+
   /** 单元素拖动 */
   function startElementDrag(e: MouseEvent, id: string) {
-    const el = findElementGlobal(opts.template(), id)?.el;
+    const found = findElementGlobal(opts.template(), id);
+    const el = found?.el;
     if (!el) return;
     // 缓存到 const,避免 TS 5.3 闭包 narrowing 丢 el 类型(inner onMove 用)
     const elW = el.w;
@@ -303,11 +323,16 @@ export function useCanvasDrag(opts: CanvasDragOptions) {
     const startY = e.clientY;
     const origX = el.x;
     const origY = el.y;
+    const pageOffsetMm = pageOffsetMmFor(found?.pageIndex);
     const pxPerMmLocal = mmToPx(1) * zoomValue.value;
     const vCandidates = collectCandidates("x", id);
     const hCandidates = collectCandidates("y", id);
     // 启动时设延长线
-    selfLines.value = { v: [origX, origX + elW], h: [origY, origY + elH] };
+    selfLines.value = {
+      v: [origX, origX + elW],
+      h: [origY, origY + elH],
+      pageOffsetMm,
+    };
 
     function onMove(ev: MouseEvent) {
       const dx = (ev.clientX - startX) / pxPerMmLocal;
@@ -337,6 +362,7 @@ export function useCanvasDrag(opts: CanvasDragOptions) {
         selfLines.value = {
           v: [newX, newX + elW],
           h: [newY, newY + elH],
+          pageOffsetMm,
         };
       }
       opts.onMove(id, newX, newY);
@@ -393,9 +419,13 @@ export function useCanvasDrag(opts: CanvasDragOptions) {
       "y",
       new Set(origs.map((o) => o.id)),
     );
+    const pageOffsetMm = pageOffsetMmFor(
+      primaryId ? findElementGlobal(opts.template(), primaryId)?.pageIndex : undefined,
+    );
     selfLines.value = {
       v: [groupX, groupRight],
       h: [groupY, groupBottom],
+      pageOffsetMm,
     };
 
     function onMove(ev: MouseEvent) {
@@ -424,6 +454,7 @@ export function useCanvasDrag(opts: CanvasDragOptions) {
         selfLines.value = {
           v: [newX, newRight],
           h: [newY, newBottom],
+          pageOffsetMm,
         };
       }
       const finalDx = newX - groupX;
@@ -466,10 +497,12 @@ export function useCanvasDrag(opts: CanvasDragOptions) {
       dir === "nw" || dir === "ne" || dir === "sw" || dir === "se";
     const vCandidates = collectCandidates("x", id);
     const hCandidates = collectCandidates("y", id);
+    const pageOffsetMm = pageOffsetMmFor(found.pageIndex);
     // 启动时设延长线
     selfLines.value = {
       v: [origX, origX + el.w],
       h: [origY, origY + el.h],
+      pageOffsetMm,
     };
 
     function onMove(ev: MouseEvent) {
@@ -529,6 +562,7 @@ export function useCanvasDrag(opts: CanvasDragOptions) {
         selfLines.value = {
           v: [x, x + w],
           h: [y, y + h],
+          pageOffsetMm,
         };
       }
       opts.onResize(id, { x, y, w, h });
