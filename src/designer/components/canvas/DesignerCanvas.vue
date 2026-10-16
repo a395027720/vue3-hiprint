@@ -242,6 +242,18 @@
       @undo="onCtxUndo"
       @redo="onCtxRedo"
     />
+
+    <!-- 删除页二次确认弹窗 -->
+    <Modal
+      v-model:open="removePageConfirm.open"
+      title="删除页"
+      :content="`确定删除第 ${(removePageConfirm.pageIndex ?? 0) + 1} 页?`"
+      confirm-text="删除"
+      cancel-text="取消"
+      :show-cancel="true"
+      danger
+      @confirm="onRemovePageConfirm"
+    />
   </div>
 </template>
 
@@ -261,6 +273,7 @@ import { allElements, findElementGlobal } from "../../core/schema";
 import { useCanvasDrag } from "../../composables/useCanvasDrag";
 import ElementRenderer from "../elements/ElementRenderer.vue";
 import ContextMenu from "../floating/ContextMenu.vue";
+import Modal from "../floating/Modal.vue";
 import ElementOverlayHandles from "./ElementOverlayHandles.vue";
 import SnapAndSelfLinesOverlay, {
   type OverlayLine,
@@ -679,12 +692,20 @@ function onPageNoInput(fromIndex: number, ev: Event) {
   emit("pageMove", fromIndex, toIndex);
 }
 
-/** 删除页:window.confirm 二次确认后 emit pageRemove(idx);useDesigner 那边会清 selectedId */
+/** 删除页:打开确认弹窗,用户点确认后才 emit pageRemove(idx);useDesigner 那边会清 selectedId */
+const removePageConfirm = ref<{ open: boolean; pageIndex: number | null }>({
+  open: false,
+  pageIndex: null,
+});
 function onPageRemove(pageIndex: number) {
   if (pageIndex === 0) return;
-  const ok = window.confirm(`确定删除第 ${pageIndex + 1} 页?`);
-  if (!ok) return;
-  emit("pageRemove", pageIndex);
+  removePageConfirm.value = { open: true, pageIndex };
+}
+function onRemovePageConfirm() {
+  if (removePageConfirm.value.pageIndex != null) {
+    emit("pageRemove", removePageConfirm.value.pageIndex);
+  }
+  removePageConfirm.value = { open: false, pageIndex: null };
 }
 
 function onDrop(e: DragEvent) {

@@ -19,3 +19,7 @@ yarn.lock
 
 # vite dev cache
 .vite-cache/
+
+# browser-harness 验证截图临时目录(应传 path 参数输出到该目录)
+.shots/
+
