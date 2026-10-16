@@ -343,7 +343,7 @@ const sw = 1.5;
 const alignLeftIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="18" y2="18"/></svg>`;
 const alignCenterHIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>`;
 const alignRightIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="6" y1="18" x2="21" y2="18"/></svg>`;
-const verticalTextIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6v12M5 8l2-2 2 2M5 16l2 2 2-2M17 6v12M15 8l2-2 2 2M15 16l2 2 2-2"/></svg>`;
+const verticalTextIcon = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10.9 16L15 5h2l4.1 11h-1.9l-1-2.8h-4.4l-1 2.8zm3.45-4.4h3.3l-1.6-4.55h-.1zM6 20l-3.5-3.5l1.4-1.4L5 16.15V3h2v13.15l1.1-1.05l1.4 1.4z"/></svg>`;
 </script>
 
 <style scoped>
