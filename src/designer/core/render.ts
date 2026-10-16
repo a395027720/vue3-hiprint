@@ -450,41 +450,28 @@ export function renderElement(el: Element, data: unknown): string {
 // ========== 分页 IR ==========
 
 /**
- * 把 elements 按 page 边界 + pageBreakBefore 分配到多页。
- * 返回 N 个 page,每个 page 是该页包含的 elements 数组。
+ * 把 tpl.pages 1:1 映射成 paper 列表(每个 page 一个 paper)。
+ * 不扁平化、不按 y+h 重排 — 用户在设计器里加了几个 page,预览就看到几个 paper。
+ * table.pageBreakBefore 在 N-page 模型下不再触发换页(用户应该用"添加页"显式分页);
+ * 该字段仍保留在元素上,后续可扩展为"插入新 paper"。
  *
- * MVP 规则:
- * - table.pageBreakBefore = true → 强制该 element 进入下一页
- * - 当前 page 已有内容且 element 的 y+h 超出 paper 边界 → 进入下一页
- * - 跨页 element 不做拆分,直接装起始页,后续 page 装后面的 element
+ * 过滤规则:
+ * - print === false 的元素不出现在 paper 输出里
+ * - repeatElement=true 的元素在每个 paper 顶部都插一份
  */
 export function paginate(tpl: Template): Element[][] {
-  const pages: Element[][] = [[]];
-  const paperH = tpl.paper.height;
-
-  // 跨所有 pages 收集元素(打印时按 paper 边界二次分页,跟编辑器 pages 是两个概念)
-  // 过滤掉 print === false 的元素
-  const all: Element[] = tpl.pages
-    .flatMap((p) => p.elements)
-    .filter((el) => el.print !== false);
-
-  for (const el of all) {
-    let target = pages[pages.length - 1];
-
-    const forceBreak =
-      el.type === "table" && (el as TableElement).pageBreakBefore;
-    const overflow = target.length > 0 && el.y + el.h > paperH;
-    if (forceBreak || overflow) {
-      target = [];
-      pages.push(target);
-    }
-    target.push(el);
-  }
-
-  // 每页重复:把所有 repeatElement=true 的元素插到每个 page 顶部(放在该 page 原内容之前)
-  const repeatEls = all.filter(
-    (el) => (el as { repeatElement?: boolean }).repeatElement === true,
+  // 1 page = 1 paper(不扁平化、不按 y+h 重排)
+  // 过滤掉 print === false 的元素;每个 page 至少保留一个 paper 入口
+  const pages: Element[][] = tpl.pages.map((p) =>
+    p.elements.filter((el) => el.print !== false),
   );
+
+  // 每页重复:把所有 repeatElement=true 的元素插到每个 paper 顶部
+  const repeatEls: Element[] = tpl.pages
+    .flatMap((p) => p.elements)
+    .filter(
+      (el) => el.print !== false && (el as { repeatElement?: boolean }).repeatElement === true,
+    );
   if (repeatEls.length > 0) {
     for (let i = 0; i < pages.length; i++) {
       pages[i] = [...repeatEls, ...pages[i]];
