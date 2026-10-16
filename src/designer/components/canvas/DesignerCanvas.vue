@@ -267,8 +267,8 @@ import SnapAndSelfLinesOverlay, {
 } from "./SnapAndSelfLinesOverlay.vue";
 import GuideOverlay from "./GuideOverlay.vue";
 
-/** 多页之间的纵向间距(mm)。S2 暂用 0(单页行为不变),S3 接 pageSpacingX/Y。 */
-const PAGE_SPACING_MM = 20;
+/** 多页之间的纵向间距(mm)。 */
+const PAGE_SPACING_MM = 10;
 
 const props = defineProps<{
   template: Template;
@@ -1024,7 +1024,7 @@ watch(
 .canvas-scale {
   display: flex;
   flex-direction: column;
-  row-gap: 75.6px; /* = mmToPx(PAGE_SPACING_MM) = mmToPx(20) */
+  row-gap: 37.8px; /* = mmToPx(PAGE_SPACING_MM) = mmToPx(10) */
   transform-origin: top left;
 }
 /* 多页:每个 page 是 .canvas-scale 的 flex 子元素,内部 .canvas 相对 page 0,0 */
