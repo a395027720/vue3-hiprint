@@ -29,6 +29,7 @@
       :italic-active="italicActive"
       :underline-active="underlineActive"
       :strike-active="strikeActive"
+      :writing-mode-active="writingModeActive"
       :paper-width="designer.template.value.paper.width"
       :paper-height="designer.template.value.paper.height"
       :canvas-background="designer.canvasBackground.value"
@@ -80,6 +81,7 @@
       @toggle-italic="onToggleItalic"
       @toggle-underline="onToggleUnderline"
       @toggle-strike="onToggleStrike"
+      @toggle-writing-mode="onToggleWritingMode"
       @clear-format="onClearFormat"
       @reset-rotation="onResetRotation"
       @set-paper="onSetPaper"
@@ -531,6 +533,10 @@ const boldActive = computed(() => {
   return fw === "bold" || fw === "700" || fw === "900";
 });
 const italicActive = computed(() => selectedText.value?.fontStyle === "italic");
+const writingModeActive = computed(() => {
+  const wm = selectedText.value?.writingMode;
+  return wm === "vertical-rl" || wm === "vertical-lr";
+});
 const underlineActive = computed(
   () => selectedText.value?.textDecoration === "underline",
 );
@@ -741,6 +747,17 @@ function onToggleBold() {
   if (!t) return;
   designer.update(t.id, {
     fontWeight: boldActive.value ? "normal" : "bold",
+  } as Partial<TextElement>);
+}
+
+function onToggleWritingMode() {
+  const t = selectedText.value;
+  if (!t) return;
+  const next: TextElement["writingMode"] = writingModeActive.value
+    ? "horizontal-tb"
+    : "vertical-rl";
+  designer.update(t.id, {
+    writingMode: next,
   } as Partial<TextElement>);
 }
 
