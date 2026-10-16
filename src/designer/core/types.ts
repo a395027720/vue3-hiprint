@@ -86,7 +86,11 @@ export interface TextElement extends BaseElement {
   listType?: 'none' | 'ul' | 'ol'
   /** 文字方向(默认 horizontal-tb);vertical-rl = 中文竖排从右到左 */
   writingMode?: WritingMode
-  /** 数据变量 key(支持点号路径,如 'name' / 'user.name');
+  /** 标题(显示在 text 上方);留空 = 无标题 */
+  title?: string
+  /** 是否显示标题(默认 true);false 时只显示 text */
+  showTitle?: boolean
+  /** 数据字段名(支持点号路径,如 'name' / 'user.name');
    *  设置后,渲染时用 data[variable] 覆盖 text 静态内容(空值保留 text) */
   variable?: string
 }

@@ -60,7 +60,7 @@ const previewRows = computed<Record<string, unknown>[]>(() => {
 .el-table {
   width: 100%;
   overflow: auto;
-  background: #ffffff;
+  background: transparent;
 }
 .el-table table {
   width: 100%;

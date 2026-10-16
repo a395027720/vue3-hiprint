@@ -10,9 +10,12 @@ export const TEXT_SECTIONS: SectionDef[] = [
   {
     title: '内容',
     category: 'base',
+    priority: -1,
     fields: [
+      { key: 'title', label: '标题', kind: 'text', placeholder: '如 客户名称' },
+      { key: 'variable', label: '字段名', kind: 'text', placeholder: '如 name / user.name' },
+      { key: 'showTitle', label: '显示标题', kind: 'checkbox' },
       { key: 'text', label: '文本', kind: 'textarea' },
-      { key: 'variable', label: '变量', kind: 'text', placeholder: '如 name / user.name' },
     ],
   },
   {

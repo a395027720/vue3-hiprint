@@ -25,8 +25,20 @@ const props = defineProps<{
 }>()
 
 const textLines = computed<string[]>(() => props.element.text.split('\n'))
-/** 画布预览显示:无 data 注入时直接展示 text,带 {{key}} 也能看到;variable 字段在打印/导出时由 render.ts 替换 */
-const displayText = computed(() => props.element.text)
+/** 是否启用标题拼接(非列表 + showTitle 未显式关闭 + title 非空) */
+const useTitlePrefix = computed(() => {
+  const e = props.element
+  if (e.listType && e.listType !== 'none') return false
+  if (e.showTitle === false) return false
+  return !!(e.title && e.title.length > 0)
+})
+/** 画布预览显示:有标题时拼接 "{title}: {text}",否则只显示 text;
+ *  variable 字段在打印/导出时由 render.ts 替换 */
+const displayText = computed(() => {
+  const e = props.element
+  if (useTitlePrefix.value) return `${e.title}: ${e.text}`
+  return e.text
+})
 
 const style = computed(() => {
   const e = props.element
@@ -49,7 +61,7 @@ const style = computed(() => {
     lineHeight: e.lineHeight,
     letterSpacing: e.letterSpacing != null ? e.letterSpacing + 'px' : undefined,
     textDecoration: e.textDecoration ?? 'none',
-    backgroundColor: e.backgroundColor ?? '#ffffff',
+    backgroundColor: e.backgroundColor ?? 'transparent',
     zIndex: e.zIndex,
     display: 'flex',
     flexDirection: 'column',

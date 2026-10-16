@@ -71,6 +71,9 @@ export interface SectionDef {
   fields: FieldDef[]
   /** 每行几列,默认 1(单列纵向),position 段用 2(2x2 网格) */
   columns?: 1 | 2
+  /** 排序权重,升序排列(数字小在前);缺省 0。
+   *  公共 POSITION/BORDER 不设;per-type section 想插到前面就传负数 */
+  priority?: number
 }
 
 // ========== 类型专属段(由 per-type 文件导出) ==========
@@ -96,8 +99,13 @@ const TYPE_SECTIONS: Record<ElementType, SectionDef[]> = {
  */
 export function getSections(el: Element): SectionDef[] {
   const specific = TYPE_SECTIONS[el.type] ?? []
-  if (el.type === 'table') return [POSITION_SECTION, ...specific]
-  return [POSITION_SECTION, BORDER_SECTION, ...specific]
+  const base = el.type === 'table'
+    ? [POSITION_SECTION]
+    : [POSITION_SECTION, BORDER_SECTION]
+  // 按 priority 升序(数字小在前),缺省 0
+  return [...base, ...specific].sort(
+    (a, b) => (a.priority ?? 0) - (b.priority ?? 0),
+  )
 }
 
 /**

@@ -157,7 +157,7 @@ function textStyle(el: Extract<Element, { type: "text" }>): string {
     el.textDecoration && el.textDecoration !== "none"
       ? `text-decoration:${el.textDecoration}`
       : "",
-    el.backgroundColor ? `background-color:${el.backgroundColor}` : "background-color:#ffffff",
+    el.backgroundColor ? `background-color:${el.backgroundColor}` : "background-color:transparent",
     borderCss4Sides(el),
     el.borderRadius ? `border-radius:${el.borderRadius}mm` : "",
     paddingCss4Sides(el),
@@ -189,9 +189,13 @@ function renderText(
     raw != null && raw !== ""
       ? String(raw)
       : el.text;
+  // 标题:非列表 + showTitle 未显式关闭 + title 非空 时拼接 "{title}: {text}"
+  const useTitlePrefix =
+    listType === "none" && el.showTitle !== false && !!(el.title && el.title.length > 0);
+  const finalText = useTitlePrefix ? `${el.title}: ${text}` : text;
   const inner =
     listType === "none"
-      ? escapeHtml(text)
+      ? escapeHtml(finalText)
       : `<${listType} style="margin:0;padding-left:1.2em;">${text
           .split("\n")
           .map((line) => `<li>${escapeHtml(line)}</li>`)
