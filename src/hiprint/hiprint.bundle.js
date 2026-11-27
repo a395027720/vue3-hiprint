@@ -3482,7 +3482,9 @@ var hiprint = function (t) {
       }, t.prototype.css = function (t) {
         if (t && t.length && this.target) {
           // 仅当前元素被选中才更新坐标位置, 以避免冲突
-          if (('block' == t.find('.resize-panel').css('display') || t[0].className.includes('table')) && this.el == t) {
+          // 元素重渲染后 designTarget 会被重建, this.el 缓存的旧节点会失效, 这里实时取元素当前的 designTarget 再比对
+          var cur = this.printElement && this.printElement.designTarget ? this.printElement.designTarget : this.el;
+          if (('block' == t.find('.resize-panel').css('display') || t[0].className.includes('table')) && cur && cur.length && cur[0] === t[0]) {
             var v = this.getValue();
             return t.css("left", v.left + "pt").css("top", v.top + "pt");
           }
@@ -3498,7 +3500,7 @@ var hiprint = function (t) {
         v.top = parseFloat(this.target.find("input:last").val() || 0)
         return v;
       }, t.prototype.setValue = function (t, el) {
-        this.el = el.designTarget || el;
+        this.printElement = el, this.el = el && el.designTarget || el;
         this.target.find("input:first").val(t.left);
         this.target.find("input:last").val(t.top);
       }, t.prototype.destroy = function () {
@@ -3549,7 +3551,9 @@ var hiprint = function (t) {
       }, t.prototype.css = function (t) {
         if (t && t.length && this.target) {
           // 仅当前元素被选中才更新宽高大小, 以避免冲突
-          if (('block' == t.find('.resize-panel').css('display') || t[0].className.includes('table')) && this.el == t) {
+          // 元素重渲染后 designTarget 会被重建, this.el 缓存的旧节点会失效, 这里实时取元素当前的 designTarget 再比对
+          var cur = this.printElement && this.printElement.designTarget ? this.printElement.designTarget : this.el;
+          if (('block' == t.find('.resize-panel').css('display') || t[0].className.includes('table')) && cur && cur.length && cur[0] === t[0]) {
             var v = this.getValue();
             return t.css("width", v.width + "pt").css("height", v.height + "pt");
           }
@@ -3565,7 +3569,7 @@ var hiprint = function (t) {
         v.height = parseFloat(this.target.find("input:last").val() || 0)
         return v;
       }, t.prototype.setValue = function (t, el) {
-        this.el = el.designTarget || el;
+        this.printElement = el, this.el = el && el.designTarget || el;
         this.target.find("input:first").val(t.width);
         this.target.find("input:last").val(t.height);
       }, t.prototype.destroy = function () {
