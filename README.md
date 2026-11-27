@@ -41,6 +41,20 @@ tpl.design("#hiprint-printTemplate");
 tpl.print({ /* data */ });
 ```
 
+> **⚠️ 不要把 `PrintTemplate` 实例放进 `ref()` / `reactive()`**
+>
+> hiprint 内部大量用**引用相等**判断"当前操作的是哪个元素"（例如 `element.designTarget == target`）。
+> Vue 的 `ref()` 会把整棵模板对象包成 reactive proxy，同一个 DOM 节点的"裸引用"和"代理引用"是两个不同对象，比较直接失败。
+> 典型症状：**从模板 JSON 加载进来的元素，改坐标/宽高不生效（回车/失焦也不动），而新拖入的元素正常**。
+>
+> ```js
+> const tpl = markRaw(new hiprint.PrintTemplate({ /* ... */ })); // ✅
+> const tpl = shallowRef(null); /* tpl.value = new ... */        // ✅
+> const tpl = ref(null);        /* tpl.value = new ... */        // ❌ 会被代理
+> ```
+>
+> `useHiprint` 内部已对实例做 `markRaw`，走 composable 无需关心。1.0.14 起库内门禁已改为实时取 `designTarget` 并按 DOM 节点比对，对代理也免疫，但仍建议按上面的写法使用。
+
 ---
 
 ## Vue 3 Wrapper API（推荐）

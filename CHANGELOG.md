@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 1.0.14 (2026-11-27)
+
+### 🐞 修复
+
+- **模板加载的元素改坐标/宽高不生效**：右侧面板 `coordinate` / `widthHeight` 的门禁缓存了面板构建时的 `designTarget`，而 `getDesignTarget()` 在渲染中会重建该 DOM 节点，导致引用比对恒为假、`css()` 静默 `return null`。表现为**从模板 JSON 加载的元素改坐标/宽高不动（回车/失焦也不动），新拖入的元素正常**。改为实时取元素当前 `designTarget`，并按 DOM 节点比对。
+
+### 📝 文档
+
+- README 新增"不要把 `PrintTemplate` 放进 `ref()` / `reactive()`"说明：Vue proxy 会破坏 hiprint 内部的引用相等判断（用 `markRaw` / `shallowRef`）。
+
+### ⚠️ 使用建议
+
+- 即使本版已对代理免疫，消费方仍建议用 `markRaw()` / `shallowRef()` 持有 `PrintTemplate` 实例，避免无谓的深层代理开销。
+
 ## 1.0.0 (2026-XX-XX)
 
 ### ⚠️ 破坏性升级（fork 自 CcSimple/vue-plugin-hiprint）

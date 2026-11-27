@@ -100,10 +100,12 @@ src/
 5. **不要新增 npm 包代码到 demo**：demo 页面（`src/demo/**`）会与 npm 包一起发布，混在一起会让用户既装了包又跑了 demo。
 6. **LGPL 协议**：本项目基于 hiprint 2.5.4（LGPL），修改 `src/hiprint/hiprint.bundle.js` 中的 LGPL 部分后，涉及的衍生代码必须遵循 LGPL（详见 `LICENSE-LGPL`）。
 7. **Vue 3 + antd-vue 2**：所有 demo 用 antd-vue 2.x（已删除 `<a-icon>`，需用 `@ant-design/icons-vue` 具名组件）；`this.$error` 已删除，改用 `Modal.error`。
+8. **`PrintTemplate` 实例不要包进 Vue 的 `ref()` / `reactive()`**：hiprint 内部靠**引用相等**判断"当前操作的是哪个元素"（如 `coordinate.css` / `widthHeight.css` 的 `this.el == t` 门禁）。Vue proxy 会让同一 DOM 节点的"裸引用"和"代理引用"不相等，症状是**从模板 JSON 加载的元素改坐标/宽高不生效（回车/失焦也不动），新拖入的元素正常**。用 `markRaw()` / `shallowRef()`；`src/hiprint/api/useHiprint.js` 已对实例做 `markRaw`。1.0.14 起库内门禁改为实时取元素当前 `designTarget` 并按 DOM 节点比对，对代理也免疫。
+9. **`designTarget` 会在渲染中被重建**：`BasePrintElement.getDesignTarget()`（`hiprint.bundle.js:721`）每次调用都 `this.designTarget = this.getHtml(...)[0].target`，即**新建 DOM 节点**。任何"缓存 designTarget 后长期比对"的写法都会失效；要判断"当前选中元素"请实时取 `designTarget` 再比 DOM 节点。
 
 ## CI/CD
 
-- `.github/workflows/deploy-demo.yml`：tag 匹配 `0.*` 或 `1.*` 时触发 → `npm run up-version newVersion` 升正式版 → `npm run pub`。
+- `.github/workflows/deploy-demo.yml`：tag 匹配 `0.*` 时触发 → `npm run up-version newVersion` 升正式版 → `npm run pub`。（注意：`1.x` 的 tag **不会**触发该 workflow，1.x 正式版需本地 `npm publish`。）
 - `.github/workflows/deploy-demo-beta.yml`：push 到 `main` 分支触发，先用 `technote-space/get-diff-action` 判断 `src/hiprint/**`、`src/demo/**`、`public/**` 是否有变更：
   - 改了 `src/hiprint/**` → `npm run up-version` 升 beta → `npm run pub-beta`。
   - 改了 `src/demo/**` 或 `public/**` → 跳过发包，仅 `npm run build-demo` 后部署到 gh-pages。
