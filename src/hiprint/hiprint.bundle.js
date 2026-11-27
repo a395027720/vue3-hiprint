@@ -845,6 +845,13 @@ var hiprint = function (t) {
         }), this.setResizePanel(), this.bingCopyEvent(this.designTarget), this.bingKeyboardMoveEvent(this.designTarget, e);
       }, BasePrintElement.prototype.getPrintElementEntity = function (t) {
         return t ? new _entity_PrintElementEntity__WEBPACK_IMPORTED_MODULE_0__.a(void 0, this.options.getPrintElementOptionEntity(), this.printElementType.getPrintElementTypeEntity()) : new _entity_PrintElementEntity__WEBPACK_IMPORTED_MODULE_0__.a(this.printElementType.tid, this.options.getPrintElementOptionEntity());
+      }, BasePrintElement.prototype.refreshSizeBoxText = function () {
+        // 在右侧面板改宽高后,元素上的尺寸标签(如 "238pt x 13pt")不会自动刷新,这里补一次
+        if (!this.designTarget || !this.designTarget.length) return;
+        var style = this.designTarget[0].style;
+        if (!style.width || !style.height) return;
+        var box = this.designTarget.find(".size-box");
+        box && box.length && box.text(style.width + " x " + style.height);
       }, BasePrintElement.prototype.submitOption = function () {
         var els = this.panel.printElements.filter(function (t) {
             return ('block' == t.designTarget.children().last().css('display')
@@ -904,7 +911,7 @@ var hiprint = function (t) {
               }
             });
           }
-          this.updateDesignViewFromOptions(), hinnn.event.trigger("hiprintTemplateDataChanged_" + this.templateId, "元素修改");
+          this.updateDesignViewFromOptions(), this.refreshSizeBoxText(), hinnn.event.trigger("hiprintTemplateDataChanged_" + this.templateId, "元素修改");
       }, BasePrintElement.prototype.updateOption = function (o, v, b) {
         try {
           var e = this.getConfigOptions();
@@ -3460,13 +3467,13 @@ var hiprint = function (t) {
           n.syncLock = !n.syncLock;
         })
         n.target.find("input:first").after(n.lockTarget);
-        // 同步编辑...
-        n.target.find("input:first").change(function () {
+        // 同步编辑...(input 实时同步,change 兜底)
+        n.target.find("input:first").on("input change", function () {
           if (n.syncLock) {
             n.target.find("input:last").val($(this).val())
           }
         });
-        n.target.find("input:last").change(function () {
+        n.target.find("input:last").on("input change", function () {
           if (n.syncLock) {
             n.target.find("input:first").val($(this).val())
           }
@@ -3527,13 +3534,13 @@ var hiprint = function (t) {
           n.syncLock = !n.syncLock;
         })
         n.target.find("input:first").after(n.lockTarget);
-        // 同步编辑...
-        n.target.find("input:first").change(function () {
+        // 同步编辑...(input 实时同步,change 兜底)
+        n.target.find("input:first").on("input change", function () {
           if (n.syncLock) {
             n.target.find("input:last").val($(this).val())
           }
         });
-        n.target.find("input:last").change(function () {
+        n.target.find("input:last").on("input change", function () {
           if (n.syncLock) {
             n.target.find("input:first").val($(this).val())
           }
@@ -10632,6 +10639,13 @@ var hiprint = function (t) {
           i.submitOption();
         }), r.find(".auto-submit:input").bind("keydown.submitOption", function (t) {
           13 == t.keyCode && i.submitOption();
+        }), r.find(".auto-submit:input[type=number]").on("input.livePreview", function () {
+          // 数字输入框(位置坐标/宽高大小等)边输入边刷新画布:
+          // 这里只重绘,不写 options、不进历史;真正提交仍由 change(失焦/回车)触发
+          // 输入过程可能出现空值(先清空再输入),空值时跳过,避免元素瞬间变成 0 尺寸
+          if ("" === $(this).val()) return;
+          i.updateDesignViewFromOptions();
+          i.refreshSizeBoxText();
         }), this.settingContainer.append(r), tabs.length < 1 && o && o.forEach(function (t) {
           var n = t.callback;
           t.callback = function (t) {
